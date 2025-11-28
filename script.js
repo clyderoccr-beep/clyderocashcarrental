@@ -900,6 +900,19 @@ document.addEventListener('click',(e)=>{
       alert('Booking extended.'); }; const onCancel=()=>{ modal.style.display='none'; cleanup(); }; function cleanup(){ document.getElementById('extendSave').removeEventListener('click',onSave); document.getElementById('extendCancel').removeEventListener('click',onCancel); } document.getElementById('extendSave').addEventListener('click',onSave); document.getElementById('extendCancel').addEventListener('click',onCancel); return; }
 });
 
+// Customer My Bookings manual refresh
+document.addEventListener('click', (e)=>{
+  const btn = e.target.closest('#accountBookingsRefresh');
+  if(!btn) return;
+  const email = getSessionEmail();
+  if(!email){ showToast('Log in to view bookings.'); return; }
+  try{
+    loadBookingsForEmail(email);
+    renderAccountBookings();
+    showToast('Bookings refreshed');
+  }catch(err){ console.warn('Refresh failed:', err?.message||err); }
+});
+
 // Signup validation
 document.addEventListener('input', (e)=>{
   if(e.target.id==='verifyEmail'){
