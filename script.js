@@ -142,8 +142,36 @@ document.addEventListener('click', (e)=>{
   } 
 });
 
-// Forgot password placeholder (implement Firebase Auth reset in production)
-document.addEventListener('click', (e)=>{ const btn=e.target.closest('#forgotPassword'); if(!btn) return; e.preventDefault(); const email=document.getElementById('loginEmail').value.trim(); if(!email){ alert('Enter your email for password help.'); return; } const api=getAuthApi(); const auth=getAuthInstance(); if(api.sendPasswordResetEmail && auth){ api.sendPasswordResetEmail(auth,email).then(()=>{ alert('If an account exists, a reset email was sent.'); }).catch(err=>{ alert(err.message||'Reset failed'); }); } else { alert('Reset not configured.'); } });
+// Forgot password: Firebase Auth reset email with spam folder reminder
+document.addEventListener('click', async (e)=>{
+  const btn = e.target.closest('#forgotPassword');
+  if(!btn) return;
+  e.preventDefault();
+  const emailInput = document.getElementById('loginEmail');
+  const email = (emailInput?.value||'').trim();
+  if(!email){ alert('Please enter your email above first.'); emailInput?.focus(); return; }
+  const api = getAuthApi();
+  const auth = getAuthInstance();
+  if(!(api.sendPasswordResetEmail && auth)){
+    alert('Password reset is not configured.');
+    return;
+  }
+  try{
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+    const actionCodeSettings = {
+      url: 'https://clyderoccr.com',
+      handleCodeInApp: false
+    };
+    await api.sendPasswordResetEmail(auth, email, actionCodeSettings);
+    alert('Password reset email sent!\n\nPlease check your inbox and spam folder.');
+  }catch(err){
+    alert(cleanErrorMessage(err));
+  }finally{
+    btn.disabled = false;
+    btn.textContent = 'Forgot password';
+  }
+});
 
 // Global click sound for buttons
 let CLICK_SOUND = null;
