@@ -351,8 +351,32 @@ document.addEventListener('submit', (e)=>{
   if(!email || !pw){ alert('Enter email and password'); return; }
   const api=getAuthApi(); const auth=getAuthInstance();
   if(api.signInWithEmailAndPassword && auth){
-    api.signInWithEmailAndPassword(auth,email,pw).then(()=>{
+    api.signInWithEmailAndPassword(auth,email,pw).then(async()=>{
       console.log('Login successful, email:', email);
+      // After login, verify membership status before enabling session
+      try{
+        const db = getDB(); const utils = getUtils();
+        const uid = auth && auth.currentUser && auth.currentUser.uid;
+        if(db && utils && uid){
+          const snap = await utils.getDoc(utils.doc(db,'users',uid));
+          if(snap.exists()){
+            const data = snap.data();
+            if(data && data.status === 'banned'){
+              console.warn('Banned account attempted login; signing out.');
+              try{ showToast('Your account is disabled. Contact support.'); }catch{}
+              try{ await api.signOut(auth); }catch{}
+              goto('login');
+              return; // do not proceed to set session
+            }
+          } else {
+            console.warn('No membership profile found post-login; signing out.');
+            try{ await api.signOut(auth); }catch{}
+            goto('login');
+            return;
+          }
+        }
+      }catch(e){ console.warn('Post-login status check failed:', e?.message||e); }
+
       setSessionEmail(email); // Store email immediately after login
       // Immediately update UI
       updateNavLabels();
@@ -372,6 +396,34 @@ document.addEventListener('submit', (e)=>{
     updateAdminVisibility();
     showToast('Logged in');
     if(email===OWNER_EMAIL){ goto('admin'); setTimeout(()=>{ loadAdminBookings().then(renderAdminBookings); loadMembersAndRender(); },100); } else { goto('vehicles'); }
+  }
+});
+
+// Pre-login disabled notice: when email is entered, check membership status
+document.addEventListener('input', async (e)=>{
+  if(e.target && e.target.id === 'loginEmail'){
+    const email = (e.target.value||'').trim();
+    const db = getDB(); const utils = getUtils();
+    if(!db || !utils || !email) return;
+    try{
+      const q = utils.query(utils.collection(db,'users'), utils.where('email','==', email));
+      const snap = await utils.getDocs(q);
+      let banned = false;
+      snap.forEach(d=>{ const data=d.data(); if(data && data.status === 'banned') banned = true; });
+      let note = document.getElementById('loginNotice');
+      if(!note){
+        note = document.createElement('div');
+        note.id = 'loginNotice';
+        note.style.marginTop = '6px';
+        note.style.fontSize = '12px';
+        note.style.color = 'var(--muted)';
+        const form = document.getElementById('login-form');
+        if(form) form.appendChild(note);
+      }
+      if(note){
+        note.textContent = banned ? 'This account is disabled. Contact support.' : '';
+      }
+    }catch(err){ /* silent */ }
   }
 });
 
