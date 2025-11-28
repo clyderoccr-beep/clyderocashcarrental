@@ -728,6 +728,20 @@ function startMyBookingsRealtime(){
         local.status = fb.status || local.status;
         local.rentedAt = fb.rentedAt || local.rentedAt;
         local.returnDate = fb.returnDate || local.returnDate;
+      } else {
+        // Booking exists in Firestore but not locally, add it
+        MY_BOOKINGS.push({
+          id: 'bk_' + Date.now() + '_' + Math.random().toString(36).substr(2,9),
+          fireId: fb.id,
+          userEmail: fb.userEmail,
+          vehicleId: fb.vehicleId,
+          pickupDate: fb.pickupDate,
+          returnDate: fb.returnDate,
+          status: fb.status || 'pending',
+          createdAt: fb.createdAt || Date.now(),
+          weeks: fb.weeks || 1,
+          rentedAt: fb.rentedAt
+        });
       }
     });
     
