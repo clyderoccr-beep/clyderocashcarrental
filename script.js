@@ -899,6 +899,7 @@ document.getElementById('signup-form')?.addEventListener('submit', (e)=>{
   const licenseCountry=document.getElementById('licenseCountry')?.value||'';
   const licenseIssueDate=document.getElementById('licenseIssueDate')?.value||'';
   const licenseExpireDate=document.getElementById('licenseExpireDate')?.value||'';
+  const dob=document.getElementById('dob')?.value||'';
   
   if(email!==verifyEmail){ alert('Email addresses do not match'); return; }
   if(password!==verifyPassword){ alert('Passwords do not match'); return; }
@@ -912,6 +913,15 @@ document.getElementById('signup-form')?.addEventListener('submit', (e)=>{
   const todayDay = new Date(); todayDay.setHours(0,0,0,0);
   if(expireDay <= issueDay){ alert('License expire date must be after issue date'); return; }
   if(expireDay < todayDay){ alert('License has expired'); return; }
+  if(!dob){ alert('Please enter your date of birth.'); return; }
+  // Age check: must be at least 25
+  try{
+    const dobDate = new Date(dob);
+    if(!(dobDate instanceof Date) || isNaN(dobDate.getTime())){ alert('Invalid date of birth.'); return; }
+    const now = new Date();
+    const cutoff = new Date(now.getFullYear()-25, now.getMonth(), now.getDate());
+    if(dobDate > cutoff){ alert('You must be at least 25 years old to become a member.'); return; }
+  }catch{ alert('Invalid date of birth.'); return; }
   // Create Auth account then proceed
   const api=getAuthApi(); const auth=getAuthInstance();
   if(api.createUserWithEmailAndPassword && auth){
@@ -934,6 +944,7 @@ document.getElementById('signup-form')?.addEventListener('submit', (e)=>{
         const basePayload={
           email, first, last, address, state, country,
           licenseNumber, licenseCountry, licenseIssueDate, licenseExpireDate,
+          dob,
           createdTs, status:'active'
         };
         let photoUrl='';
