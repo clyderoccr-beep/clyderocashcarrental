@@ -775,7 +775,12 @@ function renderAccountBookings(){
     const status=b.status||'active';
     const dates=`${b.pickupDate||''} → ${b.returnDate||''}`;
     const card=document.createElement('article'); card.className='card';
-    const badge = status==='active' ? '' : status==='accepted' ? `<span class='badge' style='background:#0d6efd33;border-color:#0d6efd66;color:#b3d4ff'>Accepted</span>` : status==='rented' ? `<span class='badge' style='background:#19875433;border-color:#19875466;color:#cfead8'>Rented</span>` : status==='cancelled' ? `<span class='badge unavailable'>Cancelled</span>` : `<span class='badge' style='background:rgba(255,255,255,.08)'>${status}</span>`;
+    const badge = status==='active' ? ''
+      : status==='accepted' ? `<span class='badge' style='background:#0d6efd33;border-color:#0d6efd66;color:#0d6efd'><strong>Status:</strong> Accepted</span>`
+      : status==='rented' ? `<span class='badge' style='background:#19875433;border-color:#19875466;color:#198754'><strong>Status:</strong> Rented</span>`
+      : status==='cancelled' ? `<span class='badge unavailable'><strong>Status:</strong> Cancelled</span>`
+      : status==='rejected' ? `<span class='badge' style='background:#6c757d33;border-color:#6c757d66;color:#6c757d'><strong>Status:</strong> Rejected</span>`
+      : `<span class='badge' style='background:rgba(255,255,255,.08)'><strong>Status:</strong> ${status}</span>`;
     card.innerHTML=`<div class='body'>
       <div style='display:flex;gap:8px;align-items:center'>
         <div style='font-weight:700'>${name}</div>
@@ -1735,7 +1740,30 @@ document.addEventListener('click',(e)=>{
     return;
   }
   const rej = e.target.closest('[data-bk-reject]');
-  if(rej){ const id=rej.dataset.bkReject; updateAdminBookingStatus(id,'rejected').then(()=>{ loadAdminBookings().then(renderAdminBookings); showToast('Booking rejected'); }); return; }
+  if(rej){ 
+    const id=rej.dataset.bkReject; 
+    const adminBk = ADMIN_BOOKINGS.find(b=>b.id===id);
+    updateAdminBookingStatus(id,'rejected').then(()=>{ 
+      loadAdminBookings().then(renderAdminBookings); 
+      showToast('Booking rejected'); 
+      // Force customer view update if they're viewing their bookings
+      if(adminBk && adminBk.userEmail){
+        const customerEmail = adminBk.userEmail;
+        const currentEmail = getSessionEmail();
+        if(currentEmail === customerEmail){
+          loadBookingsForEmail(customerEmail);
+          const local = MY_BOOKINGS.find(b=> b.fireId===id || (!b.fireId && b.vehicleId===adminBk.vehicleId && b.pickupDate===adminBk.pickupDate));
+          if(local){
+            local.status='rejected';
+            local.fireId = id;
+            saveBookingsForEmail(customerEmail);
+            renderAccountBookings();
+          }
+        }
+      }
+    }); 
+    return; 
+  }
   const rent = e.target.closest('[data-bk-rented]');
   if(rent){
     const id=rent.dataset.bkRented;
