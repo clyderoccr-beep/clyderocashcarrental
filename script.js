@@ -5,20 +5,32 @@ function getDB(){ return window.firestoreDB; }
     const actionCodeSettings = {
       url: 'https://clyderoccr.com',
       handleCodeInApp: false
-    };
-    await api.sendPasswordResetEmail(auth, email, actionCodeSettings);
-function getStorage(){ return window.firestoreStorage; }
-function getStorageUtils(){ return window.storageUtils; }
+    try{
+      // Backdrop to avoid layout shifts
+      const backdrop = document.createElement('div');
+      backdrop.id = 'resetBackdrop';
+      backdrop.style.position = 'fixed';
+      backdrop.style.inset = '0';
+      backdrop.style.background = 'rgba(0,0,0,.4)';
+      backdrop.style.zIndex = '999';
+      backdrop.style.backdropFilter = 'blur(2px)';
+      backdrop.setAttribute('aria-hidden','true');
 
-// ===== Firebase Auth Helpers (added) =====
-function getAuthApi(){ return window.authApi || {}; }
-function getAuthInstance(){ const api=getAuthApi(); return api.auth; }
-function authEmail(){ const a=getAuthInstance(); return a && a.currentUser ? (a.currentUser.email||'') : ''; }
-// Auth state listener also sets up realtime subscriptions
-try{ 
-  const api=getAuthApi(); 
-  if(api.onAuthStateChanged && api.auth){ 
-    api.onAuthStateChanged(api.auth, (user)=>{ 
+      // Modal card (fixed, no margins so it doesn't affect layout)
+      const wrap = document.createElement('div');
+      wrap.id = 'resetModal';
+      wrap.className = 'card';
+      wrap.style.maxWidth = '420px';
+      wrap.style.position = 'fixed';
+      wrap.style.left = '50%';
+      wrap.style.top = '20%';
+      wrap.style.transform = 'translateX(-50%)';
+      wrap.style.zIndex = '1000';
+      wrap.setAttribute('role','dialog');
+      wrap.setAttribute('aria-modal','true');
+      wrap.innerHTML = `<div class=\"body\">\n      <h3 style=\"margin-top:0\">Reset Password</h3>\n      <div id=\"resetStatus\" class=\"muted\" style=\"font-size:12px\">Validating link...</div>\n      <label style=\"margin-top:8px;color:#000\">New password</label>\n      <input id=\"newPassword\" type=\"password\" style=\"width:100%;color:#000\">\n      <label style=\"margin-top:8px;color:#000\">Confirm password</label>\n      <input id=\"confirmPassword\" type=\"password\" style=\"width:100%;color:#000\">\n      <div style=\"display:flex;gap:8px;margin-top:12px\">\n        <button class=\"navbtn\" id=\"resetSubmit\" type=\"button\">Set password</button>\n        <button class=\"navbtn\" id=\"resetCancel\" type=\"button\">Cancel</button>\n      </div>\n    </div>`;
+      document.body.appendChild(backdrop);
+      document.body.appendChild(wrap);
       console.log('Auth state changed, user:', user ? user.email : 'null');
       if(user && user.email) {
         // User is signed in, store email
@@ -326,7 +338,7 @@ function showResetPasswordUI(oobCode){
       submitBtn.disabled = true;
     });
 
-    const close = ()=>{ try{ document.body.removeChild(wrap); }catch{} };
+    const close = ()=>{ try{ document.body.removeChild(wrap); }catch{} try{ document.body.removeChild(backdrop); }catch{} };
     cancelBtn.addEventListener('click', close);
     submitBtn.addEventListener('click', async ()=>{
       const pw = (newPwEl.value||'').trim();
