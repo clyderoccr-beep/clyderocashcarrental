@@ -1,0 +1,66 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if user is owner
+    function isOwner() {
+      return isAuthenticated() && request.auth.token.email == 'clyderofraser97@gmail.com';
+    }
+
+    // State document (synced with localStorage)
+    match /clydero_site/state {
+      allow read: if true;  // Public read
+      allow write: if isAuthenticated();  // Must be logged in to write
+    }
+
+    // Users collection (doc ID should match auth.uid). Each user can read/update own doc; owner full access.
+    match /users/{userId} {
+      allow create: if request.auth != null && request.auth.uid == userId; // create own doc
+      allow read: if isOwner() || (isAuthenticated() && request.auth.uid == userId);
+      allow update: if isOwner() || (isAuthenticated() && request.auth.uid == userId);
+      allow delete: if isOwner();
+      allow list: if isOwner(); // Owner can list all users
+    }
+
+    // Bookings collection
+    match /bookings/{bookingId} {
+      allow read: if isAuthenticated() && (
+        resource.data.userEmail == request.auth.email || isOwner()
+      );
+      allow write: if isAuthenticated();
+    }
+
+    // Messages collection (contact form submissions)
+    match /messages/{messageId} {
+      // Allow anyone to create a message (contact form is public)
+      allow create: if true;
+      // Owner can read and delete all messages; authenticated user can read own message if email matches
+      allow read: if isOwner() || (isAuthenticated() && request.auth.token.email == resource.data.email);
+      allow delete: if isOwner();
+      // Update (mark read) restricted to owner
+      allow update: if isOwner();
+    }
+
+    // Vehicles collection
+    match /vehicles/{vehicleId} {
+      allow read: if true;  // Public read
+      allow write: if isOwner();  // Only owner can create/update/delete
+    }
+
+    // Site content collection (about page, etc.)
+    match /site_content/{docId} {
+      allow read: if true;  // Public read
+      allow write: if isOwner();  // Only owner can update
+    }
+
+    // Default deny all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

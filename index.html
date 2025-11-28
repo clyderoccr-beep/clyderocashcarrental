@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Clydero Cash Car Rental – Weekly SUV and sedan rentals in Atlanta, GA. Reliable, transparent, membership-based service." />
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+  <link rel="dns-prefetch" href="//www.gstatic.com">
+  <meta name="robots" content="index,follow" />
+  <meta property="og:title" content="Clydero Cash Car Rental" />
+  <meta property="og:description" content="Book weekly SUV and sedan rentals in Atlanta. Membership-based, reliable service." />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="assets/icon.png.png" />
+  <link rel="canonical" href="https://your-domain.example/" />
+  <title>Clydero Cash Car Rental</title>
+  <link rel="icon" type="image/png" href="assets/icon.png.png" />
+  <style>
+    :root{
+      /* Core palette */
+      --black:#0a0a0a;
+      --white:#ffffff;
+      --gold:#d4af37;
+      --grey:#b5b5b5;
+      /* Semantic tokens (restrict to black + gold) */
+      --bg:var(--black);
+      --ink:var(--gold); /* default text on dark */
+      --muted:var(--gold); /* muted now also gold per request */
+      --brand:#141414; /* dark surfaces */
+      --brand2:#1f1f1f; /* elevated dark */
+      --card:var(--white);
+      --radius:12px;
+      --maxw:1000px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0; background:
+      linear-gradient(135deg, #101010 0%, #161616 55%, #101010 100%)
+      fixed; color:var(--ink); font-family:Segoe UI,Arial,sans-serif; min-height:100vh}
+    header{position:sticky; top:0; z-index:50; border-bottom:2px solid var(--gold); background:rgba(18,18,18,.9); backdrop-filter:saturate(110%) blur(10px); box-shadow:0 0 0 1px rgba(255,255,255,.06),0 4px 24px rgba(0,0,0,.55)}
+    .wrap{max-width:var(--maxw); margin:0 auto; padding:12px}
+    nav{display:flex; gap:8px; flex-wrap:wrap}
+    .navbtn{min-height:40px; padding:8px 12px; border-radius:8px; background:linear-gradient(145deg, #141414 0%, #1f1f1f 100%); color:var(--ink) !important; border:1px solid rgba(212,175,55,.35); cursor:pointer; font-weight:600; letter-spacing:.3px; box-shadow:0 2px 10px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.08); transition:background .2s, box-shadow .2s, transform .2s, color .2s}
+    .navbtn:hover{background:linear-gradient(145deg, var(--gold) 0%, #e3c554 100%); box-shadow:0 6px 22px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.4); transform:translateY(-1px); color:#111 !important; border-color:var(--gold)}
+    .navbtn:active{transform:translateY(0); box-shadow:0 3px 12px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.4)}
+    .navbtn:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
+    .holiday{background:linear-gradient(90deg, #0f0f0f 0%, #1a1a1a 50%, #0f0f0f 100%); color:#ffffff; text-align:center; padding:8px 12px; font-weight:700; box-shadow:0 4px 16px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.1); text-shadow:none}
+    .section{display:block; padding:20px 0}
+    .card{background:linear-gradient(145deg, #ffffff 0%, #f6f6f6 100%); border:1px solid #d2d2d2; border-radius:var(--radius); overflow:hidden; box-shadow:0 6px 26px rgba(0,0,0,.10), inset 0 1px 0 rgba(255,255,255,1)}
+    .card .body{padding:12px; color:#000000}
+    h1,h2,h3{color:var(--gold); text-shadow:none}
+    .card .body h1, .card .body h2, .card .body h3 { color:#000000; }
+    @keyframes snow{0%{transform:translateY(-10vh)}100%{transform:translateY(100vh)}}
+    .flake{position:fixed; top:-10vh; left:0; color:#fff; opacity:.8; animation:snow 8s linear infinite; pointer-events:none; z-index:10}
+    .veh-dot{width:12px;height:12px;border-radius:50%;display:inline-block;position:relative;box-shadow:0 0 0 2px rgba(255,255,255,.12) inset}
+    .veh-dot.available{background:#2ecc71;animation:pulseLight 2.8s ease-in-out infinite;box-shadow:0 0 0 2px rgba(255,255,255,.12) inset,0 0 6px #2ecc71,0 0 14px rgba(46,204,113,.55)}
+    .veh-dot.unavailable{background:#e74c3c;animation:pulseDark 2.8s ease-in-out infinite;box-shadow:0 0 0 2px rgba(255,255,255,.12) inset,0 0 6px #e74c3c,0 0 14px rgba(231,76,60,.55)}
+    .veh-dot::before{content:"";position:absolute;top:1px;left:1px;width:5px;height:5px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.95),rgba(255,255,255,0) 60%);opacity:.85;filter:blur(.2px);animation:sparkle 2.4s ease-in-out infinite}
+    @keyframes pulseLight{0%,100%{box-shadow:0 0 0 2px rgba(255,255,255,.12) inset,0 0 4px rgba(46,204,113,.5),0 0 10px rgba(46,204,113,.3);transform:scale(1)}50%{box-shadow:0 0 0 2px rgba(255,255,255,.12) inset,0 0 10px rgba(46,204,113,.75),0 0 22px rgba(46,204,113,.45);transform:scale(1.15)}}
+    @keyframes pulseDark{0%,100%{box-shadow:0 0 0 2px rgba(255,255,255,.12) inset,0 0 4px rgba(231,76,60,.4),0 0 10px rgba(231,76,60,.25);transform:scale(1)}50%{box-shadow:0 0 0 2px rgba(255,255,255,.12) inset,0 0 8px rgba(231,76,60,.6),0 0 18px rgba(231,76,60,.35);transform:scale(1.12)}}
+    @keyframes sparkle{0%,100%{opacity:.55;transform:translate(0,0) scale(1)}50%{opacity:.95;transform:translate(1px,-1px) scale(1.12)}}
+    .navbtn[disabled]{opacity:.6; cursor:not-allowed}
+    .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;border:1px solid rgba(212,175,55,.55);color:var(--gold);background:rgba(212,175,55,.10);font-weight:600;letter-spacing:.3px}
+    .badge.unavailable{background:rgba(0,0,0,.25); color:#cfcfcf; border-color:#666; font-weight:500}
+    /* Toast */
+    #toast{position:fixed;left:50%;top:20px;transform:translateX(-50%);background:rgba(15,31,42,.9);color:#fff;border:1px solid rgba(255,255,255,.18);padding:10px 14px;border-radius:8px;z-index:100;box-shadow:0 6px 24px rgba(0,0,0,.35);display:none}
+
+    /* Neutral borders (removed gold glow) */
+    .card, .badge, input, select, textarea, img, #toast {
+      border:1px solid #d0d0d0 !important;
+      box-shadow: 0 4px 16px rgba(0,0,0,.1), inset 0 1px 0 rgba(255,255,255,.3);
+    }
+    .card:hover {
+      box-shadow: 0 8px 24px rgba(0,0,0,.15), inset 0 1px 0 rgba(255,255,255,.4);
+    }
+    #vehicle-grid .card {
+      box-shadow: 0 4px 12px rgba(0,0,0,.1) !important;
+      border:1px solid #d0d0d0 !important;
+    }
+    #vehicle-grid .card:hover {
+      box-shadow: 0 8px 16px rgba(0,0,0,.15) !important;
+    }
+    #vehicle-grid img, #vehicle-grid .card .body, #vehicle-grid .card .body * {
+      box-shadow: none !important;
+      border-color: transparent !important;
+    }
+    /* Remove glow from Driver License Information inputs */
+    #signup #licenseNumber,
+    #signup #licenseCountry,
+    #signup #licenseIssueDate,
+    #signup #licenseExpireDate,
+    #signup #licensePhoto,
+    #signup #photoPreview img {
+      box-shadow:none !important;
+      border:1px solid #d0d0d0 !important;
+    }
+    /* Crisp styling for Driver License Information (reduce blur) */
+    #signup #licenseNumber,
+    #signup #licenseCountry,
+    #signup #licenseIssueDate,
+    #signup #licenseExpireDate,
+    #signup #licensePhoto {
+      background:#ffffff !important;
+      color:#111 !important;
+      filter:none !important;
+      backdrop-filter:none !important;
+      box-shadow:none !important;
+      border:1px solid #9e9e9e !important;
+    }
+    /* Black text for all signup inputs */
+    #signup input,
+    #signup select,
+    #signup textarea {
+      color:#000 !important;
+    }
+    /* Black text for login inputs */
+    #login input {
+      color:#000 !important;
+    }
+    #signup #photoPreview img {
+      background:#fff !important;
+      filter:none !important;
+      backdrop-filter:none !important;
+      image-rendering:auto;
+      box-shadow:none !important;
+      border:1px solid #9e9e9e !important;
+    }
+
+    /* Global text reset to black & remove glows */
+    /* Scope text color: keep cards & headings black, avoid forcing all elements */
+    /* High contrast text strategy */
+    .card .body, .license-section { color:#000000 !important; }
+    footer { color:var(--gold) !important; }
+    .section p, .section label, .section small, .section li { color:var(--gold); }
+    /* Banner and snow text now gold */
+    .holiday, .holiday * { color:var(--gold) !important; }
+    .flake { color:var(--gold) !important; }
+    header, header * { color:var(--gold) !important; }
+  </style>
+</head>
+<body>
+  <div class="holiday">🚗 Premium Car Rental — Quality Vehicles, Professional Service ✨</div>
+  <div id="toast"></div>
+  <div class="wrap">
+    <header class="wrap">
+      <div style="display:flex;align-items:center;gap:10px; padding:6px 0">
+        <img src="assets/icon.png.png" alt="Clydero Cash Car Rental company logo" loading="lazy" style="width:28px;height:28px;border-radius:50%;object-fit:cover;border:1px solid rgba(255,255,255,.2)" />
+        <div>
+          <div style="font-weight:800;line-height:1">Clydero Cash Car Rental</div>
+          <small style="color:var(--muted)">Atlanta, GA</small>
+        </div>
+      </div>
+      <nav>
+        <button class="navbtn" data-nav="vehicles">Vehicles</button>
+        <button class="navbtn" data-nav="about">About</button>
+        <button class="navbtn" data-nav="booking" style="display:none">Booking</button>
+        <button class="navbtn" data-nav="payments" style="display:none">Payments</button>
+        <button class="navbtn" data-nav="login">Login</button>
+        <button class="navbtn" data-nav="membership">Membership</button>
+        <button class="navbtn" data-nav="contact">Contact</button>
+        <button class="navbtn" data-nav="admin" id="adminTab" style="display:none; position:relative">Admin <span id="adminBadge" style="display:none;position:absolute;top:-6px;right:-6px;background:var(--brand);color:#fff;border-radius:12px;padding:0 6px;font-size:12px;line-height:18px;min-width:18px;text-align:center">0</span></button>
+      </nav>
+    </header>
+
+    <section id="vehicles" class="section">
+      <div class="wrap">
+        <h1>Vehicles</h1>
+        <div id="vehicle-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px"></div>
+      </div>
+    </section>
+
+    <!-- Vehicle Gallery Modal -->
+    <div id="vehicleGalleryModal" class="card" style="max-width:860px;margin:12px auto;display:none" aria-modal="true" role="dialog" aria-labelledby="vgTitle">
+      <div class="body">
+        <div style="display:flex;align-items:center;gap:8px">
+          <h3 id="vgTitle" style="margin:0;flex:1">Gallery</h3>
+          <button class="navbtn" id="vgClose" type="button">Close</button>
+        </div>
+        <div style="position:relative;margin-top:8px">
+          <img id="vgImage" alt="Selected vehicle gallery photo" loading="lazy" style="width:100%;height:auto;border-radius:8px;border:1px solid rgba(255,255,255,.12)">
+          <button class="navbtn" id="vgPrev" type="button" style="position:absolute;top:50%;left:8px;transform:translateY(-50%)">‹ Prev</button>
+          <button class="navbtn" id="vgNext" type="button" style="position:absolute;top:50%;right:8px;transform:translateY(-50%)">Next ›</button>
+        </div>
+        <div id="vgCaption" class="muted" style="margin-top:8px"></div>
+      </div>
+    </div>
+    
+    <section id="about" class="section">
+      <div class="wrap">
+        <h2>About Clydero Cash Car Rental</h2>
+        <p style="color:var(--muted)">Clydero Cash Car Rental (CCR) is a privately owned vehicle rental and rent-to-own service. All vehicles are personally owned and managed by CCR. Membership is required for full access to booking and payment features. CCR focuses on reliability, transparency, and convenience for every customer.</p>
+      </div>
+    </section>
+
+    <section id="login" class="section">
+      <div class="wrap">
+        <h2>Member Login</h2>
+        <form id="login-form" class="card" style="max-width:420px">
+          <div class="body">
+            <label style="color:#000">Email</label>
+            <input id="loginEmail" type="email" required style="width:100%;color:#000">
+            <label style="margin-top:8px;color:#000">Password</label>
+            <input id="loginPassword" type="password" required style="width:100%;color:#000">
+            <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <button class="navbtn" type="submit">Log in</button>
+              <button class="navbtn" type="button" id="forgotPassword">Forgot password</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section id="membership" class="section">
+      <div class="wrap">
+        <h2 id="membershipTitle">Membership</h2>
+        <div id="membershipContent">
+          <p style="color:var(--muted)">Create your account to unlock booking and payments.</p>
+          <a class="navbtn" data-nav="signup">Go to Sign Up</a>
+        </div>
+        <div id="accountPanel" style="display:none">
+          <div class="card" style="max-width:560px">
+            <div class="body">
+              <h3 style="margin-top:0">My Account</h3>
+              <div id="accountSummary" style="white-space:pre-wrap;font-size:14px"></div>
+              <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+                <button class="navbtn" id="accountLogout" type="button">Logout</button>
+                <button class="navbtn" data-nav="signup" type="button">Update Info</button>
+                <button class="navbtn" id="accountDelete" type="button" style="background:#c1121f;border-color:#c1121f">Delete Account</button>
+              </div>
+              <div style="margin-top:16px">
+                <h3 style="margin:0 0 8px 0">My Bookings</h3>
+                <div id="accountBookings" style="display:grid;gap:8px"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Extend Booking Modal -->
+        <div id="extendModal" class="card" style="max-width:480px;margin-top:12px;display:none">
+          <div class="body">
+            <h3 style="margin-top:0">Extend Booking</h3>
+            <div class="muted" style="font-size:12px">Extensions are weekly only (1+ weeks).</div>
+            <div style="display:grid;grid-template-columns:1fr;gap:8px;margin-top:8px">
+              <div><span class="muted" style="font-size:12px">Current return date</span>
+                <div id="extendCurrent" style="font-weight:700"></div></div>
+              <div>
+                <label>Add weeks</label>
+                <select id="extendWeeks" style="width:100%">
+                  <option value="1">1 week</option>
+                  <option value="2">2 weeks</option>
+                  <option value="3">3 weeks</option>
+                  <option value="4">4 weeks</option>
+                </select>
+              </div>
+              <div><span class="muted" style="font-size:12px">New return date</span>
+                <div id="extendPreview" style="font-weight:700"></div></div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:12px">
+              <button class="navbtn" id="extendSave" type="button">Save</button>
+              <button class="navbtn" id="extendCancel" type="button">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="signup" class="section">
+      <div class="wrap">
+        <h2>Sign Up</h2>
+        <form id="signup-form" class="card" style="max-width:520px">
+          <div class="body">
+            <label style="color:#000">First name</label><input id="firstName" required style="width:100%">
+            <label style="margin-top:8px;color:#000">Last name</label><input id="lastName" required style="width:100%">
+            
+            <label style="margin-top:8px;color:#000">Email</label><input id="email" type="email" required style="width:100%">
+            <label style="margin-top:8px;color:#000">Verify email</label><input id="verifyEmail" type="email" required style="width:100%">
+            <small id="emailMatch" style="color:var(--muted);display:block;margin-top:4px"></small>
+            
+            <label style="margin-top:8px;color:#000">Password</label><input id="password" type="password" required style="width:100%">
+            <label style="margin-top:8px;color:#000">Verify password</label><input id="verifyPassword" type="password" required style="width:100%">
+            <small id="passwordMatch" style="color:var(--muted);display:block;margin-top:4px"></small>
+            
+            <label style="margin-top:8px;color:#000">Address</label><input id="address" required style="width:100%">
+            <label style="margin-top:8px;color:#000">State</label><input id="state" required style="width:100%">
+            <label style="margin-top:8px;color:#000">Country</label>
+            <select id="country" required style="width:100%">
+              <option value="">Select country...</option>
+              <option value="Afghanistan">Afghanistan</option>
+              <option value="Albania">Albania</option>
+              <option value="Algeria">Algeria</option>
+              <option value="Andorra">Andorra</option>
+              <option value="Angola">Angola</option>
+              <option value="Antigua and Barbuda">Antigua and Barbuda</option>
+              <option value="Argentina">Argentina</option>
+              <option value="Armenia">Armenia</option>
+              <option value="Australia">Australia</option>
+              <option value="Austria">Austria</option>
+              <option value="Azerbaijan">Azerbaijan</option>
+              <option value="Bahamas">Bahamas</option>
+              <option value="Bahrain">Bahrain</option>
+              <option value="Bangladesh">Bangladesh</option>
+              <option value="Barbados">Barbados</option>
+              <option value="Belarus">Belarus</option>
+              <option value="Belgium">Belgium</option>
+              <option value="Belize">Belize</option>
+              <option value="Benin">Benin</option>
+              <option value="Bhutan">Bhutan</option>
+              <option value="Bolivia">Bolivia</option>
+              <option value="Bosnia and Herzegovina">Bosnia and Herzegovina</option>
+              <option value="Botswana">Botswana</option>
+              <option value="Brazil">Brazil</option>
+              <option value="Brunei">Brunei</option>
+              <option value="Bulgaria">Bulgaria</option>
+              <option value="Burkina Faso">Burkina Faso</option>
+              <option value="Burundi">Burundi</option>
+              <option value="Cabo Verde">Cabo Verde</option>
+              <option value="Cambodia">Cambodia</option>
+              <option value="Cameroon">Cameroon</option>
+              <option value="Canada">Canada</option>
+              <option value="Central African Republic">Central African Republic</option>
+              <option value="Chad">Chad</option>
+              <option value="Chile">Chile</option>
+              <option value="China">China</option>
+              <option value="Colombia">Colombia</option>
+              <option value="Comoros">Comoros</option>
+              <option value="Congo">Congo</option>
+              <option value="Costa Rica">Costa Rica</option>
+              <option value="Croatia">Croatia</option>
+              <option value="Cuba">Cuba</option>
+              <option value="Cyprus">Cyprus</option>
+              <option value="Czech Republic">Czech Republic</option>
+              <option value="Democratic Republic of the Congo">Democratic Republic of the Congo</option>
+              <option value="Denmark">Denmark</option>
+              <option value="Djibouti">Djibouti</option>
+              <option value="Dominica">Dominica</option>
+              <option value="Dominican Republic">Dominican Republic</option>
+              <option value="East Timor">East Timor</option>
+              <option value="Ecuador">Ecuador</option>
+              <option value="Egypt">Egypt</option>
+              <option value="El Salvador">El Salvador</option>
+              <option value="Equatorial Guinea">Equatorial Guinea</option>
+              <option value="Eritrea">Eritrea</option>
+              <option value="Estonia">Estonia</option>
+              <option value="Eswatini">Eswatini</option>
+              <option value="Ethiopia">Ethiopia</option>
+              <option value="Fiji">Fiji</option>
+              <option value="Finland">Finland</option>
+              <option value="France">France</option>
+              <option value="Gabon">Gabon</option>
+              <option value="Gambia">Gambia</option>
+              <option value="Georgia">Georgia</option>
+              <option value="Germany">Germany</option>
+              <option value="Ghana">Ghana</option>
+              <option value="Greece">Greece</option>
+              <option value="Grenada">Grenada</option>
+              <option value="Guatemala">Guatemala</option>
+              <option value="Guinea">Guinea</option>
+              <option value="Guinea-Bissau">Guinea-Bissau</option>
+              <option value="Guyana">Guyana</option>
+              <option value="Haiti">Haiti</option>
+              <option value="Honduras">Honduras</option>
+              <option value="Hungary">Hungary</option>
+              <option value="Iceland">Iceland</option>
+              <option value="India">India</option>
+              <option value="Indonesia">Indonesia</option>
+              <option value="Iran">Iran</option>
+              <option value="Iraq">Iraq</option>
+              <option value="Ireland">Ireland</option>
+              <option value="Israel">Israel</option>
+              <option value="Italy">Italy</option>
+              <option value="Ivory Coast">Ivory Coast</option>
+              <option value="Jamaica">Jamaica</option>
+              <option value="Japan">Japan</option>
+              <option value="Jordan">Jordan</option>
+              <option value="Kazakhstan">Kazakhstan</option>
+              <option value="Kenya">Kenya</option>
+              <option value="Kiribati">Kiribati</option>
+              <option value="Kosovo">Kosovo</option>
+              <option value="Kuwait">Kuwait</option>
+              <option value="Kyrgyzstan">Kyrgyzstan</option>
+              <option value="Laos">Laos</option>
+              <option value="Latvia">Latvia</option>
+              <option value="Lebanon">Lebanon</option>
+              <option value="Lesotho">Lesotho</option>
+              <option value="Liberia">Liberia</option>
+              <option value="Libya">Libya</option>
+              <option value="Liechtenstein">Liechtenstein</option>
+              <option value="Lithuania">Lithuania</option>
+              <option value="Luxembourg">Luxembourg</option>
+              <option value="Madagascar">Madagascar</option>
+              <option value="Malawi">Malawi</option>
+              <option value="Malaysia">Malaysia</option>
+              <option value="Maldives">Maldives</option>
+              <option value="Mali">Mali</option>
+              <option value="Malta">Malta</option>
+              <option value="Marshall Islands">Marshall Islands</option>
+              <option value="Mauritania">Mauritania</option>
+              <option value="Mauritius">Mauritius</option>
+              <option value="Mexico">Mexico</option>
+              <option value="Micronesia">Micronesia</option>
+              <option value="Moldova">Moldova</option>
+              <option value="Monaco">Monaco</option>
+              <option value="Mongolia">Mongolia</option>
+              <option value="Montenegro">Montenegro</option>
+              <option value="Morocco">Morocco</option>
+              <option value="Mozambique">Mozambique</option>
+              <option value="Myanmar">Myanmar</option>
+              <option value="Namibia">Namibia</option>
+              <option value="Nauru">Nauru</option>
+              <option value="Nepal">Nepal</option>
+              <option value="Netherlands">Netherlands</option>
+              <option value="New Zealand">New Zealand</option>
+              <option value="Nicaragua">Nicaragua</option>
+              <option value="Niger">Niger</option>
+              <option value="Nigeria">Nigeria</option>
+              <option value="North Korea">North Korea</option>
+              <option value="North Macedonia">North Macedonia</option>
+              <option value="Norway">Norway</option>
+              <option value="Oman">Oman</option>
+              <option value="Pakistan">Pakistan</option>
+              <option value="Palau">Palau</option>
+              <option value="Palestine">Palestine</option>
+              <option value="Panama">Panama</option>
+              <option value="Papua New Guinea">Papua New Guinea</option>
+              <option value="Paraguay">Paraguay</option>
+              <option value="Peru">Peru</option>
+              <option value="Philippines">Philippines</option>
+              <option value="Poland">Poland</option>
+              <option value="Portugal">Portugal</option>
+              <option value="Qatar">Qatar</option>
+              <option value="Romania">Romania</option>
+              <option value="Russia">Russia</option>
+              <option value="Rwanda">Rwanda</option>
+              <option value="Saint Kitts and Nevis">Saint Kitts and Nevis</option>
+              <option value="Saint Lucia">Saint Lucia</option>
+              <option value="Saint Vincent and the Grenadines">Saint Vincent and the Grenadines</option>
+              <option value="Samoa">Samoa</option>
+              <option value="San Marino">San Marino</option>
+              <option value="Sao Tome and Principe">Sao Tome and Principe</option>
+              <option value="Saudi Arabia">Saudi Arabia</option>
+              <option value="Senegal">Senegal</option>
+              <option value="Serbia">Serbia</option>
+              <option value="Seychelles">Seychelles</option>
+              <option value="Sierra Leone">Sierra Leone</option>
+              <option value="Singapore">Singapore</option>
+              <option value="Slovakia">Slovakia</option>
+              <option value="Slovenia">Slovenia</option>
+              <option value="Solomon Islands">Solomon Islands</option>
+              <option value="Somalia">Somalia</option>
+              <option value="South Africa">South Africa</option>
+              <option value="South Korea">South Korea</option>
+              <option value="South Sudan">South Sudan</option>
+              <option value="Spain">Spain</option>
+              <option value="Sri Lanka">Sri Lanka</option>
+              <option value="Sudan">Sudan</option>
+              <option value="Suriname">Suriname</option>
+              <option value="Sweden">Sweden</option>
+              <option value="Switzerland">Switzerland</option>
+              <option value="Syria">Syria</option>
+              <option value="Taiwan">Taiwan</option>
+              <option value="Tajikistan">Tajikistan</option>
+              <option value="Tanzania">Tanzania</option>
+              <option value="Thailand">Thailand</option>
+              <option value="Togo">Togo</option>
+              <option value="Tonga">Tonga</option>
+              <option value="Trinidad and Tobago">Trinidad and Tobago</option>
+              <option value="Tunisia">Tunisia</option>
+              <option value="Turkey">Turkey</option>
+              <option value="Turkmenistan">Turkmenistan</option>
+              <option value="Tuvalu">Tuvalu</option>
+              <option value="Uganda">Uganda</option>
+              <option value="Ukraine">Ukraine</option>
+              <option value="United Arab Emirates">United Arab Emirates</option>
+              <option value="United Kingdom">United Kingdom</option>
+              <option value="United States">United States</option>
+              <option value="Uruguay">Uruguay</option>
+              <option value="Uzbekistan">Uzbekistan</option>
+              <option value="Vanuatu">Vanuatu</option>
+              <option value="Vatican City">Vatican City</option>
+              <option value="Venezuela">Venezuela</option>
+              <option value="Vietnam">Vietnam</option>
+              <option value="Yemen">Yemen</option>
+              <option value="Zambia">Zambia</option>
+              <option value="Zimbabwe">Zimbabwe</option>
+            </select>
+            
+            <hr style="border:none;height:1px;background:rgba(255,255,255,.08);margin:16px 0">
+            <div class="license-section" style="padding:12px;border:1px solid #d0d0d0;border-radius:8px;background:#fafafa">
+              <h3 style="margin:0 0 12px 0;font-size:16px;color:#111;font-weight:700;letter-spacing:.5px">Driver License Information</h3>
+              <label style="font-weight:600;color:#111">Driver license number</label><input id="licenseNumber" required style="width:100%;font-weight:600;color:#111">
+              <label style="margin-top:8px;font-weight:600;color:#111">License country</label>
+              <select id="licenseCountry" required style="width:100%;font-weight:600;color:#111">
+              <option value="">Select country...</option>
+              <option value="Afghanistan">Afghanistan</option>
+              <option value="Albania">Albania</option>
+              <option value="Algeria">Algeria</option>
+              <option value="Andorra">Andorra</option>
+              <option value="Angola">Angola</option>
+              <option value="Antigua and Barbuda">Antigua and Barbuda</option>
+              <option value="Argentina">Argentina</option>
+              <option value="Armenia">Armenia</option>
+              <option value="Australia">Australia</option>
+              <option value="Austria">Austria</option>
+              <option value="Azerbaijan">Azerbaijan</option>
+              <option value="Bahamas">Bahamas</option>
+              <option value="Bahrain">Bahrain</option>
+              <option value="Bangladesh">Bangladesh</option>
+              <option value="Barbados">Barbados</option>
+              <option value="Belarus">Belarus</option>
+              <option value="Belgium">Belgium</option>
+              <option value="Belize">Belize</option>
+              <option value="Benin">Benin</option>
+              <option value="Bhutan">Bhutan</option>
+              <option value="Bolivia">Bolivia</option>
+              <option value="Bosnia and Herzegovina">Bosnia and Herzegovina</option>
+              <option value="Botswana">Botswana</option>
+              <option value="Brazil">Brazil</option>
+              <option value="Brunei">Brunei</option>
+              <option value="Bulgaria">Bulgaria</option>
+              <option value="Burkina Faso">Burkina Faso</option>
+              <option value="Burundi">Burundi</option>
+              <option value="Cabo Verde">Cabo Verde</option>
+              <option value="Cambodia">Cambodia</option>
+              <option value="Cameroon">Cameroon</option>
+              <option value="Canada">Canada</option>
+              <option value="Central African Republic">Central African Republic</option>
+              <option value="Chad">Chad</option>
+              <option value="Chile">Chile</option>
+              <option value="China">China</option>
+              <option value="Colombia">Colombia</option>
+              <option value="Comoros">Comoros</option>
+              <option value="Congo">Congo</option>
+              <option value="Costa Rica">Costa Rica</option>
+              <option value="Croatia">Croatia</option>
+              <option value="Cuba">Cuba</option>
+              <option value="Cyprus">Cyprus</option>
+              <option value="Czech Republic">Czech Republic</option>
+              <option value="Democratic Republic of the Congo">Democratic Republic of the Congo</option>
+              <option value="Denmark">Denmark</option>
+              <option value="Djibouti">Djibouti</option>
+              <option value="Dominica">Dominica</option>
+              <option value="Dominican Republic">Dominican Republic</option>
+              <option value="East Timor">East Timor</option>
+              <option value="Ecuador">Ecuador</option>
+              <option value="Egypt">Egypt</option>
+              <option value="El Salvador">El Salvador</option>
+              <option value="Equatorial Guinea">Equatorial Guinea</option>
+              <option value="Eritrea">Eritrea</option>
+              <option value="Estonia">Estonia</option>
+              <option value="Eswatini">Eswatini</option>
+              <option value="Ethiopia">Ethiopia</option>
+              <option value="Fiji">Fiji</option>
+              <option value="Finland">Finland</option>
+              <option value="France">France</option>
+              <option value="Gabon">Gabon</option>
+              <option value="Gambia">Gambia</option>
+              <option value="Georgia">Georgia</option>
+              <option value="Germany">Germany</option>
+              <option value="Ghana">Ghana</option>
+              <option value="Greece">Greece</option>
+              <option value="Grenada">Grenada</option>
+              <option value="Guatemala">Guatemala</option>
+              <option value="Guinea">Guinea</option>
+              <option value="Guinea-Bissau">Guinea-Bissau</option>
+              <option value="Guyana">Guyana</option>
+              <option value="Haiti">Haiti</option>
+              <option value="Honduras">Honduras</option>
+              <option value="Hungary">Hungary</option>
+              <option value="Iceland">Iceland</option>
+              <option value="India">India</option>
+              <option value="Indonesia">Indonesia</option>
+              <option value="Iran">Iran</option>
+              <option value="Iraq">Iraq</option>
+              <option value="Ireland">Ireland</option>
+              <option value="Israel">Israel</option>
+              <option value="Italy">Italy</option>
+              <option value="Ivory Coast">Ivory Coast</option>
+              <option value="Jamaica">Jamaica</option>
+              <option value="Japan">Japan</option>
+              <option value="Jordan">Jordan</option>
+              <option value="Kazakhstan">Kazakhstan</option>
+              <option value="Kenya">Kenya</option>
+              <option value="Kiribati">Kiribati</option>
+              <option value="Kosovo">Kosovo</option>
+              <option value="Kuwait">Kuwait</option>
+              <option value="Kyrgyzstan">Kyrgyzstan</option>
+              <option value="Laos">Laos</option>
+              <option value="Latvia">Latvia</option>
+              <option value="Lebanon">Lebanon</option>
+              <option value="Lesotho">Lesotho</option>
+              <option value="Liberia">Liberia</option>
+              <option value="Libya">Libya</option>
+              <option value="Liechtenstein">Liechtenstein</option>
+              <option value="Lithuania">Lithuania</option>
+              <option value="Luxembourg">Luxembourg</option>
+              <option value="Madagascar">Madagascar</option>
+              <option value="Malawi">Malawi</option>
+              <option value="Malaysia">Malaysia</option>
+              <option value="Maldives">Maldives</option>
+              <option value="Mali">Mali</option>
+              <option value="Malta">Malta</option>
+              <option value="Marshall Islands">Marshall Islands</option>
+              <option value="Mauritania">Mauritania</option>
+              <option value="Mauritius">Mauritius</option>
+              <option value="Mexico">Mexico</option>
+              <option value="Micronesia">Micronesia</option>
+              <option value="Moldova">Moldova</option>
+              <option value="Monaco">Monaco</option>
+              <option value="Mongolia">Mongolia</option>
+              <option value="Montenegro">Montenegro</option>
+              <option value="Morocco">Morocco</option>
+              <option value="Mozambique">Mozambique</option>
+              <option value="Myanmar">Myanmar</option>
+              <option value="Namibia">Namibia</option>
+              <option value="Nauru">Nauru</option>
+              <option value="Nepal">Nepal</option>
+              <option value="Netherlands">Netherlands</option>
+              <option value="New Zealand">New Zealand</option>
+              <option value="Nicaragua">Nicaragua</option>
+              <option value="Niger">Niger</option>
+              <option value="Nigeria">Nigeria</option>
+              <option value="North Korea">North Korea</option>
+              <option value="North Macedonia">North Macedonia</option>
+              <option value="Norway">Norway</option>
+              <option value="Oman">Oman</option>
+              <option value="Pakistan">Pakistan</option>
+              <option value="Palau">Palau</option>
+              <option value="Palestine">Palestine</option>
+              <option value="Panama">Panama</option>
+              <option value="Papua New Guinea">Papua New Guinea</option>
+              <option value="Paraguay">Paraguay</option>
+              <option value="Peru">Peru</option>
+              <option value="Philippines">Philippines</option>
+              <option value="Poland">Poland</option>
+              <option value="Portugal">Portugal</option>
+              <option value="Qatar">Qatar</option>
+              <option value="Romania">Romania</option>
+              <option value="Russia">Russia</option>
+              <option value="Rwanda">Rwanda</option>
+              <option value="Saint Kitts and Nevis">Saint Kitts and Nevis</option>
+              <option value="Saint Lucia">Saint Lucia</option>
+              <option value="Saint Vincent and the Grenadines">Saint Vincent and the Grenadines</option>
+              <option value="Samoa">Samoa</option>
+              <option value="San Marino">San Marino</option>
+              <option value="Sao Tome and Principe">Sao Tome and Principe</option>
+              <option value="Saudi Arabia">Saudi Arabia</option>
+              <option value="Senegal">Senegal</option>
+              <option value="Serbia">Serbia</option>
+              <option value="Seychelles">Seychelles</option>
+              <option value="Sierra Leone">Sierra Leone</option>
+              <option value="Singapore">Singapore</option>
+              <option value="Slovakia">Slovakia</option>
+              <option value="Slovenia">Slovenia</option>
+              <option value="Solomon Islands">Solomon Islands</option>
+              <option value="Somalia">Somalia</option>
+              <option value="South Africa">South Africa</option>
+              <option value="South Korea">South Korea</option>
+              <option value="South Sudan">South Sudan</option>
+              <option value="Spain">Spain</option>
+              <option value="Sri Lanka">Sri Lanka</option>
+              <option value="Sudan">Sudan</option>
+              <option value="Suriname">Suriname</option>
+              <option value="Sweden">Sweden</option>
+              <option value="Switzerland">Switzerland</option>
+              <option value="Syria">Syria</option>
+              <option value="Taiwan">Taiwan</option>
+              <option value="Tajikistan">Tajikistan</option>
+              <option value="Tanzania">Tanzania</option>
+              <option value="Thailand">Thailand</option>
+              <option value="Togo">Togo</option>
+              <option value="Tonga">Tonga</option>
+              <option value="Trinidad and Tobago">Trinidad and Tobago</option>
+              <option value="Tunisia">Tunisia</option>
+              <option value="Turkey">Turkey</option>
+              <option value="Turkmenistan">Turkmenistan</option>
+              <option value="Tuvalu">Tuvalu</option>
+              <option value="Uganda">Uganda</option>
+              <option value="Ukraine">Ukraine</option>
+              <option value="United Arab Emirates">United Arab Emirates</option>
+              <option value="United Kingdom">United Kingdom</option>
+              <option value="United States">United States</option>
+              <option value="Uruguay">Uruguay</option>
+              <option value="Uzbekistan">Uzbekistan</option>
+              <option value="Vanuatu">Vanuatu</option>
+              <option value="Vatican City">Vatican City</option>
+              <option value="Venezuela">Venezuela</option>
+              <option value="Vietnam">Vietnam</option>
+              <option value="Yemen">Yemen</option>
+              <option value="Zambia">Zambia</option>
+              <option value="Zimbabwe">Zimbabwe</option>
+            </select>
+            
+              <div style="display:flex;gap:8px;margin-top:8px">
+                <div style="flex:1"><label style="font-weight:600;color:#111">Issue date</label><input id="licenseIssueDate" type="date" required style="width:100%;font-weight:600;color:#111"></div>
+                <div style="flex:1"><label style="font-weight:600;color:#111">Expire date</label><input id="licenseExpireDate" type="date" required style="width:100%;font-weight:600;color:#111"></div>
+              </div>
+              <label style="margin-top:8px;font-weight:600;color:#111">Live photo holding license</label>
+              <input id="licensePhoto" type="file" accept="image/*" capture="user" required style="width:100%;font-weight:600;color:#111">
+              <small style="color:#555;display:block;margin-top:4px;font-weight:500">Take a live photo with your face and license visible</small>
+              <div id="photoPreview" style="margin-top:8px;max-width:220px"></div>
+            </div>
+            
+            <div style="margin-top:10px"><button class="navbtn" type="submit">Create account</button></div>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section id="booking" class="section">
+      <div class="wrap">
+        <h2>Booking</h2>
+        <form id="booking-form" class="card" style="max-width:520px">
+          <div class="body">
+            <div class="muted" style="font-size:12px;margin-bottom:6px">Weekly rentals only</div>
+            <label>Vehicle</label>
+            <select id="vehicle-select" style="width:100%"></select>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <div style="flex:1"><label>Pick-up date</label><input id="pickupDate" type="date" required style="width:100%"></div>
+              <div style="flex:1"><label>Weeks</label>
+                <select id="bookingWeeks" style="width:100%">
+                  <option value="1">1 week</option>
+                  <option value="2">2 weeks</option>
+                  <option value="3">3 weeks</option>
+                  <option value="4">4 weeks</option>
+                </select>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <div style="flex:1"><label>Return date</label><input id="returnDate" type="date" required style="width:100%" readonly></div>
+            </div>
+            <div style="margin-top:10px"><button class="navbtn" type="submit">Request reservation</button></div>
+          </div>
+        </form>
+        <div id="my-bookings" class="wrap" style="padding:0"></div>
+      </div>
+    </section>
+
+    <section id="payments" class="section">
+      <div class="wrap">
+        <h2>Payments</h2>
+        <p style="color:var(--muted)">We accept the following payment methods:</p>
+        
+        <div class="card" style="max-width:600px;margin-bottom:20px">
+          <div class="body">
+            <h3 style="margin-top:0">Accepted Payment Methods</h3>
+            
+            <div style="display:grid;gap:12px">
+              <div style="padding:12px;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid rgba(255,255,255,.08)">
+                <strong style="color:var(--gold)">💳 Chime</strong>
+                <div style="color:#000;margin-top:4px">Phone: <strong style="color:#000">470-571-6993</strong></div>
+              </div>
+              
+              <div style="padding:12px;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid rgba(255,255,255,.08)">
+                <strong style="color:var(--gold)">💸 Zelle</strong>
+                <div style="color:#000;margin-top:4px">Phone: <strong style="color:#000">470-571-6993</strong></div>
+              </div>
+              
+              <div style="padding:12px;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid rgba(255,255,255,.08)">
+                <strong style="color:var(--gold)">💙 PayPal</strong>
+                <div style="color:#000;margin-top:4px">Available for online payments</div>
+              </div>
+              
+              <div style="padding:12px;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid rgba(255,255,255,.08)">
+                <strong style="color:var(--gold)">💵 Cash</strong>
+                <div style="color:#000;margin-top:4px">In-person payments accepted</div>
+              </div>
+            </div>
+            
+            <p style="margin-top:16px;margin-bottom:0;color:var(--muted);font-size:14px">
+              Please include your booking reference number with all payments.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="contact" class="section">
+      <div class="wrap">
+        <h2>Contact</h2>
+        <form id="contact-form" class="card" style="max-width:520px">
+          <div class="body">
+            <label style="color:#000">First name</label><input id="cFirst" required style="width:100%;color:#000">
+            <label style="margin-top:8px;color:#000">Last name</label><input id="cLast" required style="width:100%;color:#000">
+            <label style="margin-top:8px;color:#000">Email</label><input id="cEmail" type="email" required style="width:100%;color:#000">
+            <label style="margin-top:8px;color:#000">Message</label><textarea id="cMsg" rows="4" required style="width:100%;color:#000" placeholder="Type your message… (vehicle, dates, questions)"></textarea>
+            <div class="card" style="margin-top:10px">
+              <div class="body" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                <span>Solve to prove you’re human:</span>
+                <strong id="captchaQuestion">1 + 2 = ?</strong>
+                <input id="captchaAnswer" inputmode="numeric" pattern="[0-9]*" placeholder="Answer" style="width:100px">
+                <button class="navbtn" id="captchaRefresh" type="button">↻</button>
+              </div>
+            </div>
+            <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+              <button class="navbtn" type="submit">Send</button>
+              <a id="waDirect" class="navbtn" href="#" target="_blank" rel="noopener">WhatsApp</a>
+            </div>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section id="admin" class="section">
+      <div class="wrap">
+        <h2>Owner Admin</h2>
+        <p style="color:var(--muted);max-width:1000px">Welcome, owner. Visible only when logged in as <strong>clyderofraser97@gmail.com</strong>.</p>
+        
+        <details class="card" style="max-width:1000px;margin-top:16px" open>
+          <summary style="cursor:pointer;font-size:18px;font-weight:700;padding:16px;margin:-16px;margin-bottom:16px;background:rgba(212,175,55,0.1);border-radius:8px;user-select:none">🚗 Vehicles Management</summary>
+          <div class="body">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0">
+              <button class="navbtn" id="adminRefresh" type="button">Refresh</button>
+              <button class="navbtn" id="adminAddVehicle" type="button">Add Vehicle</button>
+              <button class="navbtn" id="adminEditAbout" type="button">Edit About Page</button>
+            </div>
+            <div id="admin-vehicles" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px"></div>
+          </div>
+        </details>
+        <!-- Inbox Section -->
+        <details class="card" style="max-width:1000px;margin-top:16px">
+          <summary style="cursor:pointer;font-size:18px;font-weight:700;padding:16px;margin:-16px;margin-bottom:16px;background:rgba(212,175,55,0.1);border-radius:8px;user-select:none">📧 Admin Inbox</summary>
+          <div class="body">
+            <p style="color:var(--muted);margin-top:0">Messages submitted through the public contact form appear here. You can mark them read or delete them.</p>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0">
+              <button class="navbtn" id="inboxRefresh" type="button">Refresh Inbox</button>
+              <button class="navbtn" id="inboxMarkAllRead" type="button">Mark All Read</button>
+            </div>
+            <div id="adminInbox" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px"></div>
+          </div>
+        </details>
+        <!-- Membership Section -->
+        <details class="card" style="max-width:1000px;margin-top:16px">
+          <summary style="cursor:pointer;font-size:18px;font-weight:700;padding:16px;margin:-16px;margin-bottom:16px;background:rgba(212,175,55,0.1);border-radius:8px;user-select:none">👥 Admin Membership</summary>
+          <div class="body">
+            <p style="color:var(--muted);margin-top:0">Manage your members: view signup info, ban/unban, or delete accounts.</p>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0">
+              <button class="navbtn" id="membersRefresh" type="button">Refresh Members</button>
+            </div>
+            <div id="adminMembers" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px"></div>
+          </div>
+        </details>
+        <!-- Bookings Section -->
+        <details class="card" style="max-width:1000px;margin-top:16px">
+          <summary style="cursor:pointer;font-size:18px;font-weight:700;padding:16px;margin:-16px;margin-bottom:16px;background:rgba(212,175,55,0.1);border-radius:8px;user-select:none">📅 Admin Bookings</summary>
+          <div class="body">
+            <p style="color:var(--muted);margin-top:0">All customer bookings appear here. Accept, reject, mark rented, or delete.</p>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0">
+              <button class="navbtn" id="adminBookingsRefresh" type="button">Refresh Bookings</button>
+            </div>
+            <div id="adminBookings" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px"></div>
+          </div>
+        </details>
+        <!-- Member Details Modal -->
+        <div id="memberModal" class="card" style="max-width:760px;margin-top:12px;display:none">
+          <div class="body">
+            <h3 style="margin-top:0">Member Details</h3>
+            <div style="display:grid;grid-template-columns:1fr 220px;gap:12px;align-items:start">
+              <div id="memberDetails" style="white-space:pre-wrap"></div>
+              <div>
+                <div class="muted" style="font-size:12px;margin-bottom:6px">Live Photo</div>
+                <img id="memberPhoto" alt="Live photo" style="width:100%;height:auto;border-radius:8px;border:1px solid rgba(255,255,255,.12)" />
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:12px">
+              <button class="navbtn" id="memberClose" type="button">Close</button>
+            </div>
+          </div>
+        </div>
+        <!-- Reply Modal -->
+        <div id="replyModal" class="card" style="max-width:760px;margin-top:12px;display:none">
+          <div class="body">
+            <h3 style="margin-top:0">Reply</h3>
+            <div style="display:grid;grid-template-columns:1fr;gap:8px">
+              <label>To</label><input id="replyTo" style="width:100%" readonly>
+              <label>Subject</label><input id="replySubject" style="width:100%" value="Re: Clydero Cash Car Rental">
+              <label>Message</label><textarea id="replyBody" rows="6" style="width:100%" placeholder="Type your reply..."></textarea>
+              <div class="muted" style="font-size:12px">Make sure you send from company email: <strong>clyderoccr@gmail.com</strong></div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+              <button class="navbtn" id="replyOpenGmail" type="button">Open in Gmail</button>
+              <button class="navbtn" id="replyMailto" type="button">Email Client (mailto)</button>
+              <button class="navbtn" id="replySend" type="button">Send Now</button>
+              <button class="navbtn" id="replyTestSend" type="button">Test Send to clyderoccr@gmail.com</button>
+              <button class="navbtn" id="replyCopy" type="button">Copy Reply</button>
+              <button class="navbtn" id="replyClose" type="button">Close</button>
+            </div>
+          </div>
+        </div>
+        <!-- Editor Modal -->
+        <div id="vehEditorModal" class="card" style="max-width:760px;margin-top:12px;display:none">
+          <div class="body">
+            <h3 style="margin-top:0">Edit Vehicle</h3>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div>
+                <label>Name</label><input id="edName" style="width:100%">
+                <label style="margin-top:8px">Type</label><input id="edType" style="width:100%">
+                <label style="margin-top:8px">Seats</label><input id="edSeats" type="number" min="1" style="width:100%">
+                <label style="margin-top:8px">Price (per week)</label><input id="edPrice" type="number" min="1" style="width:100%">
+                <label style="margin-top:8px">Details</label><textarea id="edDetails" rows="4" style="width:100%" placeholder="Notes, trim, mileage, etc."></textarea>
+                <label style="margin-top:8px">Availability</label>
+                <select id="edAvailable" style="width:100%"><option value="true">Available</option><option value="false">Unavailable</option></select>
+              </div>
+              <div>
+                <strong>Photos</strong>
+                <div id="edImgList" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px"></div>
+                <div style="display:flex;gap:8px;margin-top:8px">
+                  <input id="edImgUrl" placeholder="Paste image URL" style="flex:1">
+                  <button class="navbtn" id="edAddImgUrl" type="button">+ Add URL</button>
+                  <label class="navbtn" for="edImgFile">+ Add File</label>
+                  <input id="edImgFile" type="file" accept="image/*" style="display:none">
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:12px">
+              <button class="navbtn" id="edSave" type="button">Save</button>
+              <button class="navbtn" id="edDelete" type="button" style="background:#c1121f;border-color:#c1121f">Delete Vehicle</button>
+              <button class="navbtn" id="edCancel" type="button">Cancel</button>
+            </div>
+          </div>
+        </div>
+        <!-- About Editor Modal -->
+        <div id="aboutEditorModal" class="card" style="max-width:760px;margin-top:12px;display:none">
+          <div class="body">
+            <h3 style="margin-top:0">Edit About Page</h3>
+            <label>Title</label><input id="aboutEdTitle" style="width:100%" placeholder="About Clydero Cash Car Rental">
+            <label style="margin-top:8px">Content</label><textarea id="aboutEdContent" rows="8" style="width:100%" placeholder="Enter the about page content..."></textarea>
+            <div style="display:flex;gap:8px;margin-top:12px">
+              <button class="navbtn" id="aboutEdSave" type="button">Save</button>
+              <button class="navbtn" id="aboutEdCancel" type="button">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="wrap" style="padding:20px 12px; color:var(--muted)">© <span id="year"></span> Clydero Cash Car Rental</footer>
+  </div>
+
+  <script type="module">
+    // Firebase configuration
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+    import { getFirestore, doc, getDoc, setDoc, collection, getDocs, updateDoc, deleteDoc, addDoc, onSnapshot, query, where } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+    import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
+    import { initializeAppCheck, ReCaptchaV3Provider } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check.js';
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+    import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js';
+    
+    const firebaseConfig = {
+      apiKey: "AIzaSyD454p-mIhykwpyKf15y3CLJXjeQZaaWfA",
+      authDomain: "clyderocashcarrental.firebaseapp.com",
+      projectId: "clyderocashcarrental",
+      storageBucket: "clyderocashcarrental.firebasestorage.app",
+      messagingSenderId: "59151943771",
+      appId: "1:59151943771:web:47016f11a3a5d70604977e"
+    };
+    
+    const app = initializeApp(firebaseConfig);
+    // Firebase App Check with reCAPTCHA v3
+    const appCheck = initializeAppCheck(app, {
+      provider: new ReCaptchaV3Provider('6LfphxosAAAAAMIiMO7feXcuKotxRCtkq6hFYGVp'),
+      isTokenAutoRefreshEnabled: true
+    });
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+    const auth = getAuth(app);
+    const functions = getFunctions(app);
+    
+    // Set auth persistence to LOCAL (keeps user logged in across page refreshes)
+    setPersistence(auth, browserLocalPersistence).then(() => {
+      console.log('Auth persistence set to LOCAL');
+    }).catch((error) => {
+      console.error('Error setting auth persistence:', error);
+    });
+    
+    // Make Firestore available globally
+    window.firestoreDB = db;
+    window.firestoreStorage = storage;
+    window.firestoreFunctions = functions;
+    window.firestoreUtils = { doc, getDoc, setDoc, collection, getDocs, updateDoc, deleteDoc, addDoc, onSnapshot, query, where };
+    window.storageUtils = { storageRef, uploadBytes, getDownloadURL };
+    window.functionsUtils = { httpsCallable };
+    window.authApi = { auth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, signOut, onAuthStateChanged };
+  </script>
+  <!-- EmailJS client SDK and config -->
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <script>
+    window.EMAILJS_CONFIG = {
+      publicKey: 'Sb_UNQnTWWgZq_mhu',
+      serviceId: 'service_4u3uaeo',
+      templateId: 'template_y80j9gg'
+    };
+  </script>
+  <script src="script.js"></script>
+  <script>
+    // Minimal snow
+    (function(){
+      function flake(){ const s=document.createElement('div'); s.className='flake'; s.textContent='❄'; s.style.left=Math.random()*100+'vw'; s.style.animationDuration=(Math.random()*3+5)+'s'; s.style.fontSize=(Math.random()*10+10)+'px'; document.body.appendChild(s); setTimeout(()=>s.remove(),8000);} 
+      for(let i=0;i<20;i++) setTimeout(flake, i*150); setInterval(flake, 400);
+    })();
+  </script>
+</body>
+</html>
