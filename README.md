@@ -19,3 +19,5 @@ Open `index.html` in a browser.
 - Add Payments/Booking/Admin tabs
 - Integrate Firebase Auth/Firestore if needed
 Auto-deploy test 2025-11-28 14:51:14
+
+Deploy test 2025-11-28 14:55:16
