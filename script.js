@@ -842,10 +842,10 @@ function renderAccountBookings(){
       ${status==='rented'?`<div class='muted' style='margin-top:4px;font-size:12px'>Rented at ${b.rentedAt? new Date(b.rentedAt).toLocaleString():''}</div>`:''}
       ${status==='rented'?`<div style='margin-top:4px;font-size:12px'><strong>Time until payment/return:</strong> <span class='countdown' data-return='${b.returnDate||''}' data-rented='${b.rentedAt||''}'>—</span></div>`:''}
       ${status==='rented'?`<div style='margin-top:8px;padding:8px;background:rgba(255,193,7,.1);border-left:3px solid #ffc107;font-size:11px;line-height:1.4'><strong>⚠️ Important:</strong> If extending, pay before timer expires. If returning, return before timer expires or a late fee of <strong>$5/hour</strong> will be added.</div>`:''}
-      <div style='display:flex;gap:8px;margin-top:8px;flex-wrap:wrap'>
+      ${(status==='active'||status==='accepted'||status==='cancelled'||status==='rejected')?`<div style='display:flex;gap:8px;margin-top:8px;flex-wrap:wrap'>
         ${status==='active'||status==='accepted'?`<button class='navbtn' data-bk-extend='${b.id}'>Extend</button><button class='navbtn' data-bk-cancel='${b.id}'>Cancel</button>`:''}
         ${status==='cancelled'||status==='rejected'?`<button class='navbtn' data-bk-delete='${b.id}' style='background:#c1121f;border-color:#c1121f'>Delete</button>`:''}
-      </div>
+      </div>`:''}
     </div>`;
     wrap.appendChild(card);
   });
