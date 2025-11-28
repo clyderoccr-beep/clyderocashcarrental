@@ -1,36 +1,20 @@
 'use strict';
-  try{
+
 // Firestore helpers
 function getDB(){ return window.firestoreDB; }
-    const actionCodeSettings = {
-      url: 'https://clyderoccr.com',
-      handleCodeInApp: false
-    try{
-      // Backdrop to avoid layout shifts
-      const backdrop = document.createElement('div');
-      backdrop.id = 'resetBackdrop';
-      backdrop.style.position = 'fixed';
-      backdrop.style.inset = '0';
-      backdrop.style.background = 'rgba(0,0,0,.4)';
-      backdrop.style.zIndex = '999';
-      backdrop.style.backdropFilter = 'blur(2px)';
-      backdrop.setAttribute('aria-hidden','true');
+function getUtils(){ return window.firestoreUtils; }
+function getStorage(){ return window.firestoreStorage; }
+function getStorageUtils(){ return window.storageUtils; }
 
-      // Modal card (fixed, no margins so it doesn't affect layout)
-      const wrap = document.createElement('div');
-      wrap.id = 'resetModal';
-      wrap.className = 'card';
-      wrap.style.maxWidth = '420px';
-      wrap.style.position = 'fixed';
-      wrap.style.left = '50%';
-      wrap.style.top = '20%';
-      wrap.style.transform = 'translateX(-50%)';
-      wrap.style.zIndex = '1000';
-      wrap.setAttribute('role','dialog');
-      wrap.setAttribute('aria-modal','true');
-      wrap.innerHTML = `<div class=\"body\">\n      <h3 style=\"margin-top:0\">Reset Password</h3>\n      <div id=\"resetStatus\" class=\"muted\" style=\"font-size:12px\">Validating link...</div>\n      <label style=\"margin-top:8px;color:#000\">New password</label>\n      <input id=\"newPassword\" type=\"password\" style=\"width:100%;color:#000\">\n      <label style=\"margin-top:8px;color:#000\">Confirm password</label>\n      <input id=\"confirmPassword\" type=\"password\" style=\"width:100%;color:#000\">\n      <div style=\"display:flex;gap:8px;margin-top:12px\">\n        <button class=\"navbtn\" id=\"resetSubmit\" type=\"button\">Set password</button>\n        <button class=\"navbtn\" id=\"resetCancel\" type=\"button\">Cancel</button>\n      </div>\n    </div>`;
-      document.body.appendChild(backdrop);
-      document.body.appendChild(wrap);
+// ===== Firebase Auth Helpers (added) =====
+function getAuthApi(){ return window.authApi || {}; }
+function getAuthInstance(){ const api=getAuthApi(); return api.auth; }
+function authEmail(){ const a=getAuthInstance(); return a && a.currentUser ? (a.currentUser.email||'') : ''; }
+// Auth state listener also sets up realtime subscriptions
+try{ 
+  const api=getAuthApi(); 
+  if(api.onAuthStateChanged && api.auth){ 
+    api.onAuthStateChanged(api.auth, (user)=>{ 
       console.log('Auth state changed, user:', user ? user.email : 'null');
       if(user && user.email) {
         // User is signed in, store email
@@ -158,32 +142,8 @@ document.addEventListener('click', (e)=>{
   } 
 });
 
-// Forgot password: Firebase Auth reset email with simple UX
-document.addEventListener('click', async (e)=>{
-  const btn = e.target.closest('#forgotPassword');
-  if(!btn) return;
-  e.preventDefault();
-  const emailInput = document.getElementById('loginEmail');
-  const email = (emailInput?.value||'').trim();
-  if(!email){ alert('Please enter your email above first.'); emailInput?.focus(); return; }
-  const api = getAuthApi();
-  const auth = getAuthInstance();
-  if(!(api.sendPasswordResetEmail && auth)){
-    alert('Password reset is not configured.');
-    return;
-  }
-  try{
-    btn.disabled = true;
-    btn.textContent = 'Sending...';
-    await api.sendPasswordResetEmail(auth, email);
-    showToast('If an account exists, a reset email was sent.');
-  }catch(err){
-    alert(cleanErrorMessage(err));
-  }finally{
-    btn.disabled = false;
-    btn.textContent = 'Forgot password';
-  }
-});
+// Forgot password placeholder (implement Firebase Auth reset in production)
+document.addEventListener('click', (e)=>{ const btn=e.target.closest('#forgotPassword'); if(!btn) return; e.preventDefault(); const email=document.getElementById('loginEmail').value.trim(); if(!email){ alert('Enter your email for password help.'); return; } const api=getAuthApi(); const auth=getAuthInstance(); if(api.sendPasswordResetEmail && auth){ api.sendPasswordResetEmail(auth,email).then(()=>{ alert('If an account exists, a reset email was sent.'); }).catch(err=>{ alert(err.message||'Reset failed'); }); } else { alert('Reset not configured.'); } });
 
 // Global click sound for buttons
 let CLICK_SOUND = null;
@@ -250,116 +210,42 @@ if(document.readyState === 'loading'){
 }
 
 document.addEventListener('DOMContentLoaded', async ()=>{ 
-  try{ const yearEl = document.getElementById('year'); if(yearEl) yearEl.textContent = new Date().getFullYear(); }catch{}
-  try{ await loadFromFirestore(); }catch(e){ console.warn('Initial Firestore load failed:', e?.message||e); }
-  try{ renderVehicles(); }catch(e){ console.warn('Render vehicles failed:', e?.message||e); }
-  try{ seedBooking(); }catch{}
-  try{ seedPayments(); }catch{}
-  try{ renderAbout(); }catch{}
-  // Start realtime after initial snapshot load (safe)
-  try{ setupRealtimeForRole(); }catch(e){ console.warn('Realtime setup failed:', e?.message||e); }
-  // If arrived with Firebase email action link, handle reset in-app
-  try{
-    const params = new URLSearchParams(location.search||'');
-    const mode = params.get('mode');
-    const oobCode = params.get('oobCode');
-    if(mode === 'resetPassword' && oobCode){
-      showResetPasswordUI(oobCode);
-    }
-  }catch(_){ /* ignore */ }
-
+  document.getElementById('year').textContent = new Date().getFullYear(); 
+    try{ await loadFromFirestore(); }catch(e){ console.warn('Initial Firestore load failed:', e?.message||e); }
+    // Guarantee vehicles show: restore defaults if empty, then render
+    try{
+      if(!(Array.isArray(VEHICLES) && VEHICLES.length)){
+        VEHICLES.length = 0;
+        DEFAULT_VEHICLES.forEach(v=> VEHICLES.push({ ...v }));
+      }
+      renderVehicles();
+    }catch(e){ console.warn('Render vehicles failed:', e?.message||e); }
+  seedBooking(); 
+  seedPayments(); 
+  renderAbout(); 
+  // Start realtime after initial snapshot load
+  setupRealtimeForRole();
+  
   // Wait for Firebase Auth to initialize and restore session
   const checkAuthAndUpdateUI = () => {
-    try{
-      const email = getSessionEmail();
-      console.log('Checking auth state on page load, email:', email);
-      if(email) {
-        updateNavLabels();
-        updateMembershipPanel();
-        updateAdminVisibility();
-      }
-    }catch(e){ console.warn('Auth UI update failed:', e?.message||e); }
+    const email = getSessionEmail();
+    console.log('Checking auth state on page load, email:', email);
+    if(email) {
+      // User is logged in, update UI immediately
+      console.log('User logged in on page load, updating UI');
+      updateNavLabels();
+      updateMembershipPanel();
+      updateAdminVisibility();
+    }
   };
+  
+  // Check immediately and also after a delay to catch auth restoration
   checkAuthAndUpdateUI();
   setTimeout(checkAuthAndUpdateUI, 300);
   setTimeout(checkAuthAndUpdateUI, 800);
-
-  // Ensure a default route is shown and others hidden
-  try{ goto('vehicles'); }catch(e){ console.warn('Routing failed:', e?.message||e); }
+  
+  goto('vehicles');
 });
-
-// In-app password reset UI and flow
-function showResetPasswordUI(oobCode){
-  try{
-    // Render a lightweight modal card
-    const wrap = document.createElement('div');
-    wrap.id = 'resetModal';
-    wrap.className = 'card';
-    wrap.style.maxWidth = '420px';
-    wrap.style.margin = '12px auto';
-    wrap.style.position = 'fixed';
-    wrap.style.left = '50%';
-    wrap.style.top = '20%';
-    wrap.style.transform = 'translateX(-50%)';
-    wrap.style.zIndex = '1000';
-    wrap.innerHTML = `<div class="body">
-      <h3 style="margin-top:0">Reset Password</h3>
-      <div id="resetStatus" class="muted" style="font-size:12px">Validating link...</div>
-      <label style="margin-top:8px;color:#000">New password</label>
-      <input id="newPassword" type="password" style="width:100%;color:#000">
-      <label style="margin-top:8px;color:#000">Confirm password</label>
-      <input id="confirmPassword" type="password" style="width:100%;color:#000">
-      <div style="display:flex;gap:8px;margin-top:12px">
-        <button class="navbtn" id="resetSubmit" type="button">Set password</button>
-        <button class="navbtn" id="resetCancel" type="button">Cancel</button>
-      </div>
-    </div>`;
-    document.body.appendChild(wrap);
-
-    const api = getAuthApi();
-    const auth = getAuthInstance();
-    const statusEl = wrap.querySelector('#resetStatus');
-    const submitBtn = wrap.querySelector('#resetSubmit');
-    const cancelBtn = wrap.querySelector('#resetCancel');
-    const newPwEl = wrap.querySelector('#newPassword');
-    const confPwEl = wrap.querySelector('#confirmPassword');
-
-    if(!(api.verifyPasswordResetCode && api.confirmPasswordReset && auth)){
-      statusEl.textContent = 'Reset not available. Please try again later.';
-      submitBtn.disabled = true;
-      return;
-    }
-
-    api.verifyPasswordResetCode(auth, oobCode).then((email)=>{
-      statusEl.textContent = `Resetting password for ${email}`;
-    }).catch((err)=>{
-      statusEl.textContent = cleanErrorMessage(err);
-      submitBtn.disabled = true;
-    });
-
-    const close = ()=>{ try{ document.body.removeChild(wrap); }catch{} try{ document.body.removeChild(backdrop); }catch{} };
-    cancelBtn.addEventListener('click', close);
-    submitBtn.addEventListener('click', async ()=>{
-      const pw = (newPwEl.value||'').trim();
-      const pw2 = (confPwEl.value||'').trim();
-      if(!pw || pw.length < 6){ alert('Password should be at least 6 characters.'); return; }
-      if(pw !== pw2){ alert('Passwords do not match'); return; }
-      try{
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Saving...';
-        await api.confirmPasswordReset(auth, oobCode, pw);
-        showToast('Password updated. Please log in.');
-        close();
-        goto('login');
-      }catch(err){
-        alert(cleanErrorMessage(err));
-      }finally{
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Set password';
-      }
-    });
-  }catch(err){ console.warn('Reset UI error:', err?.message||err); }
-}
 
 // Simple session (non-secure placeholder; replace with Firebase Auth for production)
 const OWNER_EMAIL = 'clyderofraser97@gmail.com';
@@ -1066,7 +952,6 @@ document.getElementById('signup-form')?.addEventListener('submit', (e)=>{
           email, first, last, address, state, country,
           licenseNumber, licenseCountry, licenseIssueDate, licenseExpireDate,
           dob,
-          dobTs: new Date(dob),
           createdTs, status:'active'
         };
         let photoUrl='';
