@@ -482,12 +482,7 @@
               <option value="Zambia">Zambia</option>
               <option value="Zimbabwe">Zimbabwe</option>
             </select>
-            <div style="margin-top:8px">
-              <label style="font-weight:600;color:#111">Date of Birth</label>
-              <input id="dob" type="date" required style="width:100%;font-weight:600;color:#111">
-              <small style="color:#555;display:block;margin-top:4px;font-weight:500">You must be at least 25 years old to become a member.</small>
-            </div>
-
+            
             <hr style="border:none;height:1px;background:rgba(255,255,255,.08);margin:16px 0">
             <div class="license-section" style="padding:12px;border:1px solid #d0d0d0;border-radius:8px;background:#fafafa">
               <h3 style="margin:0 0 12px 0;font-size:16px;color:#111;font-weight:700;letter-spacing:.5px">Driver License Information</h3>
@@ -716,11 +711,11 @@
         <form id="booking-form" class="card" style="max-width:520px">
           <div class="body">
             <div class="muted" style="font-size:12px;margin-bottom:6px">Weekly rentals only</div>
-            <label>Vehicle</label>
+            <label style="color:#000">Vehicle</label>
             <select id="vehicle-select" style="width:100%"></select>
             <div style="display:flex;gap:8px;margin-top:8px">
-              <div style="flex:1"><label>Pick-up date</label><input id="pickupDate" type="date" required style="width:100%"></div>
-              <div style="flex:1"><label>Weeks</label>
+              <div style="flex:1"><label style="color:#000">Pick-up date</label><input id="pickupDate" type="date" required style="width:100%"></div>
+              <div style="flex:1"><label style="color:#000">Weeks</label>
                 <select id="bookingWeeks" style="width:100%">
                   <option value="1">1 week</option>
                   <option value="2">2 weeks</option>
@@ -730,7 +725,7 @@
               </div>
             </div>
             <div style="display:flex;gap:8px;margin-top:8px">
-              <div style="flex:1"><label>Return date</label><input id="returnDate" type="date" required style="width:100%" readonly></div>
+              <div style="flex:1"><label style="color:#000">Return date</label><input id="returnDate" type="date" required style="width:100%" readonly></div>
             </div>
             <div style="margin-top:10px"><button class="navbtn" type="submit">Request reservation</button></div>
           </div>
