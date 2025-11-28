@@ -945,6 +945,7 @@ document.getElementById('signup-form')?.addEventListener('submit', (e)=>{
           email, first, last, address, state, country,
           licenseNumber, licenseCountry, licenseIssueDate, licenseExpireDate,
           dob,
+          dobTs: new Date(dob),
           createdTs, status:'active'
         };
         let photoUrl='';
