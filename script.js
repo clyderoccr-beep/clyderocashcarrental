@@ -746,11 +746,8 @@ function startMyBookingsRealtime(){
     });
     
     saveBookingsForEmail(email);
-    const accountPanel = document.getElementById('accountBookings');
-    const isVisible = accountPanel && accountPanel.offsetParent !== null;
-    if(isVisible){
-      renderAccountBookings();
-    }
+    // Force re-render immediately to show updated status
+    renderAccountBookings();
   }, (error)=>{
     console.error('Realtime listener error:', error);
   });
@@ -1787,15 +1784,6 @@ document.addEventListener('click',(e)=>{
     updateAdminBookingStatus(id,'accepted').then(async ()=>{
       loadAdminBookings().then(renderAdminBookings);
       showToast('Booking accepted');
-      // Force customer view update if they're viewing their bookings
-      if(adminBk && adminBk.userEmail){
-        const customerEmail = adminBk.userEmail;
-        const currentEmail = getSessionEmail();
-        if(currentEmail === customerEmail){
-          // Immediate Firestore pull to reduce perceived delay
-          refreshCustomerBookingsFromFirestore(customerEmail);
-        }
-      }
     });
     return;
   }
@@ -1806,14 +1794,6 @@ document.addEventListener('click',(e)=>{
     updateAdminBookingStatus(id,'rejected').then(()=>{ 
       loadAdminBookings().then(renderAdminBookings); 
       showToast('Booking rejected'); 
-      // Force customer view update if they're viewing their bookings
-      if(adminBk && adminBk.userEmail){
-        const customerEmail = adminBk.userEmail;
-        const currentEmail = getSessionEmail();
-        if(currentEmail === customerEmail){
-          refreshCustomerBookingsFromFirestore(customerEmail);
-        }
-      }
     }); 
     return; 
   }
@@ -1825,14 +1805,6 @@ document.addEventListener('click',(e)=>{
     updateAdminBookingStatus(id,'rented').then(()=>{
       loadAdminBookings().then(renderAdminBookings);
       showToast('Marked rented at '+ new Date(now).toLocaleString());
-      // Force customer view update if they're viewing their bookings
-      if(adminBk && adminBk.userEmail){
-        const customerEmail = adminBk.userEmail;
-        const currentEmail = getSessionEmail();
-        if(currentEmail === customerEmail){
-          refreshCustomerBookingsFromFirestore(customerEmail);
-        }
-      }
     });
     return;
   }
