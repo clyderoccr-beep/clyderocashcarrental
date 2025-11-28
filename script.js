@@ -250,14 +250,14 @@ if(document.readyState === 'loading'){
 }
 
 document.addEventListener('DOMContentLoaded', async ()=>{ 
-  document.getElementById('year').textContent = new Date().getFullYear(); 
-  await loadFromFirestore(); 
-  renderVehicles(); 
-  seedBooking(); 
-  seedPayments(); 
-  renderAbout(); 
-  // Start realtime after initial snapshot load
-  setupRealtimeForRole();
+  try{ const yearEl = document.getElementById('year'); if(yearEl) yearEl.textContent = new Date().getFullYear(); }catch{}
+  try{ await loadFromFirestore(); }catch(e){ console.warn('Initial Firestore load failed:', e?.message||e); }
+  try{ renderVehicles(); }catch(e){ console.warn('Render vehicles failed:', e?.message||e); }
+  try{ seedBooking(); }catch{}
+  try{ seedPayments(); }catch{}
+  try{ renderAbout(); }catch{}
+  // Start realtime after initial snapshot load (safe)
+  try{ setupRealtimeForRole(); }catch(e){ console.warn('Realtime setup failed:', e?.message||e); }
   // If arrived with Firebase email action link, handle reset in-app
   try{
     const params = new URLSearchParams(location.search||'');
@@ -267,26 +267,25 @@ document.addEventListener('DOMContentLoaded', async ()=>{
       showResetPasswordUI(oobCode);
     }
   }catch(_){ /* ignore */ }
-  
+
   // Wait for Firebase Auth to initialize and restore session
   const checkAuthAndUpdateUI = () => {
-    const email = getSessionEmail();
-    console.log('Checking auth state on page load, email:', email);
-    if(email) {
-      // User is logged in, update UI immediately
-      console.log('User logged in on page load, updating UI');
-      updateNavLabels();
-      updateMembershipPanel();
-      updateAdminVisibility();
-    }
+    try{
+      const email = getSessionEmail();
+      console.log('Checking auth state on page load, email:', email);
+      if(email) {
+        updateNavLabels();
+        updateMembershipPanel();
+        updateAdminVisibility();
+      }
+    }catch(e){ console.warn('Auth UI update failed:', e?.message||e); }
   };
-  
-  // Check immediately and also after a delay to catch auth restoration
   checkAuthAndUpdateUI();
   setTimeout(checkAuthAndUpdateUI, 300);
   setTimeout(checkAuthAndUpdateUI, 800);
-  
-  goto('vehicles');
+
+  // Ensure a default route is shown and others hidden
+  try{ goto('vehicles'); }catch(e){ console.warn('Routing failed:', e?.message||e); }
 });
 
 // In-app password reset UI and flow
