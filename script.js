@@ -763,6 +763,60 @@ function stopMyBookingsRealtime(){
   }
 }
 
+// Force-refresh customer's bookings from Firestore (immediate pull)
+async function refreshCustomerBookingsFromFirestore(email){
+  const db = getDB();
+  const utils = getUtils() || {};
+  if(!email || !db || !utils.collection || !utils.query || !utils.where || !utils.getDocs){
+    // Fallback to local render if Firestore is unavailable
+    loadBookingsForEmail(email);
+    renderAccountBookings();
+    return;
+  }
+  try{
+    const q = utils.query(utils.collection(db,'bookings'), utils.where('userEmail','==',email));
+    const snap = await utils.getDocs(q);
+    const fireBookings = [];
+    snap.forEach(d=> fireBookings.push({ id:d.id, ...d.data() }));
+
+    // Merge Firestore into local state
+    loadBookingsForEmail(email);
+    fireBookings.forEach(fb=>{
+      let local = MY_BOOKINGS.find(b=> b.fireId===fb.id);
+      if(!local){
+        local = MY_BOOKINGS.find(b=> !b.fireId && b.vehicleId===fb.vehicleId && b.pickupDate===fb.pickupDate);
+      }
+      if(local){
+        local.fireId = fb.id;
+        local.status = fb.status || local.status;
+        local.rentedAt = fb.rentedAt || local.rentedAt;
+        local.returnDate = fb.returnDate || local.returnDate;
+        local.weeks = fb.weeks || local.weeks;
+      } else {
+        MY_BOOKINGS.push({
+          id: 'bk_' + Date.now() + '_' + Math.random().toString(36).substr(2,9),
+          fireId: fb.id,
+          userEmail: fb.userEmail,
+          vehicleId: fb.vehicleId,
+          pickupDate: fb.pickupDate,
+          returnDate: fb.returnDate,
+          status: fb.status || 'pending',
+          createdAt: fb.createdAt || Date.now(),
+          weeks: fb.weeks || 1,
+          rentedAt: fb.rentedAt
+        });
+      }
+    });
+
+    saveBookingsForEmail(email);
+    renderAccountBookings();
+  }catch(err){
+    console.warn('Forced Firestore refresh failed:', err?.message||err);
+    loadBookingsForEmail(email);
+    renderAccountBookings();
+  }
+}
+
 function renderAccountBookings(){
   const wrap=document.getElementById('accountBookings'); if(!wrap) return;
   const email=getSessionEmail(); if(!email){ wrap.innerHTML='<div class="muted">Log in to see your bookings.</div>'; return; }
@@ -907,9 +961,8 @@ document.addEventListener('click', (e)=>{
   const email = getSessionEmail();
   if(!email){ showToast('Log in to view bookings.'); return; }
   try{
-    loadBookingsForEmail(email);
-    renderAccountBookings();
-    showToast('Bookings refreshed');
+    // Prefer Firestore-backed refresh for latest status
+    refreshCustomerBookingsFromFirestore(email).then(()=>{ showToast('Bookings refreshed'); });
   }catch(err){ console.warn('Refresh failed:', err?.message||err); }
 });
 
@@ -1739,14 +1792,8 @@ document.addEventListener('click',(e)=>{
         const customerEmail = adminBk.userEmail;
         const currentEmail = getSessionEmail();
         if(currentEmail === customerEmail){
-          loadBookingsForEmail(customerEmail);
-          const local = MY_BOOKINGS.find(b=> b.fireId===id || (!b.fireId && b.vehicleId===adminBk.vehicleId && b.pickupDate===adminBk.pickupDate));
-          if(local){ 
-            local.status='accepted';
-            local.fireId = id;
-            saveBookingsForEmail(customerEmail);
-            renderAccountBookings();
-          }
+          // Immediate Firestore pull to reduce perceived delay
+          refreshCustomerBookingsFromFirestore(customerEmail);
         }
       }
     });
@@ -1764,14 +1811,7 @@ document.addEventListener('click',(e)=>{
         const customerEmail = adminBk.userEmail;
         const currentEmail = getSessionEmail();
         if(currentEmail === customerEmail){
-          loadBookingsForEmail(customerEmail);
-          const local = MY_BOOKINGS.find(b=> b.fireId===id || (!b.fireId && b.vehicleId===adminBk.vehicleId && b.pickupDate===adminBk.pickupDate));
-          if(local){
-            local.status='rejected';
-            local.fireId = id;
-            saveBookingsForEmail(customerEmail);
-            renderAccountBookings();
-          }
+          refreshCustomerBookingsFromFirestore(customerEmail);
         }
       }
     }); 
@@ -1790,15 +1830,7 @@ document.addEventListener('click',(e)=>{
         const customerEmail = adminBk.userEmail;
         const currentEmail = getSessionEmail();
         if(currentEmail === customerEmail){
-          loadBookingsForEmail(customerEmail);
-          const local = MY_BOOKINGS.find(b=> b.fireId===id || (!b.fireId && b.vehicleId===adminBk.vehicleId && b.pickupDate===adminBk.pickupDate));
-          if(local){
-            local.status='rented';
-            local.rentedAt=now;
-            local.fireId = id;
-            saveBookingsForEmail(customerEmail);
-            renderAccountBookings();
-          }
+          refreshCustomerBookingsFromFirestore(customerEmail);
         }
       }
     });
