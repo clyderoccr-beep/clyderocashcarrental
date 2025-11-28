@@ -1,20 +1,6 @@
 [build]
-publish = "."
-command = ""
+  publish = "."
+  command = ""
 
-[build.processing]
-  skip_processing = false
-[build.processing.css]
-  bundle = true
-  minify = true
-[build.processing.js]
-  bundle = true
-  minify = true
-[build.processing.html]
-  pretty_urls = true
-[build.processing.images]
-  compress = true
-
-# Firebase client keys are safe to expose; disable secret scanning
-[[build.environment]]
+[build.environment]
   NETLIFY_SKIP_SECRET_SCANNING = "true"
