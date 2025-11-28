@@ -12,6 +12,12 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.token.email == 'clyderofraser97@gmail.com';
     }
 
+    // Helper to assert the current user is not banned
+    function isActiveUser() {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status != 'banned';
+    }
+
     // State document (synced with localStorage)
     match /clydero_site/state {
       allow read: if true;  // Public read
@@ -29,10 +35,13 @@ service cloud.firestore {
 
     // Bookings collection
     match /bookings/{bookingId} {
-      allow read: if isAuthenticated() && (
-        resource.data.userEmail == request.auth.email || isOwner()
+      // Read own bookings when active, or owner reads all
+      allow read: if isOwner() || (
+        isActiveUser() && resource.data.userEmail == request.auth.token.email
       );
-      allow write: if isAuthenticated();
+      // Create/update/delete only by owner or active owner of booking
+      allow create: if isActiveUser() && request.resource.data.userEmail == request.auth.token.email;
+      allow update, delete: if isOwner() || (isActiveUser() && resource.data.userEmail == request.auth.token.email);
     }
 
     // Messages collection (contact form submissions)

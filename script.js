@@ -950,9 +950,26 @@ function setupRealtimeForRole(){
 
   // Current user membership doc realtime (improves account panel updates)
   const api=getAuthApi(); const auth=getAuthInstance(); const uid = auth && auth.currentUser && auth.currentUser.uid;
-  if(uid && !_currentUserUnsub){ try{ _currentUserUnsub = utils.onSnapshot(utils.doc(db,'users',uid), snap=>{ if(snap.exists()){ const data=snap.data(); // merge/update MEMBERS entry
+  if(uid && !_currentUserUnsub){ try{ _currentUserUnsub = utils.onSnapshot(utils.doc(db,'users',uid), snap=>{
+        if(!snap.exists()){
+          console.warn('User profile missing; signing out.');
+          try{ clearSession(); }catch{}
+          try{ showToast('Your account was removed.'); }catch{}
+          try{ goto('login'); }catch{}
+          return;
+        }
+        const data=snap.data();
+        if(data && data.status === 'banned'){
+          console.warn('User is banned; signing out.');
+          try{ clearSession(); }catch{}
+          try{ alert('Your account has been disabled. Contact support.'); }catch{}
+          try{ goto('login'); }catch{}
+          return;
+        }
+        // merge/update MEMBERS entry
         let m = MEMBERS.find(x=>x.id===uid); if(!m){ MEMBERS.push({ id:uid, ...data }); } else { Object.assign(m, data); }
-        updateMembershipPanel(); } }); }catch(e){ console.warn('Current user realtime failed', e.message); } }
+        updateMembershipPanel();
+      }); }catch(e){ console.warn('Current user realtime failed', e.message); } }
 
   const isOwner = getSessionEmail()===OWNER_EMAIL;
   if(isOwner){
@@ -1160,6 +1177,7 @@ async function deleteMember(userId){
       try{ 
         await deleteDoc(doc(db,'users',userId)); 
         console.warn('Deleted Firestore doc only (Auth user still exists)');
+        try{ showToast('Deleted profile only. Sign in as owner to fully remove.'); }catch{}
         return true;
       }catch(err2){ 
         console.error('Failed to delete member:', err2?.message||err2); 
@@ -1174,6 +1192,7 @@ async function deleteMember(userId){
     try{ 
       await deleteDoc(doc(db,'users',userId)); 
       console.warn('Deleted Firestore doc only (Cloud Functions not available; Auth user still exists)');
+      try{ showToast('Deleted profile only. Sign in as owner to fully remove.'); }catch{}
       return true;
     }catch(err){ 
       console.error('Failed to delete member:', err?.message||err); 
