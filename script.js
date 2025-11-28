@@ -844,6 +844,7 @@ function renderAccountBookings(){
       ${status==='rented'?`<div style='margin-top:8px;padding:8px;background:rgba(255,193,7,.1);border-left:3px solid #ffc107;font-size:11px;line-height:1.4'><strong>⚠️ Important:</strong> If extending, pay before timer expires. If returning, return before timer expires or a late fee of <strong>$5/hour</strong> will be added.</div>`:''}
       <div style='display:flex;gap:8px;margin-top:8px;flex-wrap:wrap'>
         ${status==='active'||status==='accepted'?`<button class='navbtn' data-bk-extend='${b.id}'>Extend</button><button class='navbtn' data-bk-cancel='${b.id}'>Cancel</button>`:''}
+        ${status==='cancelled'||status==='rejected'?`<button class='navbtn' data-bk-delete='${b.id}' style='background:#c1121f;border-color:#c1121f'>Delete</button>`:''}
       </div>
     </div>`;
     wrap.appendChild(card);
@@ -944,6 +945,11 @@ document.addEventListener('click',(e)=>{
       // update Firestore status if mirrored
       try{ const db=getDB(); const { doc, updateDoc } = getUtils(); if(db && bk.fireId){ updateDoc(doc(db,'bookings',bk.fireId), { status:'cancelled' }); } }catch(err){ console.warn('Failed to update Firestore on cancel:', err.message); }
       alert('Booking cancelled.'); } } return; }
+  const deleteBtn=e.target.closest('[data-bk-delete]');
+    if(deleteBtn){ const email=getSessionEmail(); if(!email) return; loadBookingsForEmail(email); const id=deleteBtn.dataset.bkDelete; const bk=MY_BOOKINGS.find(b=>b.id===id); if(bk){ if(confirm('Delete this booking record? This cannot be undone.')){ const idx=MY_BOOKINGS.findIndex(b=>b.id===id); if(idx>=0){ MY_BOOKINGS.splice(idx,1); saveBookingsForEmail(email); renderAccountBookings(); 
+      // Delete from Firestore if mirrored
+      try{ const db=getDB(); const { doc, deleteDoc } = getUtils(); if(db && bk.fireId){ deleteDoc(doc(db,'bookings',bk.fireId)).then(()=>console.log('Booking deleted from Firestore:',bk.fireId)).catch(err=>console.warn('Failed to delete from Firestore:',err.message)); } }catch(err){ console.warn('Failed to delete booking from Firestore:', err.message); }
+      showToast('Booking deleted'); } } } return; }
   const extendBtn=e.target.closest('[data-bk-extend]');
     if(extendBtn){ const email=getSessionEmail(); if(!email) return; loadBookingsForEmail(email); const id=extendBtn.dataset.bkExtend; const bk=MY_BOOKINGS.find(b=>b.id===id); if(!bk || bk.status!=='active') return; const modal=document.getElementById('extendModal'); const extCurr=document.getElementById('extendCurrent'); const extWeeks=document.getElementById('extendWeeks'); const extPrev=document.getElementById('extendPreview'); const curr=bk.returnDate||bk.pickupDate; modal.style.display='block'; extCurr.textContent=curr; function updatePreview(){ const w=parseInt(extWeeks.value,10)||1; const d=new Date(curr); d.setDate(d.getDate()+7*w); extPrev.textContent=d.toISOString().slice(0,10); } updatePreview(); extWeeks.onchange=updatePreview; const onSave=()=>{ const w=parseInt(extWeeks.value,10)||1; const d=new Date(curr); d.setDate(d.getDate()+7*w); bk.returnDate=d.toISOString().slice(0,10); saveBookingsForEmail(email); renderAccountBookings(); modal.style.display='none'; cleanup();
       // Firestore update on extend
