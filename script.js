@@ -357,7 +357,10 @@ document.addEventListener('submit', (e)=>{
       try{
         const db = getDB(); const utils = getUtils();
         const uid = auth && auth.currentUser && auth.currentUser.uid;
-        if(db && utils && uid){
+        // Owner bypass: allow owner to log in even if profile missing or flagged
+        if(email === OWNER_EMAIL){
+          // ensure admin UI loads; skip ban/profile checks
+        } else if(db && utils && uid){
           const snap = await utils.getDoc(utils.doc(db,'users',uid));
           if(snap.exists()){
             const data = snap.data();
@@ -1003,6 +1006,13 @@ function setupRealtimeForRole(){
   // Current user membership doc realtime (improves account panel updates)
   const api=getAuthApi(); const auth=getAuthInstance(); const uid = auth && auth.currentUser && auth.currentUser.uid;
   if(uid && !_currentUserUnsub){ try{ _currentUserUnsub = utils.onSnapshot(utils.doc(db,'users',uid), snap=>{
+        // Owner bypass: do not auto sign-out owner
+        if(getSessionEmail() === OWNER_EMAIL){
+          const data = snap.exists() ? snap.data() : {};
+          let m = MEMBERS.find(x=>x.id===uid); if(!m){ MEMBERS.push({ id:uid, ...data }); } else { Object.assign(m, data); }
+          updateMembershipPanel();
+          return;
+        }
         if(!snap.exists()){
           console.warn('User profile missing; signing out.');
           try{ clearSession(); }catch{}
