@@ -1,8 +1,12 @@
 'use strict';
-
+  try{
 // Firestore helpers
 function getDB(){ return window.firestoreDB; }
-function getUtils(){ return window.firestoreUtils; }
+    const actionCodeSettings = {
+      url: 'https://clyderoccr.com',
+      handleCodeInApp: false
+    };
+    await api.sendPasswordResetEmail(auth, email, actionCodeSettings);
 function getStorage(){ return window.firestoreStorage; }
 function getStorageUtils(){ return window.storageUtils; }
 
