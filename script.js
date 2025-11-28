@@ -968,7 +968,7 @@ document.getElementById('signup-form')?.addEventListener('submit', (e)=>{
 
 // ===== Admin vehicle management =====
 let _editingId = null;
-let ABOUT_CONTENT = { title: 'About Clydero Cash Car Rental', content: 'Clydero Cash Car Rental (CCR) is a privately owned vehicle rental and rent-to-own service. All vehicles are personally owned and managed by CCR. Membership is required for full access to booking and payment features. CCR focuses on reliability, transparency, and convenience for every customer.' };
+let ABOUT_CONTENT = { title: 'About Our Service', content: 'We are a privately owned vehicle rental and rent-to-own service. All vehicles are personally owned and managed. Membership is required for full access to booking and payment features. We focus on reliability, transparency, and convenience for every customer.' };
 
 // Inbox messages state
 let INBOX = [];
@@ -1423,10 +1423,10 @@ function openReply(id){
   __replyMsgId = id;
   document.getElementById('replyTo').value = m.email || '';
   const subj = document.getElementById('replySubject');
-  if(subj && !subj.value) subj.value = 'Re: Clydero Cash Car Rental';
+  if(subj && !subj.value) subj.value = 'Re: Car Rental Inquiry';
   const body = document.getElementById('replyBody');
   if(body && !body.value){
-    body.value = `Hi ${m.first},\n\nThanks for reaching out to Clydero Cash Car Rental.\n\n> ${m.msg}\n\nBest regards,\nClydero CCR\nclyderoccr@gmail.com`;
+    body.value = `Hi ${m.first},\n\nThanks for reaching out.\n\n> ${m.msg}\n\nBest regards,\nSupport Team`;
   }
   document.getElementById('replyModal').style.display='block';
 }
@@ -1441,8 +1441,8 @@ document.addEventListener('click',(e)=>{
   if(e.target?.id==='replyOpenGmail'){
     const to = encodeURIComponent(document.getElementById('replyTo').value||'');
     const su = encodeURIComponent(document.getElementById('replySubject').value||'');
-    const body = encodeURIComponent(document.getElementById('replyBody').value + `\n\nSent from: clyderoccr@gmail.com`);
-    const bcc = encodeURIComponent('clyderoccr@gmail.com');
+    const body = encodeURIComponent(document.getElementById('replyBody').value);
+    const bcc = '';
     const url = `https://mail.google.com/mail/?view=cm&fs=1&to=${to}&bcc=${bcc}&su=${su}&body=${body}&tf=1`;
     window.open(url, '_blank','noopener');
     return;
@@ -1450,8 +1450,8 @@ document.addEventListener('click',(e)=>{
   if(e.target?.id==='replyMailto'){
     const toRaw = (document.getElementById('replyTo').value||'');
     const suRaw = (document.getElementById('replySubject').value||'');
-    const bodyRaw = (document.getElementById('replyBody').value||'') + `\n\nSent from: clyderoccr@gmail.com`;
-    const params = new URLSearchParams({ subject: suRaw, body: bodyRaw, bcc: 'clyderoccr@gmail.com' }).toString();
+    const bodyRaw = (document.getElementById('replyBody').value||'');
+    const params = new URLSearchParams({ subject: suRaw, body: bodyRaw }).toString();
     window.location.href = `mailto:${encodeURIComponent(toRaw)}?${params}`;
     return;
   }
@@ -1476,12 +1476,12 @@ document.addEventListener('click',(e)=>{
   }
   if(e.target?.id==='replyTestSend'){
     if(!initEmailJS()){ alert('EmailJS not configured. Set publicKey/serviceId/templateId in index.html.'); return; }
-    const to = 'clyderoccr@gmail.com';
-    const su = 'Test: Clydero CCR Reply';
+    const to = '';
+    const su = 'Test: Reply';
     const body = 'This is a test send from the site Reply modal.';
     const btn = e.target; const prev=btn.textContent; btn.disabled=true; btn.textContent='Sending...';
-    sendReplyViaEmailJS({ toEmail: to, subject: su, body, toName: 'Clydero CCR' })
-      .then(()=> alert('Test email sent to clyderoccr@gmail.com.'))
+    sendReplyViaEmailJS({ toEmail: to, subject: su, body, toName: 'Support' })
+      .then(()=> alert('Test email sent.'))
       .catch(err=>{ console.error(err); alert('Failed to send test. Check EmailJS config.'); })
       .finally(()=>{ btn.disabled=false; btn.textContent=prev; });
     return;
