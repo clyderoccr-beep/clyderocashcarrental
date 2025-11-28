@@ -349,6 +349,29 @@ document.addEventListener('submit', (e)=>{
   const email = document.getElementById('loginEmail').value.trim();
   const pw = document.getElementById('loginPassword').value.trim();
   if(!email || !pw){ alert('Enter email and password'); return; }
+
+  // Basic client-side rate limiting to avoid verifyPassword quota
+  const now = Date.now();
+  const key = `login_rate_${email}`;
+  const state = JSON.parse(localStorage.getItem(key) || '{}');
+  const windowMs = 5*60*1000; // 5 minutes
+  const maxAttempts = 5; // allow up to 5 attempts per 5 minutes
+  if(state.until && now < state.until){
+    const wait = Math.ceil((state.until - now)/1000);
+    alert(`Too many attempts. Try again in ${wait} seconds.`);
+    return;
+  }
+  // initialize window
+  if(!state.start || (now - state.start) > windowMs){ state.start = now; state.count = 0; }
+  state.count = (state.count||0) + 1;
+  if(state.count > maxAttempts){
+    // cooldown 2 minutes
+    state.until = now + 2*60*1000;
+    localStorage.setItem(key, JSON.stringify(state));
+    alert('Too many attempts. Please wait 2 minutes and try again.');
+    return;
+  }
+  localStorage.setItem(key, JSON.stringify(state));
   const api=getAuthApi(); const auth=getAuthInstance();
   if(api.signInWithEmailAndPassword && auth){
     api.signInWithEmailAndPassword(auth,email,pw).then(async()=>{
@@ -390,7 +413,16 @@ document.addEventListener('submit', (e)=>{
         goto('admin');
         setTimeout(()=>{ loadAdminBookings().then(renderAdminBookings); loadMembersAndRender(); },100);
       } else { goto('vehicles'); }
-    }).catch(err=>{ alert(cleanErrorMessage(err)); });
+    }).catch(err=>{
+      // On failure, add small backoff
+      try{
+        const st = JSON.parse(localStorage.getItem(key) || '{}');
+        st.count = (st.count||0) + 1;
+        if(st.count > maxAttempts){ st.until = Date.now() + 2*60*1000; }
+        localStorage.setItem(key, JSON.stringify(st));
+      }catch{}
+      alert(cleanErrorMessage(err));
+    });
   } else {
     // Fallback legacy session
     setSessionEmail(email);
