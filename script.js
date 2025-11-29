@@ -2078,8 +2078,7 @@ document.addEventListener('click',(e)=>{
 });
 
 // ===== Stripe Payment Integration =====
-// Replace 'pk_test_YOUR_PUBLISHABLE_KEY' with your actual Stripe publishable key
-const STRIPE_PUBLISHABLE_KEY = 'pk_test_51QQpV6AelR3kYJDzDAnqJgBw8TnXPhRLm8QDPRVDKcNbPa8rGvF8sZYJLdTrxoWbGHaIccVCxDJHHrOm8vsDbfLV00aTQcWNFn'; // TODO: Replace with your key
+const STRIPE_PUBLISHABLE_KEY = 'pk_test_51SYuKa07xJu59h4NJ0d8nSABFa0kqFiiZ8hqiPfmhwOCZQBB7FEgLYmCsJtBRRTXOrwgVxlzOf9cWpSPgTwhe3wC00hIHOWXtK';
 
 let stripe = null;
 let elements = null;
