@@ -1229,14 +1229,14 @@ async function saveAboutToFirestore(){
 
 async function saveVehicleToFirestore(vehicle){
   const db = getDB();
-  const { doc, setDoc } = getUtils();
+  const { doc, setDoc, getDoc } = getUtils();
   if(!db || !vehicle) return;
-  
-  // Debug: check auth state
+
   const auth = getAuthInstance();
-  console.log('Current user:', auth?.currentUser?.email);
-  console.log('Saving vehicle:', vehicle.id);
-  
+  const email = auth?.currentUser?.email;
+  console.log('[saveVehicle] Auth user:', email);
+  console.log('[saveVehicle] Saving vehicle ID:', vehicle.id, 'imgs length:', (vehicle.imgs||[]).length);
+
   try {
     await setDoc(doc(db, 'vehicles', vehicle.id), {
       name: vehicle.name,
@@ -1247,11 +1247,28 @@ async function saveVehicleToFirestore(vehicle){
       available: vehicle.available !== false,
       details: vehicle.details || ''
     });
-    console.log('Vehicle saved successfully:', vehicle.id);
+    console.log('[saveVehicle] SetDoc success for', vehicle.id);
+    // Verification read-back
+    try {
+      const savedSnap = await getDoc(doc(db,'vehicles', vehicle.id));
+      if(savedSnap.exists()){
+        const imgsLen = (savedSnap.data().imgs||[]).length;
+        console.log('[saveVehicle] Verification imgs length:', imgsLen, savedSnap.data().imgs);
+        if(typeof showToast==='function'){
+          showToast('Saved vehicle. Images: '+imgsLen);
+        }
+        if(imgsLen !== (vehicle.imgs||[]).length){
+          console.warn('[saveVehicle] MISMATCH: local imgs length', (vehicle.imgs||[]).length, 'Firestore imgs length', imgsLen);
+        }
+      } else {
+        console.warn('[saveVehicle] Verification snapshot missing for', vehicle.id);
+      }
+    } catch(vErr){ console.warn('[saveVehicle] Verification read failed:', vErr.message||vErr); }
   } catch(err){
-    console.error('Failed to save vehicle:', err);
+    console.error('[saveVehicle] Failed:', err);
     console.error('Error code:', err.code);
     console.error('Error message:', err.message);
+    if(typeof showToast==='function'){ try{ showToast('Save failed: '+(err.message||err)); }catch{} }
     alert('Failed to save vehicle. Error: ' + err.message + '\nCheck console for details.');
   }
 }
@@ -1673,14 +1690,20 @@ document.getElementById('edImgFile')?.addEventListener('change', async (e)=>{
   const { storageRef, uploadBytes, getDownloadURL } = utilsStore;
 
   if(!storage || !storageRef || !uploadBytes || !getDownloadURL){
-    console.warn('Storage utilities missing; falling back to embedding base64.');
-    // Fallback: embed base64 directly (NOT ideal for large images)
+    console.warn('[ImageUpload] Storage utilities missing; falling back to base64.');
     const r = new FileReader();
-    r.onload = ev => {
+    r.onload = async (ev) => {
       v.imgs = v.imgs || [];
-      v.imgs.push(ev.target.result);
+      const base64Data = ev.target.result;
+      v.imgs.push(base64Data);
+      console.log('[ImageUpload] Base64 added, imgs length:', v.imgs.length);
+      try { 
+        await saveVehicleToFirestore(v); 
+        console.log('[ImageUpload] Base64 persisted to Firestore');
+      } catch(e3){ console.error('[ImageUpload] Base64 persist failed:', e3); }
+      try { await reloadVehicles(); } catch(e4){ console.warn('[ImageUpload] Reload after base64 failed:', e4); }
       openEditor(_editingId);
-      alert('Image added (local base64 fallback).');
+      alert('Image added (base64 fallback - Storage unavailable).');
     };
     r.readAsDataURL(file);
     return;
@@ -1701,33 +1724,48 @@ document.getElementById('edImgFile')?.addEventListener('change', async (e)=>{
   try { showToast('Uploading image...'); uploadingToastShown = true; }catch{}
 
   try {
+    console.log('[ImageUpload] Uploading to Storage:', path);
     await uploadBytes(ref, blobToUpload);
     const url = await getDownloadURL(ref);
+    console.log('[ImageUpload] Storage URL received:', url);
     v.imgs = v.imgs || [];
     v.imgs.push(url);
+    console.log('[ImageUpload] Local imgs updated, length:', v.imgs.length);
     // Persist and reload from Firestore to avoid overwrite race
-    try { await saveVehicleToFirestore(v); } catch(e3){ console.warn('Persist failed:', e3); }
-    try { await reloadVehicles(); } catch(e4){ console.warn('Reload vehicles failed:', e4); }
+    try { 
+      await saveVehicleToFirestore(v); 
+      console.log('[ImageUpload] Firestore save completed');
+    } catch(e3){ console.error('[ImageUpload] Persist failed:', e3); }
+    try { 
+      await reloadVehicles(); 
+      console.log('[ImageUpload] Vehicles reloaded from Firestore');
+    } catch(e4){ console.warn('[ImageUpload] Reload vehicles failed:', e4); }
     openEditor(_editingId);
     showToast('Image uploaded & saved');
   }catch(err){
-    console.error('Image upload failed:', err);
-    alert('Failed to upload image: ' + (err.message||err));
-    // Fallback base64 if not already added
+    console.error('[ImageUpload] Storage upload failed:', err);
+    console.error('[ImageUpload] Error details:', err.code, err.message);
+    // Fallback base64 if upload failed (CORS or other error)
+    console.log('[ImageUpload] Attempting base64 fallback after Storage error');
     try {
       const r2 = new FileReader();
-      r2.onload = ev => {
+      r2.onload = async (ev) => {
         v.imgs = v.imgs || [];
         v.imgs.push(ev.target.result);
-        (async ()=>{
-          try { await saveVehicleToFirestore(v); } catch(e4){ console.warn('Failed to persist base64 image:', e4); }
-          try { await reloadVehicles(); } catch(e5){ console.warn('Reload after base64 failed:', e5); }
-        })();
+        console.log('[ImageUpload] Base64 fallback added, imgs length:', v.imgs.length);
+        try { 
+          await saveVehicleToFirestore(v); 
+          console.log('[ImageUpload] Base64 fallback persisted to Firestore');
+        } catch(e4){ console.error('[ImageUpload] Failed to persist base64:', e4); }
+        try { 
+          await reloadVehicles(); 
+          console.log('[ImageUpload] Vehicles reloaded after base64 fallback');
+        } catch(e5){ console.warn('[ImageUpload] Reload after base64 failed:', e5); }
         openEditor(_editingId);
-        alert('Image added locally (upload failed).');
+        alert('Image saved as base64 (Storage upload failed due to CORS - see STORAGE_CORS_FIX.md)');
       };
       r2.readAsDataURL(file);
-    }catch(_){ /* ignore */ }
+    }catch(fallbackErr){ console.error('[ImageUpload] Base64 fallback also failed:', fallbackErr); }
   }
   finally {
     if(!uploadingToastShown){ try{ showToast('Done'); }catch{} }
