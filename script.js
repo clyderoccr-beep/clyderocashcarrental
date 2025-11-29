@@ -1705,6 +1705,9 @@ document.getElementById('edImgFile')?.addEventListener('change', async (e)=>{
     const url = await getDownloadURL(ref);
     v.imgs = v.imgs || [];
     v.imgs.push(url);
+    // Persist updated vehicle to Firestore and refresh UI
+    try{ saveVehicleToFirestore(v); }catch(e3){ console.warn('Failed to persist vehicle with new image:', e3); }
+    try{ renderVehicles(); renderAdminVehicles(); }catch{}
     openEditor(_editingId);
     showToast('Image uploaded');
   }catch(err){
@@ -1716,6 +1719,8 @@ document.getElementById('edImgFile')?.addEventListener('change', async (e)=>{
       r2.onload = ev => {
         v.imgs = v.imgs || [];
         v.imgs.push(ev.target.result);
+        try{ saveVehicleToFirestore(v); }catch(e4){ console.warn('Failed to persist base64 image:', e4); }
+        try{ renderVehicles(); renderAdminVehicles(); }catch{}
         openEditor(_editingId);
         alert('Image added locally (upload failed).');
       };
