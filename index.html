@@ -223,7 +223,7 @@
               <div id="accountSummary" style="white-space:pre-wrap;font-size:14px"></div>
               <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
                 <button class="navbtn" id="accountLogout" type="button">Logout</button>
-                <button class="navbtn" data-nav="signup" type="button">Update Info</button>
+                <button class="navbtn" id="updateInfoBtn" type="button">Update Info</button>
                 <button class="navbtn" id="accountDelete" type="button" style="background:#c1121f;border-color:#c1121f">Delete Account</button>
               </div>
               <div style="margin-top:16px">
@@ -234,6 +234,45 @@
                 <div id="accountBookings" style="display:grid;gap:8px"></div>
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- Update Info Modal -->
+        <div id="updateInfoModal" class="card" style="max-width:600px;margin-top:12px;display:none">
+          <div class="body">
+            <h3 style="margin-top:0">Update Account Information</h3>
+            <p style="color:#666;font-size:14px;margin-bottom:16px">Email and DOB cannot be changed. Update your editable information below.</p>
+            
+            <form id="updateInfoForm">
+              <label style="color:#000">First name</label><input id="updateFirstName" required style="width:100%">
+              <label style="margin-top:8px;color:#000">Last name</label><input id="updateLastName" required style="width:100%">
+              
+              <label style="margin-top:8px;color:#000">Address</label><input id="updateAddress" required style="width:100%">
+              <label style="margin-top:8px;color:#000">State</label><input id="updateState" required style="width:100%">
+              <label style="margin-top:8px;color:#000">Country</label><input id="updateCountry" required style="width:100%" readonly>
+              
+              <label style="margin-top:8px;color:#000">New Password (leave blank to keep current)</label>
+              <input id="updatePassword" type="password" style="width:100%">
+              
+              <hr style="border:none;height:1px;background:rgba(0,0,0,.1);margin:16px 0">
+              
+              <div class="license-section" style="padding:12px;border:1px solid #d0d0d0;border-radius:8px;background:#fafafa">
+                <h3 style="margin:0 0 12px 0;font-size:16px;color:#111;font-weight:700">Driver License Information</h3>
+                <label style="font-weight:600;color:#111">Driver license number</label><input id="updateLicenseNumber" required style="width:100%;font-weight:600;color:#111">
+                <label style="margin-top:8px;font-weight:600;color:#111">License country</label><input id="updateLicenseCountry" required style="width:100%;font-weight:600;color:#111" readonly>
+                <label style="margin-top:8px;font-weight:600;color:#111">Issue date</label><input id="updateLicenseIssueDate" type="date" required style="width:100%;font-weight:600;color:#111">
+                <label style="margin-top:8px;font-weight:600;color:#111">Expiration date</label><input id="updateLicenseExpireDate" type="date" required style="width:100%;font-weight:600;color:#111">
+                <label style="margin-top:8px;font-weight:600;color:#111">Update license photo (optional)</label>
+                <input id="updateLicensePhoto" type="file" accept="image/*" capture="user" style="width:100%;font-weight:600;color:#111">
+                <small style="color:#555;display:block;margin-top:4px;font-weight:500">Leave blank to keep existing photo</small>
+                <div id="updatePhotoPreview" style="margin-top:8px;max-width:220px"></div>
+              </div>
+              
+              <div style="display:flex;gap:8px;margin-top:16px">
+                <button class="navbtn" type="submit">Save Changes</button>
+                <button class="navbtn" id="updateInfoCancel" type="button">Cancel</button>
+              </div>
+            </form>
           </div>
         </div>
 

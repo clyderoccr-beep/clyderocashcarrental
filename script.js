@@ -595,6 +595,131 @@ document.addEventListener('click', async (e)=>{
   }
 });
 
+// Update Info modal handlers
+document.getElementById('updateInfoBtn')?.addEventListener('click', async ()=>{
+  const auth = getAuthInstance();
+  const uid = auth?.currentUser?.uid;
+  if(!uid){ alert('You must be logged in.'); return; }
+  
+  const db = getDB();
+  const { doc, getDoc } = getUtils();
+  if(!db){ alert('Database not available.'); return; }
+  
+  try {
+    const userDoc = await getDoc(doc(db, 'users', uid));
+    if(!userDoc.exists()){ alert('User data not found.'); return; }
+    
+    const data = userDoc.data();
+    document.getElementById('updateFirstName').value = data.firstName || '';
+    document.getElementById('updateLastName').value = data.lastName || '';
+    document.getElementById('updateAddress').value = data.address || '';
+    document.getElementById('updateState').value = data.state || '';
+    document.getElementById('updateCountry').value = data.country || '';
+    document.getElementById('updateLicenseNumber').value = data.licenseNumber || '';
+    document.getElementById('updateLicenseCountry').value = data.licenseCountry || '';
+    document.getElementById('updateLicenseIssueDate').value = data.licenseIssueDate || '';
+    document.getElementById('updateLicenseExpireDate').value = data.licenseExpireDate || '';
+    
+    // Show existing photo if available
+    const previewDiv = document.getElementById('updatePhotoPreview');
+    if(data.licensePhotoData){
+      previewDiv.innerHTML = `<img src="${data.licensePhotoData}" alt="Current license photo" style="width:100%;height:auto;border-radius:8px;border:1px solid #ccc">`;
+    } else {
+      previewDiv.innerHTML = '<small style="color:#666">No photo on file</small>';
+    }
+    
+    document.getElementById('updateInfoModal').style.display = 'block';
+  } catch(err){
+    console.error('Failed to load user data:', err);
+    alert('Failed to load your information.');
+  }
+});
+
+document.getElementById('updateInfoCancel')?.addEventListener('click', ()=>{
+  document.getElementById('updateInfoModal').style.display = 'none';
+  document.getElementById('updateInfoForm').reset();
+});
+
+document.getElementById('updateInfoForm')?.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  
+  const auth = getAuthInstance();
+  const uid = auth?.currentUser?.uid;
+  if(!uid){ alert('You must be logged in.'); return; }
+  
+  const db = getDB();
+  const { doc, updateDoc } = getUtils();
+  if(!db){ alert('Database not available.'); return; }
+  
+  const updates = {
+    firstName: document.getElementById('updateFirstName').value.trim(),
+    lastName: document.getElementById('updateLastName').value.trim(),
+    address: document.getElementById('updateAddress').value.trim(),
+    state: document.getElementById('updateState').value.trim(),
+    licenseNumber: document.getElementById('updateLicenseNumber').value.trim(),
+    licenseIssueDate: document.getElementById('updateLicenseIssueDate').value,
+    licenseExpireDate: document.getElementById('updateLicenseExpireDate').value,
+  };
+  
+  // Handle new license photo if uploaded
+  const photoInput = document.getElementById('updateLicensePhoto');
+  if(photoInput?.files?.[0]){
+    try {
+      const photoData = await new Promise((resolve, reject)=>{
+        const reader = new FileReader();
+        reader.onload = (ev)=> resolve(ev.target.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(photoInput.files[0]);
+      });
+      updates.licensePhotoData = photoData;
+    } catch(err){
+      console.error('Failed to read photo:', err);
+      alert('Failed to process photo. Please try again.');
+      return;
+    }
+  }
+  
+  // Handle password update
+  const newPassword = document.getElementById('updatePassword').value.trim();
+  if(newPassword){
+    if(newPassword.length < 6){
+      alert('Password must be at least 6 characters.');
+      return;
+    }
+    try {
+      await auth.currentUser.updatePassword(newPassword);
+      showToast('Password updated');
+    } catch(err){
+      console.error('Password update failed:', err);
+      alert('Failed to update password: ' + (err.message || 'Unknown error'));
+      return;
+    }
+  }
+  
+  try {
+    await updateDoc(doc(db, 'users', uid), updates);
+    alert('Your information has been updated successfully!');
+    document.getElementById('updateInfoModal').style.display = 'none';
+    document.getElementById('updateInfoForm').reset();
+    updateMembershipPanel(); // Refresh account display
+  } catch(err){
+    console.error('Update failed:', err);
+    alert('Failed to update your information: ' + (err.message || 'Unknown error'));
+  }
+});
+
+// Preview new license photo in update modal
+document.getElementById('updateLicensePhoto')?.addEventListener('change', (e)=>{
+  const file = e.target.files?.[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    const preview = document.getElementById('updatePhotoPreview');
+    preview.innerHTML = `<img src="${ev.target.result}" alt="New license photo preview" style="width:100%;height:auto;border-radius:8px;border:1px solid #ccc">`;
+  };
+  reader.readAsDataURL(file);
+});
+
 // Ensure admin visibility reflects any stored session on load
 updateAdminVisibility();
 
