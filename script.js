@@ -596,7 +596,11 @@ document.addEventListener('click', async (e)=>{
 });
 
 // Update Info modal handlers
-document.getElementById('updateInfoBtn')?.addEventListener('click', async ()=>{
+document.addEventListener('click', async (e)=>{
+  const btn = e.target.closest('#updateInfoBtn');
+  if(!btn) return;
+  e.preventDefault();
+
   const auth = getAuthInstance();
   const uid = auth?.currentUser?.uid;
   if(!uid){ alert('You must be logged in.'); return; }
@@ -635,12 +639,17 @@ document.getElementById('updateInfoBtn')?.addEventListener('click', async ()=>{
   }
 });
 
-document.getElementById('updateInfoCancel')?.addEventListener('click', ()=>{
+document.addEventListener('click', (e)=>{
+  const btn = e.target.closest('#updateInfoCancel');
+  if(!btn) return;
+  e.preventDefault();
   document.getElementById('updateInfoModal').style.display = 'none';
   document.getElementById('updateInfoForm').reset();
 });
 
-document.getElementById('updateInfoForm')?.addEventListener('submit', async (e)=>{
+document.addEventListener('submit', async (e)=>{
+  const form = e.target.closest('#updateInfoForm');
+  if(!form) return;
   e.preventDefault();
   
   const auth = getAuthInstance();
