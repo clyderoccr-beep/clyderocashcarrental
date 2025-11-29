@@ -2076,3 +2076,134 @@ document.addEventListener('click',(e)=>{
   const del = e.target.closest('[data-bk-delete]');
   if(del){ const id=del.dataset.bkDelete; if(confirm('Delete this booking?')){ deleteAdminBooking(id).then(()=>{ loadAdminBookings().then(renderAdminBookings); showToast('Booking deleted'); }); } return; }
 });
+
+// ===== Stripe Payment Integration =====
+// Replace 'pk_test_YOUR_PUBLISHABLE_KEY' with your actual Stripe publishable key
+const STRIPE_PUBLISHABLE_KEY = 'pk_test_51QQpV6AelR3kYJDzDAnqJgBw8TnXPhRLm8QDPRVDKcNbPa8rGvF8sZYJLdTrxoWbGHaIccVCxDJHHrOm8vsDbfLV00aTQcWNFn'; // TODO: Replace with your key
+
+let stripe = null;
+let elements = null;
+let paymentElement = null;
+
+// Initialize Stripe when page loads
+if(typeof Stripe !== 'undefined'){
+  stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
+}
+
+// Handle Stripe payment form submission
+document.addEventListener('submit', async (e)=>{
+  const form = e.target.closest('#stripe-payment-form');
+  if(!form) return;
+  e.preventDefault();
+
+  const submitButton = document.getElementById('submit-payment');
+  const buttonText = document.getElementById('button-text');
+  const spinner = document.getElementById('spinner');
+  const messageDiv = document.getElementById('payment-message');
+
+  // Disable button
+  submitButton.disabled = true;
+  buttonText.style.display = 'none';
+  spinner.style.display = 'inline';
+
+  const bookingId = document.getElementById('paymentBookingId').value.trim();
+  const amount = parseFloat(document.getElementById('paymentAmount').value);
+
+  if(!bookingId || !amount || amount < 1){
+    messageDiv.textContent = 'Please enter a valid booking ID and amount.';
+    messageDiv.style.display = 'block';
+    submitButton.disabled = false;
+    buttonText.style.display = 'inline';
+    spinner.style.display = 'none';
+    return;
+  }
+
+  try {
+    // Call Firebase Function to create PaymentIntent
+    const { httpsCallable } = window.functionsUtils || {};
+    if(!httpsCallable){
+      throw new Error('Firebase Functions not available');
+    }
+
+    const createPaymentIntent = httpsCallable(window.firestoreFunctions, 'createPaymentIntent');
+    const result = await createPaymentIntent({
+      amount: Math.round(amount * 100), // Convert to cents
+      currency: 'usd',
+      bookingId: bookingId,
+      vehicleName: 'Vehicle Rental' // Can be enhanced to fetch from booking
+    });
+
+    const { clientSecret } = result.data;
+
+    if(!stripe || !elements){
+      // Initialize Stripe Elements if not already done
+      elements = stripe.elements({ clientSecret });
+      paymentElement = elements.create('payment');
+      paymentElement.mount('#payment-element');
+    }
+
+    // Confirm payment
+    const { error } = await stripe.confirmPayment({
+      elements,
+      confirmParams: {
+        return_url: window.location.href, // Redirect back to same page
+      },
+    });
+
+    if(error){
+      messageDiv.textContent = error.message;
+      messageDiv.style.display = 'block';
+    } else {
+      // Payment succeeded - will redirect
+      messageDiv.textContent = 'Payment successful!';
+      messageDiv.style.color = '#2ecc71';
+      messageDiv.style.display = 'block';
+    }
+  } catch(err){
+    console.error('Payment error:', err);
+    messageDiv.textContent = err.message || 'Payment failed. Please try again.';
+    messageDiv.style.display = 'block';
+  } finally {
+    submitButton.disabled = false;
+    buttonText.style.display = 'inline';
+    spinner.style.display = 'none';
+  }
+});
+
+// Initialize Stripe Elements when payment section is visible
+document.addEventListener('click', async (e)=>{
+  const payTab = e.target.closest('[data-nav="payments"]');
+  if(!payTab) return;
+
+  // Delay to let section render
+  setTimeout(async ()=>{
+    if(!stripe){
+      console.warn('Stripe not loaded');
+      return;
+    }
+    
+    // Only initialize once
+    if(paymentElement) return;
+
+    // Create a setup intent to show payment methods without charging
+    // This allows Apple Pay button to appear
+    try {
+      elements = stripe.elements({
+        mode: 'payment',
+        amount: 25000, // Default $250
+        currency: 'usd',
+      });
+
+      paymentElement = elements.create('payment', {
+        layout: {
+          type: 'tabs',
+          defaultCollapsed: false,
+        },
+      });
+
+      paymentElement.mount('#payment-element');
+    } catch(err){
+      console.error('Stripe Elements initialization failed:', err);
+    }
+  }, 100);
+});
