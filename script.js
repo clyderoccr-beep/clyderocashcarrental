@@ -1623,42 +1623,107 @@ document.addEventListener('click',(e)=>{
 });
 
 document.getElementById('edImgFile')?.addEventListener('change', async (e)=>{ 
-  const file = e.target.files[0]; 
-  if(!file || _editingId === null) return; 
-  
-  // Upload to Firebase Storage instead of base64
+  const file = e.target.files[0];
+  if(!file || _editingId === null) return;
+
+  const v = VEHICLES.find(x=>x.id===_editingId);
+  if(!v) return;
+
+  // Basic preview immediately (object URL)
+  try {
+    const previewList = document.getElementById('edImgList');
+    const tempUrl = URL.createObjectURL(file);
+    if(previewList){
+      const wrap = document.createElement('div');
+      wrap.style.position='relative';
+      wrap.innerHTML = `<img src='${tempUrl}' alt='preview' style='width:120px;height:auto;border-radius:8px;border:1px solid rgba(255,255,255,.12)'><span style='position:absolute;bottom:4px;right:6px;background:rgba(0,0,0,.55);color:#fff;font-size:10px;padding:2px 4px;border-radius:4px'>preview</span>`;
+      previewList.appendChild(wrap);
+    }
+  }catch(_){ /* ignore preview errors */ }
+
+  // Attempt client-side resize/compression for large images (>2MB or dimensions > 2000px)
+  async function prepareBlob(originalFile){
+    return new Promise((resolve)=>{
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const img = new Image();
+        img.onload = () => {
+          const MAX_DIM = 1600;
+          let { width, height } = img;
+          if(width > MAX_DIM || height > MAX_DIM){
+            if(width >= height){ height = Math.round(height * (MAX_DIM/width)); width = MAX_DIM; }
+            else { width = Math.round(width * (MAX_DIM/height)); height = MAX_DIM; }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width; canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img,0,0,width,height);
+          canvas.toBlob(blob => { resolve(blob || originalFile); }, 'image/jpeg', 0.85);
+        };
+        img.onerror = () => resolve(originalFile);
+        img.src = ev.target.result;
+      };
+      reader.onerror = () => resolve(originalFile);
+      reader.readAsDataURL(originalFile);
+    });
+  }
+
   const storage = getStorage();
-  const { storageRef, uploadBytes, getDownloadURL } = getStorageUtils();
-  
-  if(!storage){
-    alert('Storage not configured');
+  const utilsStore = getStorageUtils() || {};
+  const { storageRef, uploadBytes, getDownloadURL } = utilsStore;
+
+  if(!storage || !storageRef || !uploadBytes || !getDownloadURL){
+    console.warn('Storage utilities missing; falling back to embedding base64.');
+    // Fallback: embed base64 directly (NOT ideal for large images)
+    const r = new FileReader();
+    r.onload = ev => {
+      v.imgs = v.imgs || [];
+      v.imgs.push(ev.target.result);
+      openEditor(_editingId);
+      alert('Image added (local base64 fallback).');
+    };
+    r.readAsDataURL(file);
     return;
   }
-  
+
+  let blobToUpload = file;
+  if(file.size > 2*1024*1024){
+    try { blobToUpload = await prepareBlob(file); }catch(e2){ console.warn('Compression failed, using original', e2); }
+  }
+
+  const timestamp = Date.now();
+  const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').toLowerCase();
+  const path = `vehicle_images/${_editingId}_${timestamp}_${safeFileName}`;
+  const ref = storageRef(storage, path);
+
+  // Non-blocking status indicator
+  let uploadingToastShown = false;
+  try { showToast('Uploading image...'); uploadingToastShown = true; }catch{}
+
   try {
-    const timestamp = Date.now();
-    const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const path = `vehicle_images/${_editingId}_${timestamp}_${safeFileName}`;
-    const ref = storageRef(storage, path);
-    
-    // Show uploading message
-    const v = VEHICLES.find(x=>x.id===_editingId);
-    if(!v) return;
-    
-    alert('Uploading image...');
-    
-    await uploadBytes(ref, file);
+    await uploadBytes(ref, blobToUpload);
     const url = await getDownloadURL(ref);
-    
-    // Add URL to vehicle images
     v.imgs = v.imgs || [];
     v.imgs.push(url);
-    
     openEditor(_editingId);
-    alert('Image uploaded successfully!');
-  } catch(err) {
+    showToast('Image uploaded');
+  }catch(err){
     console.error('Image upload failed:', err);
-    alert('Failed to upload image: ' + err.message);
+    alert('Failed to upload image: ' + (err.message||err));
+    // Fallback base64 if not already added
+    try {
+      const r2 = new FileReader();
+      r2.onload = ev => {
+        v.imgs = v.imgs || [];
+        v.imgs.push(ev.target.result);
+        openEditor(_editingId);
+        alert('Image added locally (upload failed).');
+      };
+      r2.readAsDataURL(file);
+    }catch(_){ /* ignore */ }
+  }
+  finally {
+    if(!uploadingToastShown){ try{ showToast('Done'); }catch{} }
   }
 });
 
