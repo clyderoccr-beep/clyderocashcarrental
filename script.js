@@ -1705,11 +1705,11 @@ document.getElementById('edImgFile')?.addEventListener('change', async (e)=>{
     const url = await getDownloadURL(ref);
     v.imgs = v.imgs || [];
     v.imgs.push(url);
-    // Persist updated vehicle to Firestore and refresh UI
-    try{ saveVehicleToFirestore(v); }catch(e3){ console.warn('Failed to persist vehicle with new image:', e3); }
-    try{ renderVehicles(); renderAdminVehicles(); }catch{}
+    // Persist and reload from Firestore to avoid overwrite race
+    try { await saveVehicleToFirestore(v); } catch(e3){ console.warn('Persist failed:', e3); }
+    try { await reloadVehicles(); } catch(e4){ console.warn('Reload vehicles failed:', e4); }
     openEditor(_editingId);
-    showToast('Image uploaded');
+    showToast('Image uploaded & saved');
   }catch(err){
     console.error('Image upload failed:', err);
     alert('Failed to upload image: ' + (err.message||err));
@@ -1719,8 +1719,10 @@ document.getElementById('edImgFile')?.addEventListener('change', async (e)=>{
       r2.onload = ev => {
         v.imgs = v.imgs || [];
         v.imgs.push(ev.target.result);
-        try{ saveVehicleToFirestore(v); }catch(e4){ console.warn('Failed to persist base64 image:', e4); }
-        try{ renderVehicles(); renderAdminVehicles(); }catch{}
+        (async ()=>{
+          try { await saveVehicleToFirestore(v); } catch(e4){ console.warn('Failed to persist base64 image:', e4); }
+          try { await reloadVehicles(); } catch(e5){ console.warn('Reload after base64 failed:', e5); }
+        })();
         openEditor(_editingId);
         alert('Image added locally (upload failed).');
       };
@@ -1731,6 +1733,21 @@ document.getElementById('edImgFile')?.addEventListener('change', async (e)=>{
     if(!uploadingToastShown){ try{ showToast('Done'); }catch{} }
   }
 });
+
+// Helper: reload vehicles fresh from Firestore
+async function reloadVehicles(){
+  const db = getDB();
+  const { collection, getDocs } = getUtils() || {};
+  if(!db || !collection || !getDocs) return;
+  try {
+    const snap = await getDocs(collection(db,'vehicles'));
+    VEHICLES.length = 0;
+    snap.forEach(docSnap => VEHICLES.push({ id: docSnap.id, ...docSnap.data() }));
+    renderVehicles();
+    if(getSessionEmail()===OWNER_EMAIL){ try{ renderAdminVehicles(); }catch{} }
+    seedBooking();
+  }catch(err){ console.warn('reloadVehicles error:', err?.message||err); }
+}
 
 document.getElementById('adminAddVehicle')?.addEventListener('click',()=>{ const id='veh_'+Date.now(); const newVehicle = {id,name:'New Vehicle',type:'Other',seats:4,price:100,imgs:[],available:true,details:''}; VEHICLES.push(newVehicle); renderAdminVehicles(); saveVehicleToFirestore(newVehicle); });
 
