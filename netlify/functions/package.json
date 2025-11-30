@@ -1,0 +1,11 @@
+{
+  "name": "clyderoccr-netlify-functions",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Netlify serverless functions for Clydero Cash Car Rental",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "stripe": "^14.25.0",
+    "node-fetch": "^3.3.2"
+  }
+}

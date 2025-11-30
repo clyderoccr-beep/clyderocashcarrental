@@ -2089,226 +2089,97 @@ document.addEventListener('click',(e)=>{
   if(del){ const id=del.dataset.bkDelete; if(confirm('Delete this booking?')){ deleteAdminBooking(id).then(()=>{ loadAdminBookings().then(renderAdminBookings); showToast('Booking deleted'); }); } return; }
 });
 
-// ===== Stripe Payment Integration =====
-const STRIPE_PUBLISHABLE_KEY = 'pk_test_51SYuKa07xJu59h4NJ0d8nSABFa0kqFiiZ8hqiPfmhwOCZQBB7FEgLYmCsJtBRRTXOrwgVxlzOf9cWpSPgTwhe3wC00hIHOWXtK';
- 
- let stripe = null;
- let elements = null;
- let cardElement = null; // Replaces paymentElement to restrict to card only
- let applePayButtonMounted = false;
- let paymentRequest = null;// Initialize Stripe when page loads
-if(typeof Stripe !== 'undefined'){
-  stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
+// ===== Hosted Payment Integration (Stripe Checkout + PayPal) =====
+// NOTE: Stripe publishable key is NOT required for redirect-to-Checkout approach.
+// If needed later for client-side Stripe features, place pk_live_... here.
+
+function initHostedPayments(){
+  initStripeCheckoutButton();
+  initPayPalHostedButton();
 }
 
-// Handle Stripe payment form submission
-document.addEventListener('submit', async (e)=>{
-  const form = e.target.closest('#stripe-payment-form');
-  if(!form) return;
-  e.preventDefault();
-
-  const submitButton = document.getElementById('submit-payment');
-  const buttonText = document.getElementById('button-text');
-  const spinner = document.getElementById('spinner');
-  const messageDiv = document.getElementById('payment-message');
-
-  // Disable button
-  submitButton.disabled = true;
-  buttonText.style.display = 'none';
-  spinner.style.display = 'inline';
-
-  const bookingId = document.getElementById('paymentBookingId').value.trim();
-  const amount = parseFloat(document.getElementById('paymentAmount').value);
-
-  if(!bookingId || !amount || amount < 1){
-    messageDiv.textContent = 'Please enter a valid booking ID and amount.';
-    messageDiv.style.display = 'block';
-    submitButton.disabled = false;
-    buttonText.style.display = 'inline';
-    spinner.style.display = 'none';
-    return;
-  }
-
-  try {
-    // Call Firebase Function to create PaymentIntent
-    const { httpsCallable } = window.functionsUtils || {};
-    if(!httpsCallable){
-      throw new Error('Firebase Functions not available');
-    }
-
-    const createPaymentIntent = httpsCallable(window.firestoreFunctions, 'createPaymentIntent');
-    const result = await createPaymentIntent({
-      amount: Math.round(amount * 100), // Convert to cents
-      currency: 'usd',
-      bookingId: bookingId,
-      vehicleName: 'Vehicle Rental' // Can be enhanced to fetch from booking
-    });
-
-    const { clientSecret } = result.data;
-
-    if(!stripe || !elements){
-      // Initialize Stripe Elements if not already done (card only)
-      elements = stripe.elements({ clientSecret, appearance:{ theme:'stripe' } });
-      cardElement = elements.create('card');
-      cardElement.mount('#payment-element');
-    } else if(!cardElement){
-      cardElement = elements.create('card');
-      cardElement.mount('#payment-element');
-    }
-
-    // Confirm card payment (no extra methods)
-    const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
-      payment_method: { card: cardElement }
-    });
-
-    if(error){
-      messageDiv.textContent = error.message;
-      messageDiv.style.display = 'block';
-    } else if(paymentIntent && paymentIntent.status === 'succeeded'){
-      messageDiv.textContent = 'Payment successful!';
-      messageDiv.style.color = '#2ecc71';
-      messageDiv.style.display = 'block';
-    }
-  } catch(err){
-    console.error('Payment error:', err);
-    messageDiv.textContent = err.message || 'Payment failed. Please try again.';
-    messageDiv.style.display = 'block';
-  } finally {
-    submitButton.disabled = false;
-    buttonText.style.display = 'inline';
-    spinner.style.display = 'none';
-  }
-});
-
-// Initialize Stripe Elements when payment section is visible
-document.addEventListener('click', async (e)=>{
+// Initialize on navigation to payments section
+document.addEventListener('click', (e)=>{
   const payTab = e.target.closest('[data-nav="payments"]');
-  if(!payTab) return;
-  setTimeout(()=>{ initStripeUI(); },120);
+  if(payTab){ setTimeout(()=> initHostedPayments(), 100); }
 });
 
-function initStripeUI(){
-  if(!stripe){ console.warn('Stripe not loaded'); return; }
-  if(!elements){
-    elements = stripe.elements({
-      // No automatic payment methods here; we mount card only
-      appearance:{ theme:'stripe' }
-    });
-  }
-  if(!cardElement){
-    cardElement = elements.create('card');
-    cardElement.mount('#payment-element');
-  }
-  initApplePayButton();
-  initPayPalButtons();
+function getBookingAndAmount(){
+  const bookingId = document.getElementById('paymentBookingId')?.value.trim();
+  const amountStr = document.getElementById('paymentAmount')?.value.trim();
+  const amountFloat = parseFloat(amountStr||'0');
+  const amountCents = Math.round(amountFloat * 100);
+  return { bookingId, amountCents, amountFloat };
 }
 
-function initApplePayButton(){
-  if(applePayButtonMounted) return;
-  const container = document.getElementById('apple-pay-button');
-  if(!container) return;
-  try{
-    paymentRequest = stripe.paymentRequest({
-      country: 'US',
-      currency: 'usd',
-      total: { label: 'Car Rental', amount: 100 }, // replaced dynamically before confirm
-      requestPayerName: true,
-      requestPayerEmail: true
-    });
-    const prButton = elements.create('paymentRequestButton', {
-      paymentRequest,
-      style: { paymentRequestButton: { type: 'default', theme: 'dark', height: '48px' } }
-    });
-    paymentRequest.canMakePayment().then(result => {
-      if(result){
-        prButton.mount('#apple-pay-button');
-        applePayButtonMounted = true;
-      } else {
-        container.innerHTML = '<small style="color:#666">Apple Pay not available on this device/browser.</small>';
-      }
-    });
-    paymentRequest.on('paymentmethod', async (ev) => {
-      try{
-        // Create PaymentIntent first
-        const bookingId = document.getElementById('paymentBookingId').value.trim();
-        const amountVal = parseFloat(document.getElementById('paymentAmount').value);
-        if(!bookingId || !amountVal){ ev.complete('fail'); return; }
-        const { httpsCallable } = window.functionsUtils || {};
-        const createPaymentIntent = httpsCallable(window.firestoreFunctions, 'createPaymentIntent');
-        const piRes = await createPaymentIntent({ amount: Math.round(amountVal*100), currency:'usd', bookingId, vehicleName: 'Vehicle Rental' });
-        const clientSecret = piRes.data.clientSecret;
-        const confirmRes = await stripe.confirmCardPayment(clientSecret, { payment_method: ev.paymentMethod.id }, { handleActions: true });
-        if(confirmRes.error){ ev.complete('fail'); showPaymentMessage(confirmRes.error.message); }
-        else {
-          ev.complete('success');
-          showPaymentMessage('Apple Pay payment successful!');
-        }
-      }catch(err){ console.error('Apple Pay error', err); ev.complete('fail'); showPaymentMessage(err.message||'Apple Pay failed'); }
-    });
-  }catch(err){ console.warn('Apple Pay init failed:', err.message); }
-}
-
-function showPaymentMessage(msg){
-  const div = document.getElementById('payment-message');
-  if(!div) return; div.textContent = msg; div.style.display='block'; div.style.color = /successful|success/i.test(msg)?'#2d6a4f':'#c1121f';
-}
-
-// Re-evaluate Apple Pay availability when amount or booking changes
-document.addEventListener('input', (e)=>{
-  if(e.target.id==='paymentAmount' || e.target.id==='paymentBookingId'){
-    if(paymentRequest){
-      const amt = parseFloat(document.getElementById('paymentAmount').value)||0;
-      if(amt>0){ paymentRequest.update({ total:{ label:'Car Rental', amount: Math.round(amt*100) } }); }
+function initStripeCheckoutButton(){
+  const btn = document.getElementById('stripeCheckoutBtn');
+  if(!btn || btn.dataset.bound) return;
+  btn.dataset.bound = '1';
+  btn.addEventListener('click', async ()=>{
+    const { bookingId, amountCents, amountFloat } = getBookingAndAmount();
+    const msgEl = document.getElementById('payment-message');
+    if(!bookingId || !amountCents || amountCents < 50){
+      if(msgEl){ msgEl.style.display='block'; msgEl.style.color='#c1121f'; msgEl.textContent='Enter valid booking ID and amount.'; }
+      return;
     }
-  }
-});
+    btn.disabled = true; btn.textContent = 'Redirecting…';
+    try{
+      const res = await fetch('/.netlify/functions/create-checkout-session', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify({ bookingId, amount: amountCents })
+      });
+      if(!res.ok){ throw new Error('Checkout create failed'); }
+      const data = await res.json();
+      if(!data.url){ throw new Error('No session URL returned'); }
+      window.location.href = data.url; // Redirect to Stripe Checkout
+    }catch(err){
+      console.error('Stripe Checkout error', err);
+      if(msgEl){ msgEl.style.display='block'; msgEl.style.color='#c1121f'; msgEl.textContent = err.message || 'Failed to start checkout.'; }
+      btn.disabled = false; btn.textContent = 'Pay with Card / Apple Pay';
+    }
+  });
+}
 
-// Simple stub for PayPal button
-function initPayPalButtons(){
+function initPayPalHostedButton(){
   const wrap = document.getElementById('paypal-button-container');
   if(!wrap || wrap.dataset.loaded) return;
-  if(typeof paypal === 'undefined'){ wrap.innerHTML = '<small style="color:#666">PayPal SDK not loaded (replace client-id in script tag).</small>'; return; }
-  wrap.dataset.loaded = '1';
-  try{
-    paypal.Buttons({
-      style:{ layout:'vertical', color:'gold', shape:'rect', label:'pay' },
-      createOrder: async () => {
-        const bookingId = document.getElementById('paymentBookingId').value.trim();
-        const amountVal = parseFloat(document.getElementById('paymentAmount').value);
-        if(!bookingId || !amountVal){ showPayPalStatus('Enter booking and amount first', true); return ''; }
-        // Call backend to create PayPal order
-        const { httpsCallable } = window.functionsUtils || {};
-        if(!httpsCallable){ showPayPalStatus('Firebase Functions unavailable', true); return ''; }
-        try{
-          const createOrderFn = httpsCallable(window.firestoreFunctions,'createPaypalOrder');
-          const res = await createOrderFn({ amount: Math.round(amountVal*100), bookingId, vehicleName:'Vehicle Rental' });
-          const orderId = res.data.orderId;
-          showPayPalStatus('Order created. Approve in PayPal popup.', false);
-          return orderId;
-        }catch(err){ console.error('PayPal create error',err); showPayPalStatus(err.message||'Create failed', true); return ''; }
-      },
-      onApprove: async (data, actions) => {
-        const bookingId = document.getElementById('paymentBookingId').value.trim();
-        showPayPalStatus('Capturing payment…', false);
-        try{
-          const { httpsCallable } = window.functionsUtils || {};
-          const captureFn = httpsCallable(window.firestoreFunctions,'capturePaypalOrder');
-          const capRes = await captureFn({ orderId: data.orderID, bookingId });
-          showPayPalStatus('PayPal payment successful!', false, true);
-        }catch(err){ console.error('PayPal capture error',err); showPayPalStatus(err.message||'Capture failed', true); }
-      },
-      onError: (err) => {
-        console.error('PayPal button error', err); showPayPalStatus('PayPal error: '+(err.message||'Unknown'), true);
-      }
-    }).render('#paypal-button-container');
-    showPayPalStatus('PayPal ready', false);
-  }catch(err){ console.error('PayPal init failed', err); showPayPalStatus(err.message||'Init failed', true); }
+  if(typeof paypal === 'undefined'){ wrap.innerHTML='<small style="color:#666">PayPal SDK not loaded.</small>'; return; }
+  wrap.dataset.loaded='1';
+  paypal.Buttons({
+    style:{ layout:'vertical', color:'gold', shape:'rect', label:'pay' },
+    createOrder: (data, actions) => {
+      const { bookingId, amountCents } = getBookingAndAmount();
+      if(!bookingId || !amountCents){ showPayPalHostedStatus('Enter booking & amount first', true); return ''; }
+      const decimal = (amountCents/100).toFixed(2);
+      return actions.order.create({
+        intent:'CAPTURE',
+        purchase_units:[{ reference_id: bookingId, amount:{ currency_code:'USD', value: decimal }, description:`CCR Booking ${bookingId}` }]
+      });
+    },
+    onApprove: async (data, actions) => {
+      try{
+        const details = await actions.order.capture();
+        showPayPalHostedStatus('Payment captured. Verifying…', false);
+        const { bookingId, amountCents } = getBookingAndAmount();
+        // Call verification stub (does server-side fetch of order)
+        const resp = await fetch('/.netlify/functions/paypal-payment-confirm', {
+          method:'POST', headers:{ 'Content-Type':'application/json' },
+          body: JSON.stringify({ orderId: data.orderID, bookingId, amount: amountCents })
+        });
+        if(!resp.ok){ throw new Error('Verify failed'); }
+        const verify = await resp.json();
+        showPayPalHostedStatus('PayPal payment successful!', false, true);
+        console.log('PayPal verify response', verify);
+      }catch(err){ console.error('PayPal approve error', err); showPayPalHostedStatus(err.message||'PayPal failed', true); }
+    },
+    onError: (err) => { console.error('PayPal button error', err); showPayPalHostedStatus('PayPal error: '+(err.message||'Unknown'), true); }
+  }).render('#paypal-button-container');
+  showPayPalHostedStatus('PayPal ready', false);
 }
 
-function showPayPalStatus(msg, isError=false, success=false){
+function showPayPalHostedStatus(msg, isError=false, success=false){
   const el = document.getElementById('paypal-status');
-  if(!el) return;
-  el.style.display='block';
-  el.textContent = msg;
-  el.style.color = success? '#2d6a4f' : (isError? '#c1121f' : '#666');
+  if(!el) return; el.style.display='block'; el.textContent=msg; el.style.color = success? '#2d6a4f' : (isError? '#c1121f' : '#666');
 }

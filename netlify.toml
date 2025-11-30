@@ -4,3 +4,9 @@
 
 [build.environment]
   NETLIFY_SKIP_SECRET_SCANNING = "true"
+
+# Functions configuration for Stripe Checkout & PayPal handlers
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+

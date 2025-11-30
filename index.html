@@ -822,43 +822,33 @@
           </div>
         </div>
 
-        <!-- Online Payment (Apple Pay, Card, PayPal) -->
+        <!-- Hosted Checkout (Stripe Checkout + PayPal) -->
         <div class="card" style="max-width:640px;margin-bottom:20px">
           <div class="body">
-            <h3 style="margin-top:0">Pay Now (Apple Pay, Card, PayPal)</h3>
-            <p style="color:#666;font-size:14px;margin-bottom:12px">
-              Secure checkout. Apple Pay only appears on Safari (macOS/iOS) with an active Wallet & verified domain. PayPal coming via separate button below.
+            <h3 style="margin-top:0">Pay for Booking</h3>
+            <p style="color:#666;font-size:14px;margin-bottom:16px">
+              Card & Apple Pay handled on the secure Stripe Checkout page. Apple Pay appears automatically on supported devices (Safari + verified domain + Wallet). PayPal is processed separately below.
             </p>
-            
-            <form id="stripe-payment-form">
-              <div style="margin-bottom:12px">
-                <label style="color:#000;font-weight:600">Booking ID</label>
-                <input id="paymentBookingId" type="text" placeholder="e.g., bk_1234567890" required style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px">
-                <small style="color:#666;display:block;margin-top:4px">Enter your booking ID from My Account</small>
-              </div>
-
-              <div style="margin-bottom:12px">
-                <label style="color:#000;font-weight:600">Amount (USD)</label>
-                <input id="paymentAmount" type="number" min="1" step="0.01" placeholder="250.00" required style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px">
-                <small style="color:#666;display:block;margin-top:4px">Weekly rental amount</small>
-              </div>
-
-              <!-- Apple Pay Button (mounted dynamically if available) -->
-              <div id="apple-pay-button" style="margin:12px 0"></div>
-              <!-- Stripe Card Payment Element -->
-              <div id="payment-element" style="margin:16px 0"></div>
-
-              <!-- PayPal Button Container -->
-              <div id="paypal-button-container" style="margin:12px 0"></div>
-              <div id="paypal-status" style="display:none;font-size:13px;margin-top:4px"></div>
-              
-              <div id="payment-message" style="color:#c1121f;margin:12px 0;display:none"></div>
-
-              <button id="submit-payment" class="navbtn" type="submit" style="width:100%;margin-top:8px">
-                <span id="button-text">Pay Now</span>
-                <span id="spinner" style="display:none">Processing...</span>
-              </button>
-            </form>
+            <div style="margin-bottom:12px">
+              <label style="color:#000;font-weight:600">Booking ID</label>
+              <input id="paymentBookingId" type="text" placeholder="e.g., bk_1234567890" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px">
+              <small style="color:#666;display:block;margin-top:4px">Enter your booking reference</small>
+            </div>
+            <div style="margin-bottom:20px">
+              <label style="color:#000;font-weight:600">Amount (USD)</label>
+              <input id="paymentAmount" type="number" min="1" step="0.01" placeholder="250.00" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px">
+              <small style="color:#666;display:block;margin-top:4px">Weekly rental total (example: 250.00)</small>
+            </div>
+            <!-- Stripe Checkout Trigger -->
+            <button id="stripeCheckoutBtn" class="navbtn" style="width:100%;margin-bottom:16px">Pay with Card / Apple Pay</button>
+            <!-- PayPal Buttons -->
+            <div id="paypal-button-container" style="margin-bottom:8px"></div>
+            <div id="paypal-status" style="display:none;font-size:13px"></div>
+            <div id="payment-message" style="display:none;margin-top:12px;font-size:13px"></div>
+            <!-- Notes -->
+            <div style="margin-top:16px;font-size:12px;color:#666;line-height:1.4">
+              <strong>Security:</strong> Card & Apple Pay processed by Stripe. PayPal processed by PayPal. No card data touches this site.
+            </div>
           </div>
         </div>
       </div>
