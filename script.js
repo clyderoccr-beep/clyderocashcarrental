@@ -360,6 +360,7 @@ function updateMembershipPanel(){
   const panel = document.getElementById('accountPanel');
   const content = document.getElementById('membershipContent');
   const summary = document.getElementById('accountSummary');
+  const pmStatus = document.getElementById('paymentMethodStatus');
   console.log('updateMembershipPanel called, email:', email);
   console.log('accountPanel:', panel, 'membershipContent:', content);
   if(!panel || !content) return;
@@ -377,6 +378,9 @@ function updateMembershipPanel(){
         `Status: ${member.status||'active'}`,
         `Member Since: ${member.createdTs? new Date(member.createdTs).toLocaleDateString() : ''}`
       ]; summary.textContent = lines.join('\n');
+      const hasCard = !!member.cardOnFile && !!member.stripeDefaultPm;
+      if(pmStatus){ pmStatus.innerHTML = `<span style="font-weight:700">Payment Method:</span> <span class="badge" style="${hasCard?'background:#2d6a4f33;border-color:#2d6a4f66;color:#2d6a4f':'background:#6c757d22;border-color:#6c757d55;color:#6c757d'}">Card on file: ${hasCard?'Yes':'No'}</span>`; }
+      const rmBtn = document.getElementById('removeSavedCard'); if(rmBtn){ rmBtn.style.display = hasCard ? 'inline-block' : 'none'; }
     } else if(summary){ summary.textContent = `Logged in as ${email}`; }
     if(typeof renderAccountBookings==='function'){ renderAccountBookings(); }
   } else { 
@@ -2206,6 +2210,8 @@ function renderAdminBookings(){
     const cust = b.customer||{};
     const ts = b.createdAt? new Date(b.createdAt).toLocaleString() : '';
     const isLate = (()=>{ try{ if(!b.returnDate) return false; const due=new Date(b.returnDate).getTime(); return Date.now()>due; }catch{ return false; } })();
+    const member = (typeof MEMBERS!=='undefined' && Array.isArray(MEMBERS))? MEMBERS.find(m=>m.email===b.userEmail):null;
+    const hasCard = !!(member && member.cardOnFile && member.stripeDefaultPm);
     const card=document.createElement('article'); card.className='card';
     card.innerHTML = `<div class='body'>
       <div style='display:flex;gap:8px;align-items:center'>
@@ -2214,6 +2220,7 @@ function renderAdminBookings(){
       </div>
       <div class='muted' style='font-size:12px;margin-top:4px'>${b.userEmail||''}</div>
       <div class='muted' style='font-size:12px;margin-top:4px'>${dates}</div>
+      <div style='margin-top:4px'><span class='badge' style='${hasCard?'background:#2d6a4f33;border-color:#2d6a4f66;color:#2d6a4f':'background:#6c757d22;border-color:#6c757d55;color:#6c757d'}'>Card on file: ${hasCard?'Yes':'No'}</span></div>
       <div style='white-space:pre-wrap;font-size:12px;color:var(--muted);margin-top:6px'>${
         [`Name: ${(cust.first||'')+' '+(cust.last||'')}`,
          `Address: ${cust.address||''}`,
