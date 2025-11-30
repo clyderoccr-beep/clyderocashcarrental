@@ -2142,8 +2142,8 @@ document.addEventListener('click',(e)=>{
 // If needed later for client-side Stripe features, place pk_live_... here.
 
 function initHostedPayments(){
-  initStripeCheckoutButton();
-  initPayPalHostedButton();
+  try{ initStripeCheckoutButton(); }catch(e){ console.warn('Stripe init failed', e); }
+  try{ initPayPalHostedButton(); }catch(e){ console.warn('PayPal init failed', e); }
 }
 
 // Initialize on navigation to payments section
@@ -2155,6 +2155,8 @@ document.addEventListener('click', (e)=>{
 // Initialize when arriving directly on payments via hash or programmatic navigation
 document.addEventListener('DOMContentLoaded', ()=>{
   if(location.hash.includes('payments')){ setTimeout(()=> initHostedPayments(), 100); }
+  // Ensure bindings exist even if not navigating via tab
+  setTimeout(()=> initHostedPayments(), 300);
 });
 window.addEventListener('hashchange', ()=>{
   if(location.hash.includes('payments')){ setTimeout(()=> initHostedPayments(), 100); }
@@ -2181,12 +2183,16 @@ function initStripeCheckoutButton(){
     }
     btn.disabled = true; btn.textContent = 'Redirecting…';
     try{
-      const res = await fetch('/.netlify/functions/create-checkout-session', {
+      const endpoint = '/.netlify/functions/create-checkout-session';
+      const res = await fetch(endpoint, {
         method:'POST',
         headers:{ 'Content-Type':'application/json' },
         body: JSON.stringify({ bookingId, amount: amountCents })
       });
-      if(!res.ok){ throw new Error('Checkout create failed'); }
+      if(!res.ok){
+        const txt = await res.text().catch(()=>res.statusText);
+        throw new Error(`Checkout create failed (${res.status}): ${txt}`);
+      }
       const data = await res.json();
       if(!data.url){ throw new Error('No session URL returned'); }
       window.location.href = data.url; // Redirect to Stripe Checkout
