@@ -978,6 +978,10 @@ function renderAccountBookings(){
         <span class='muted' style='margin-left:auto;font-size:12px'>${new Date(b.createdAt||Date.now()).toLocaleString()}</span>
       </div>
       <div class='muted' style='margin-top:4px;font-size:12px'>${dates}</div>
+      <div style='margin-top:4px;display:flex;gap:8px;align-items:center;flex-wrap:wrap'>
+        <span style='font-size:11px;color:#666'>ID: <code style='background:#f0f0f0;padding:2px 4px;border-radius:3px;font-size:10px'>${b.id}</code></span>
+        <button class='navbtn' data-bk-copy-id='${b.id}' style='font-size:11px;padding:4px 8px'>Copy ID</button>
+      </div>
       <div style='margin-top:4px'>${badge}</div>
       ${status==='rented'?`<div class='muted' style='margin-top:4px;font-size:12px'>Rented at ${b.rentedAt? new Date(b.rentedAt).toLocaleString():''}</div>`:''}
       ${status==='rented'?`<div style='margin-top:4px;font-size:12px'><strong>Time until payment/return:</strong> <span class='countdown' data-return='${b.returnDate||''}' data-rented='${b.rentedAt||''}'>—</span></div>`:''}
@@ -1080,8 +1084,10 @@ document.addEventListener('submit',(e)=>{
   updateMembershipPanel();
 });
 
-// Booking actions: cancel + extend
+// Booking actions: cancel + extend + copy ID
 document.addEventListener('click',(e)=>{
+  const copyIdBtn=e.target.closest('[data-bk-copy-id]');
+    if(copyIdBtn){ const id=copyIdBtn.dataset.bkCopyId; navigator.clipboard.writeText(id).then(()=>showToast('Booking ID copied!')).catch(()=>showToast('Failed to copy')); return; }
   const cancelBtn=e.target.closest('[data-bk-cancel]');
     if(cancelBtn){ const email=getSessionEmail(); if(!email) return; loadBookingsForEmail(email); const id=cancelBtn.dataset.bkCancel; const bk=MY_BOOKINGS.find(b=>b.id===id); if(bk && bk.status!=='cancelled'){ if(confirm('Cancel this booking?')){ bk.status='cancelled'; saveBookingsForEmail(email); renderAccountBookings();
       // update Firestore status if mirrored
