@@ -814,12 +814,14 @@
               <input id="paymentAmount" type="number" min="1" step="0.01" placeholder="250.00" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px">
               <small style="color:#666;display:block;margin-top:4px">Weekly rental total (example: 250.00)</small>
             </div>
-            <!-- Stripe Checkout Trigger -->
-            <button id="stripeCheckoutBtn" class="navbtn" style="width:100%;margin-bottom:16px">Pay Now</button>
+            <!-- Stripe Checkout Triggers (separated) -->
+            <button id="stripeCheckoutBtn" class="navbtn" style="width:100%;margin-bottom:8px">Pay with Card</button>
+            <button id="applePayBtn" class="navbtn" style="width:100%;margin-bottom:16px">Pay with Apple Pay</button>
             <!-- PayPal Buttons -->
             <div id="paypal-button-container" style="margin-bottom:8px"></div>
             <div id="paypal-status" style="display:none;font-size:13px"></div>
             <div id="payment-message" style="display:none;margin-top:12px;font-size:13px"></div>
+            <div id="apple-status" style="display:none;margin-top:8px;font-size:12px;color:#666"></div>
             <!-- Notes -->
             <div style="margin-top:16px;font-size:12px;color:#666;line-height:1.4">
               <strong>Security:</strong> Card & Apple Pay processed by Stripe. PayPal processed by PayPal. No card data touches this site.

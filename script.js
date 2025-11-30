@@ -2251,6 +2251,7 @@ function ensurePayPalSdkLoaded(){
 
 function initHostedPayments(){
   try{ initStripeCheckoutButton(); }catch(e){ console.warn('Stripe init failed', e); }
+  try{ initApplePayButton(); }catch(e){ console.warn('Apple Pay init failed', e); }
   ensurePayPalSdkLoaded()
     .then(()=>{ try{ initPayPalHostedButton(); }catch(e){ console.warn('PayPal init failed', e); } })
     .catch((e)=>{ console.warn('PayPal SDK load failed', e?.message||e); const wrap=document.getElementById('paypal-button-container'); if(wrap){ wrap.innerHTML='<small style="color:#666">PayPal unavailable (SDK failed to load).</small>'; } });
@@ -2317,6 +2318,39 @@ function initStripeCheckoutButton(){
       console.error('Stripe Checkout error', err);
       if(msgEl){ msgEl.style.display='block'; msgEl.style.color='#c1121f'; msgEl.textContent = err.message || 'Failed to start checkout.'; }
       btn.disabled = false; btn.textContent = 'Pay Now';
+    }
+  });
+}
+
+function initApplePayButton(){
+  const btn = document.getElementById('applePayBtn');
+  if(!btn || btn.dataset.bound) return;
+  btn.dataset.bound = '1';
+  btn.addEventListener('click', async ()=>{
+    const { bookingId, amountCents } = getBookingAndAmount();
+    const msgEl = document.getElementById('payment-message');
+    const aMsg = document.getElementById('apple-status');
+    const appleSupported = typeof window.ApplePaySession !== 'undefined' && ApplePaySession.canMakePayments && ApplePaySession.canMakePayments();
+    if(!appleSupported){ if(aMsg){ aMsg.style.display='block'; aMsg.textContent='Apple Pay not available on this device. We\'ll open secure checkout where you can still use your card.'; } }
+    if(!bookingId || !amountCents || amountCents < 50){
+      if(msgEl){ msgEl.style.display='block'; msgEl.style.color='#c1121f'; msgEl.textContent='Missing or invalid locked booking amount.'; }
+      return;
+    }
+    btn.disabled = true; const prev=btn.textContent; btn.textContent='Checking…';
+    try{
+      // Use the same Checkout session. On Apple devices, Apple Pay shows as an option on Checkout.
+      const endpoint = '/.netlify/functions/create-checkout-session';
+      const res = await fetch(endpoint, {
+        method:'POST', headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify({ bookingId, amount: amountCents })
+      });
+      if(!res.ok){ const txt=await res.text().catch(()=>res.statusText); throw new Error(`Checkout create failed (${res.status}): ${txt}`); }
+      const data = await res.json(); if(!data.url) throw new Error('No session URL returned');
+      window.location.href = data.url;
+    }catch(err){
+      console.error('Apple Pay flow (Checkout) error', err);
+      if(msgEl){ msgEl.style.display='block'; msgEl.style.color='#c1121f'; msgEl.textContent = err.message || 'Failed to start Apple Pay checkout.'; }
+      btn.disabled = false; btn.textContent = prev;
     }
   });
 }
