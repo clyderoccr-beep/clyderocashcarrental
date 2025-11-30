@@ -2185,7 +2185,7 @@ function initStripeCheckoutButton(){
     }catch(err){
       console.error('Stripe Checkout error', err);
       if(msgEl){ msgEl.style.display='block'; msgEl.style.color='#c1121f'; msgEl.textContent = err.message || 'Failed to start checkout.'; }
-      btn.disabled = false; btn.textContent = 'Pay with Card / Apple Pay';
+      btn.disabled = false; btn.textContent = 'Pay Now';
     }
   });
 }
