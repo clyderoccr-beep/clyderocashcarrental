@@ -2381,8 +2381,12 @@ function initPayPalHostedButton(){
           method:'POST', headers:{ 'Content-Type':'application/json' },
           body: JSON.stringify({ orderId: data.orderID, bookingId, amount: amountCents })
         });
-        if(!resp.ok){ throw new Error('Verify failed'); }
-        const verify = await resp.json();
+        // Accept any 2xx status as success (200, 201, etc.)
+        if(!resp.ok && resp.status < 200 || resp.status >= 300){ 
+          const errText = await resp.text().catch(()=>'Unknown server error'); 
+          throw new Error('Verify failed: ' + errText); 
+        }
+        const verify = await resp.json().catch(()=>({}));
         showPayPalHostedStatus('PayPal payment successful!', false, true);
         console.log('PayPal verify response', verify);
         // Mark booking as rented locally & Firestore
