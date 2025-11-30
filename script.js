@@ -1378,29 +1378,26 @@ async function loadFromFirestore(){
 
 // ===== Realtime Subscriptions =====
 let _vehUnsub=null, _aboutUnsub=null, _adminBookingsUnsub=null, _inboxUnsub=null, _membersUnsub=null, _currentUserUnsub=null;
+let _isUpdatingVehicles = false;
 
 function setupRealtimeForRole(){
   const db=getDB(); const utils=getUtils(); if(!db || !utils.onSnapshot) return;
   // Public (vehicles + about) always
   if(!_aboutUnsub){ try{ _aboutUnsub = utils.onSnapshot(utils.doc(db,'site_content','about'), snap=>{ if(snap.exists()){ ABOUT_CONTENT = snap.data(); renderAbout(); } }); }catch(e){ console.warn('About realtime failed', e.message); } }
-  if(!_vehUnsub){ try{ _vehUnsub = utils.onSnapshot(utils.collection(db,'vehicles'), async snap=>{ 
+  if(!_vehUnsub){ try{ _vehUnsub = utils.onSnapshot(utils.collection(db,'vehicles'), snap=>{ 
+    if(_isUpdatingVehicles) return; _isUpdatingVehicles = true;
     try{
       const fireList = []; snap.forEach(d=> fireList.push({ id:d.id, ...d.data() }));
       let merged = mergeVehiclesWithDefaults(fireList);
       if(!Array.isArray(merged) || merged.length===0){ merged = DEFAULT_VEHICLES.map(v=>({ ...v })); }
       VEHICLES.length=0; merged.forEach(v=> VEHICLES.push(v));
       renderVehicles(); seedBooking();
-      const isOwner = getSessionEmail()===OWNER_EMAIL; if(isOwner){
-        // If some defaults missing in Firestore, republish them
-        const missing = DEFAULT_VEHICLES.filter(d=> !fireList.find(f=> f.id===d.id));
-        for(const m of missing){ try{ await saveVehicleToFirestore(m); }catch{} }
-        renderAdminVehicles();
-      }
+      if(getSessionEmail()===OWNER_EMAIL){ renderAdminVehicles(); }
     }catch(err){
       console.warn('Vehicles snapshot merge failed:', err?.message||err);
       VEHICLES.length=0; DEFAULT_VEHICLES.forEach(v=> VEHICLES.push({ ...v }));
       renderVehicles(); seedBooking();
-    }
+    } finally { _isUpdatingVehicles = false; }
   }); }catch(e){ console.warn('Vehicles realtime failed', e.message); } }
 
   // Current user membership doc realtime (improves account panel updates)
