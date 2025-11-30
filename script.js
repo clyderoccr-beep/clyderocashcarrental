@@ -966,6 +966,12 @@ function renderAccountBookings(){
       : status==='cancelled' ? `<span class='badge unavailable'><strong>Status:</strong> Cancelled</span>`
       : status==='rejected' ? `<span class='badge' style='background:#6c757d33;border-color:#6c757d66;color:#6c757d'><strong>Status:</strong> Rejected</span>`
       : `<span class='badge' style='background:rgba(255,255,255,.08)'><strong>Status:</strong> ${status}</span>`;
+    const pricePerWeek = veh?.price || 0;
+    const nowMs = Date.now();
+    const retMs = b.returnDate ? new Date(b.returnDate).getTime() : 0;
+    const overdueMs = retMs ? Math.max(0, nowMs - retMs) : 0;
+    const overdueHours = overdueMs > 0 ? Math.ceil(overdueMs / (1000*60*60)) : 0;
+    const lateFee = overdueHours * 5; // $5/hour late fee
     card.innerHTML=`<div class='body'>
       <div style='display:flex;gap:8px;align-items:center'>
         <div style='font-weight:700'>${name}</div>
@@ -976,8 +982,10 @@ function renderAccountBookings(){
       ${status==='rented'?`<div class='muted' style='margin-top:4px;font-size:12px'>Rented at ${b.rentedAt? new Date(b.rentedAt).toLocaleString():''}</div>`:''}
       ${status==='rented'?`<div style='margin-top:4px;font-size:12px'><strong>Time until payment/return:</strong> <span class='countdown' data-return='${b.returnDate||''}' data-rented='${b.rentedAt||''}'>—</span></div>`:''}
       ${status==='rented'?`<div style='margin-top:8px;padding:8px;background:rgba(255,193,7,.1);border-left:3px solid #ffc107;font-size:11px;line-height:1.4'><strong>⚠️ Important:</strong> If extending, pay before timer expires. If returning, return before timer expires or a late fee of <strong>$5/hour</strong> will be added.</div>`:''}
-      ${(status==='active'||status==='accepted'||status==='cancelled'||status==='rejected')?`<div style='display:flex;gap:8px;margin-top:8px;flex-wrap:wrap'>
+      ${(status==='active'||status==='accepted'||status==='cancelled'||status==='rejected'||status==='rented')?`<div style='display:flex;gap:8px;margin-top:8px;flex-wrap:wrap'>
+        ${status==='accepted'?`<button class='navbtn' data-bk-pay-now='${b.id}'>Pay Now</button>`:''}
         ${status==='active'||status==='accepted'?`<button class='navbtn' data-bk-extend='${b.id}'>Extend</button><button class='navbtn' data-bk-cancel='${b.id}'>Cancel</button>`:''}
+        ${status==='rented'?`<button class='navbtn' data-bk-extend1w='${b.id}'>Extend 1 Week${lateFee>0?` (+$${lateFee} late fee)`:''}</button>`:''}
         ${status==='cancelled'||status==='rejected'?`<button class='navbtn' data-bk-delete='${b.id}' style='background:#c1121f;border-color:#c1121f'>Delete</button>`:''}
       </div>`:''}
     </div>`;
@@ -1089,6 +1097,10 @@ document.addEventListener('click',(e)=>{
       // Firestore update on extend
       try{ const db=getDB(); const { doc, updateDoc } = getUtils(); if(db && bk.fireId){ updateDoc(doc(db,'bookings',bk.fireId), { returnDate: bk.returnDate, status: 'extended' }); } }catch(err){ console.warn('Failed to update Firestore booking on extend:', err.message); }
       alert('Booking extended.'); }; const onCancel=()=>{ modal.style.display='none'; cleanup(); }; function cleanup(){ document.getElementById('extendSave').removeEventListener('click',onSave); document.getElementById('extendCancel').removeEventListener('click',onCancel); } document.getElementById('extendSave').addEventListener('click',onSave); document.getElementById('extendCancel').addEventListener('click',onCancel); return; }
+  const payNowBtn=e.target.closest('[data-bk-pay-now]');
+    if(payNowBtn){ const email=getSessionEmail(); if(!email) return; loadBookingsForEmail(email); const id=payNowBtn.dataset.bkPayNow; const bk=MY_BOOKINGS.find(b=>b.id===id); const veh=VEHICLES.find(v=>v.id===bk?.vehicleId); const amount=veh?.price||0; if(!bk||!amount){ showToast('Booking or amount missing'); return; } try{ document.getElementById('paymentBookingId').value = bk.fireId || bk.id; document.getElementById('paymentAmount').value = String(amount); goto('payments'); showToast('Ready to pay for booking'); }catch{} return; }
+  const extend1wBtn=e.target.closest('[data-bk-extend1w]');
+    if(extend1wBtn){ const email=getSessionEmail(); if(!email) return; loadBookingsForEmail(email); const id=extend1wBtn.dataset.bkExtend1w; const bk=MY_BOOKINGS.find(b=>b.id===id); const veh=VEHICLES.find(v=>v.id===bk?.vehicleId); const base=veh?.price||0; const now=Date.now(); const retMs=bk?.returnDate? new Date(bk.returnDate).getTime():0; const overdueMs=retMs? Math.max(0, now-retMs):0; const overdueHours=overdueMs>0? Math.ceil(overdueMs/(1000*60*60)):0; const fee=overdueHours*5; const total=base+fee; if(!bk||!base){ showToast('Booking or vehicle price missing'); return; } try{ document.getElementById('paymentBookingId').value = (bk.fireId || bk.id)+'_extend1w'; document.getElementById('paymentAmount').value = String(total); goto('payments'); showToast(`Extension ready: $${base} + $${fee} late`); }catch{} return; }
 });
 
 // Customer My Bookings manual refresh
@@ -2079,12 +2091,12 @@ document.addEventListener('click',(e)=>{
 
 // ===== Stripe Payment Integration =====
 const STRIPE_PUBLISHABLE_KEY = 'pk_test_51SYuKa07xJu59h4NJ0d8nSABFa0kqFiiZ8hqiPfmhwOCZQBB7FEgLYmCsJtBRRTXOrwgVxlzOf9cWpSPgTwhe3wC00hIHOWXtK';
-
-let stripe = null;
-let elements = null;
-let paymentElement = null;
-
-// Initialize Stripe when page loads
+ 
+ let stripe = null;
+ let elements = null;
+ let cardElement = null; // Replaces paymentElement to restrict to card only
+ let applePayButtonMounted = false;
+ let paymentRequest = null;// Initialize Stripe when page loads
 if(typeof Stripe !== 'undefined'){
   stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
 }
@@ -2135,25 +2147,24 @@ document.addEventListener('submit', async (e)=>{
     const { clientSecret } = result.data;
 
     if(!stripe || !elements){
-      // Initialize Stripe Elements if not already done
-      elements = stripe.elements({ clientSecret });
-      paymentElement = elements.create('payment');
-      paymentElement.mount('#payment-element');
+      // Initialize Stripe Elements if not already done (card only)
+      elements = stripe.elements({ clientSecret, appearance:{ theme:'stripe' } });
+      cardElement = elements.create('card');
+      cardElement.mount('#payment-element');
+    } else if(!cardElement){
+      cardElement = elements.create('card');
+      cardElement.mount('#payment-element');
     }
 
-    // Confirm payment
-    const { error } = await stripe.confirmPayment({
-      elements,
-      confirmParams: {
-        return_url: window.location.href, // Redirect back to same page
-      },
+    // Confirm card payment (no extra methods)
+    const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+      payment_method: { card: cardElement }
     });
 
     if(error){
       messageDiv.textContent = error.message;
       messageDiv.style.display = 'block';
-    } else {
-      // Payment succeeded - will redirect
+    } else if(paymentIntent && paymentIntent.status === 'succeeded'){
       messageDiv.textContent = 'Payment successful!';
       messageDiv.style.color = '#2ecc71';
       messageDiv.style.display = 'block';
@@ -2173,36 +2184,131 @@ document.addEventListener('submit', async (e)=>{
 document.addEventListener('click', async (e)=>{
   const payTab = e.target.closest('[data-nav="payments"]');
   if(!payTab) return;
-
-  // Delay to let section render
-  setTimeout(async ()=>{
-    if(!stripe){
-      console.warn('Stripe not loaded');
-      return;
-    }
-    
-    // Only initialize once
-    if(paymentElement) return;
-
-    // Create a setup intent to show payment methods without charging
-    // This allows Apple Pay button to appear
-    try {
-      elements = stripe.elements({
-        mode: 'payment',
-        amount: 25000, // Default $250
-        currency: 'usd',
-      });
-
-      paymentElement = elements.create('payment', {
-        layout: {
-          type: 'tabs',
-          defaultCollapsed: false,
-        },
-      });
-
-      paymentElement.mount('#payment-element');
-    } catch(err){
-      console.error('Stripe Elements initialization failed:', err);
-    }
-  }, 100);
+  setTimeout(()=>{ initStripeUI(); },120);
 });
+
+function initStripeUI(){
+  if(!stripe){ console.warn('Stripe not loaded'); return; }
+  if(!elements){
+    elements = stripe.elements({
+      // No automatic payment methods here; we mount card only
+      appearance:{ theme:'stripe' }
+    });
+  }
+  if(!cardElement){
+    cardElement = elements.create('card');
+    cardElement.mount('#payment-element');
+  }
+  initApplePayButton();
+  initPayPalButtons();
+}
+
+function initApplePayButton(){
+  if(applePayButtonMounted) return;
+  const container = document.getElementById('apple-pay-button');
+  if(!container) return;
+  try{
+    paymentRequest = stripe.paymentRequest({
+      country: 'US',
+      currency: 'usd',
+      total: { label: 'Car Rental', amount: 100 }, // replaced dynamically before confirm
+      requestPayerName: true,
+      requestPayerEmail: true
+    });
+    const prButton = elements.create('paymentRequestButton', {
+      paymentRequest,
+      style: { paymentRequestButton: { type: 'default', theme: 'dark', height: '48px' } }
+    });
+    paymentRequest.canMakePayment().then(result => {
+      if(result){
+        prButton.mount('#apple-pay-button');
+        applePayButtonMounted = true;
+      } else {
+        container.innerHTML = '<small style="color:#666">Apple Pay not available on this device/browser.</small>';
+      }
+    });
+    paymentRequest.on('paymentmethod', async (ev) => {
+      try{
+        // Create PaymentIntent first
+        const bookingId = document.getElementById('paymentBookingId').value.trim();
+        const amountVal = parseFloat(document.getElementById('paymentAmount').value);
+        if(!bookingId || !amountVal){ ev.complete('fail'); return; }
+        const { httpsCallable } = window.functionsUtils || {};
+        const createPaymentIntent = httpsCallable(window.firestoreFunctions, 'createPaymentIntent');
+        const piRes = await createPaymentIntent({ amount: Math.round(amountVal*100), currency:'usd', bookingId, vehicleName: 'Vehicle Rental' });
+        const clientSecret = piRes.data.clientSecret;
+        const confirmRes = await stripe.confirmCardPayment(clientSecret, { payment_method: ev.paymentMethod.id }, { handleActions: true });
+        if(confirmRes.error){ ev.complete('fail'); showPaymentMessage(confirmRes.error.message); }
+        else {
+          ev.complete('success');
+          showPaymentMessage('Apple Pay payment successful!');
+        }
+      }catch(err){ console.error('Apple Pay error', err); ev.complete('fail'); showPaymentMessage(err.message||'Apple Pay failed'); }
+    });
+  }catch(err){ console.warn('Apple Pay init failed:', err.message); }
+}
+
+function showPaymentMessage(msg){
+  const div = document.getElementById('payment-message');
+  if(!div) return; div.textContent = msg; div.style.display='block'; div.style.color = /successful|success/i.test(msg)?'#2d6a4f':'#c1121f';
+}
+
+// Re-evaluate Apple Pay availability when amount or booking changes
+document.addEventListener('input', (e)=>{
+  if(e.target.id==='paymentAmount' || e.target.id==='paymentBookingId'){
+    if(paymentRequest){
+      const amt = parseFloat(document.getElementById('paymentAmount').value)||0;
+      if(amt>0){ paymentRequest.update({ total:{ label:'Car Rental', amount: Math.round(amt*100) } }); }
+    }
+  }
+});
+
+// Simple stub for PayPal button
+function initPayPalButtons(){
+  const wrap = document.getElementById('paypal-button-container');
+  if(!wrap || wrap.dataset.loaded) return;
+  if(typeof paypal === 'undefined'){ wrap.innerHTML = '<small style="color:#666">PayPal SDK not loaded (replace client-id in script tag).</small>'; return; }
+  wrap.dataset.loaded = '1';
+  try{
+    paypal.Buttons({
+      style:{ layout:'vertical', color:'gold', shape:'rect', label:'pay' },
+      createOrder: async () => {
+        const bookingId = document.getElementById('paymentBookingId').value.trim();
+        const amountVal = parseFloat(document.getElementById('paymentAmount').value);
+        if(!bookingId || !amountVal){ showPayPalStatus('Enter booking and amount first', true); return ''; }
+        // Call backend to create PayPal order
+        const { httpsCallable } = window.functionsUtils || {};
+        if(!httpsCallable){ showPayPalStatus('Firebase Functions unavailable', true); return ''; }
+        try{
+          const createOrderFn = httpsCallable(window.firestoreFunctions,'createPaypalOrder');
+          const res = await createOrderFn({ amount: Math.round(amountVal*100), bookingId, vehicleName:'Vehicle Rental' });
+          const orderId = res.data.orderId;
+          showPayPalStatus('Order created. Approve in PayPal popup.', false);
+          return orderId;
+        }catch(err){ console.error('PayPal create error',err); showPayPalStatus(err.message||'Create failed', true); return ''; }
+      },
+      onApprove: async (data, actions) => {
+        const bookingId = document.getElementById('paymentBookingId').value.trim();
+        showPayPalStatus('Capturing payment…', false);
+        try{
+          const { httpsCallable } = window.functionsUtils || {};
+          const captureFn = httpsCallable(window.firestoreFunctions,'capturePaypalOrder');
+          const capRes = await captureFn({ orderId: data.orderID, bookingId });
+          showPayPalStatus('PayPal payment successful!', false, true);
+        }catch(err){ console.error('PayPal capture error',err); showPayPalStatus(err.message||'Capture failed', true); }
+      },
+      onError: (err) => {
+        console.error('PayPal button error', err); showPayPalStatus('PayPal error: '+(err.message||'Unknown'), true);
+      }
+    }).render('#paypal-button-container');
+    showPayPalStatus('PayPal ready', false);
+  }catch(err){ console.error('PayPal init failed', err); showPayPalStatus(err.message||'Init failed', true); }
+}
+
+function showPayPalStatus(msg, isError=false, success=false){
+  const el = document.getElementById('paypal-status');
+  if(!el) return;
+  el.style.display='block';
+  el.textContent = msg;
+  el.style.color = success? '#2d6a4f' : (isError? '#c1121f' : '#666');
+}
