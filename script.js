@@ -972,6 +972,17 @@ function renderAccountBookings(){
     const overdueMs = retMs ? Math.max(0, nowMs - retMs) : 0;
     const overdueHours = overdueMs > 0 ? Math.ceil(overdueMs / (1000*60*60)) : 0;
     const lateFee = overdueHours * 5; // $5/hour late fee
+    // Determine if late and compute overdue fee for display
+    const nowMS = Date.now();
+    let overdueHoursDisplay = '';
+    if(status==='rented' && b.returnDate){
+      const retMS = new Date(b.returnDate).getTime();
+      const overdueMs = nowMS - retMS;
+      if(overdueMs > 0){
+        const overdueHours = Math.ceil(overdueMs / (1000*60*60));
+        overdueHoursDisplay = `<div style='margin-top:6px;font-size:11px;color:#c1121f;font-weight:600'>Late by ${overdueHours}h • $${overdueHours*5} late fee accruing</div>`;
+      }
+    }
     card.innerHTML=`<div class='body'>
       <div style='display:flex;gap:8px;align-items:center'>
         <div style='font-weight:700'>${name}</div>
@@ -988,10 +999,11 @@ function renderAccountBookings(){
       ${status==='rented'?`<div style='margin-top:8px;padding:8px;background:rgba(255,193,7,.1);border-left:3px solid #ffc107;font-size:11px;line-height:1.4'><strong>⚠️ Important:</strong> If extending, pay before timer expires. If returning, return before timer expires or a late fee of <strong>$5/hour</strong> will be added.</div>`:''}
       ${(status==='active'||status==='accepted'||status==='cancelled'||status==='rejected'||status==='rented')?`<div style='display:flex;gap:8px;margin-top:8px;flex-wrap:wrap'>
         ${status==='accepted'?`<button class='navbtn' data-bk-pay-now='${b.id}'>Pay Now</button>`:''}
-        ${status==='active'||status==='accepted'?`<button class='navbtn' data-bk-extend='${b.id}'>Extend</button><button class='navbtn' data-bk-cancel='${b.id}'>Cancel</button>`:''}
-        ${status==='rented'?`<button class='navbtn' data-bk-extend1w='${b.id}'>Extend 1 Week${lateFee>0?` (+$${lateFee} late fee)`:''}</button>`:''}
+        ${(status==='active'||status==='accepted')?`<button class='navbtn' data-bk-cancel='${b.id}'>Cancel</button>`:''}
+        ${status==='rented'?`<button class='navbtn' data-bk-extend='${b.id}'>Extend</button><button class='navbtn' data-bk-extend1w='${b.id}'>Extend 1 Week${lateFee>0?` (+$${lateFee} late fee)`:''}</button>`:''}
         ${status==='cancelled'||status==='rejected'?`<button class='navbtn' data-bk-delete='${b.id}' style='background:#c1121f;border-color:#c1121f'>Delete</button>`:''}
       </div>`:''}
+      ${overdueHoursDisplay}
     </div>`;
     wrap.appendChild(card);
   });
@@ -1011,7 +1023,15 @@ function startCountdowns(){
       const ret = new Date(returnDate).getTime();
       const diff = ret - now;
       
-      if(diff <= 0){ el.textContent = 'Payment Due Now!'; el.style.color = '#c1121f'; el.style.fontWeight = '700'; return; }
+      if(diff <= 0){
+        const overdueMs = Math.abs(diff);
+        const overdueHours = Math.ceil(overdueMs/(1000*60*60));
+        el.textContent = `Late ${overdueHours}h`;
+        el.style.color = '#c1121f';
+        el.style.fontWeight = '700';
+        el.style.textShadow = '0 0 6px rgba(193,18,31,.5)';
+        return;
+      }
       
       const days = Math.floor(diff / (1000*60*60*24));
       const hours = Math.floor((diff % (1000*60*60*24)) / (1000*60*60));
@@ -1104,9 +1124,9 @@ document.addEventListener('click',(e)=>{
       try{ const db=getDB(); const { doc, updateDoc } = getUtils(); if(db && bk.fireId){ updateDoc(doc(db,'bookings',bk.fireId), { returnDate: bk.returnDate, status: 'extended' }); } }catch(err){ console.warn('Failed to update Firestore booking on extend:', err.message); }
       alert('Booking extended.'); }; const onCancel=()=>{ modal.style.display='none'; cleanup(); }; function cleanup(){ document.getElementById('extendSave').removeEventListener('click',onSave); document.getElementById('extendCancel').removeEventListener('click',onCancel); } document.getElementById('extendSave').addEventListener('click',onSave); document.getElementById('extendCancel').addEventListener('click',onCancel); return; }
   const payNowBtn=e.target.closest('[data-bk-pay-now]');
-    if(payNowBtn){ const email=getSessionEmail(); if(!email) return; loadBookingsForEmail(email); const id=payNowBtn.dataset.bkPayNow; const bk=MY_BOOKINGS.find(b=>b.id===id); const veh=VEHICLES.find(v=>v.id===bk?.vehicleId); const amount=veh?.price||0; if(!bk||!amount){ showToast('Booking or amount missing'); return; } try{ document.getElementById('paymentBookingId').value = bk.fireId || bk.id; document.getElementById('paymentAmount').value = String(amount); goto('payments'); showToast('Ready to pay for booking'); }catch{} return; }
+    if(payNowBtn){ const email=getSessionEmail(); if(!email) return; loadBookingsForEmail(email); const id=payNowBtn.dataset.bkPayNow; const bk=MY_BOOKINGS.find(b=>b.id===id); const veh=VEHICLES.find(v=>v.id===bk?.vehicleId); const amount=veh?.price||0; if(!bk||!amount){ showToast('Booking or amount missing'); return; } try{ const bidEl=document.getElementById('paymentBookingId'); const amtEl=document.getElementById('paymentAmount'); bidEl.value = bk.fireId || bk.id; amtEl.value = String(amount); bidEl.readOnly=true; amtEl.readOnly=true; bidEl.dataset.locked='1'; amtEl.dataset.locked='1'; goto('payments'); showToast('Amount locked for payment'); }catch{} return; }
   const extend1wBtn=e.target.closest('[data-bk-extend1w]');
-    if(extend1wBtn){ const email=getSessionEmail(); if(!email) return; loadBookingsForEmail(email); const id=extend1wBtn.dataset.bkExtend1w; const bk=MY_BOOKINGS.find(b=>b.id===id); const veh=VEHICLES.find(v=>v.id===bk?.vehicleId); const base=veh?.price||0; const now=Date.now(); const retMs=bk?.returnDate? new Date(bk.returnDate).getTime():0; const overdueMs=retMs? Math.max(0, now-retMs):0; const overdueHours=overdueMs>0? Math.ceil(overdueMs/(1000*60*60)):0; const fee=overdueHours*5; const total=base+fee; if(!bk||!base){ showToast('Booking or vehicle price missing'); return; } try{ document.getElementById('paymentBookingId').value = (bk.fireId || bk.id)+'_extend1w'; document.getElementById('paymentAmount').value = String(total); goto('payments'); showToast(`Extension ready: $${base} + $${fee} late`); }catch{} return; }
+    if(extend1wBtn){ const email=getSessionEmail(); if(!email) return; loadBookingsForEmail(email); const id=extend1wBtn.dataset.bkExtend1w; const bk=MY_BOOKINGS.find(b=>b.id===id); const veh=VEHICLES.find(v=>v.id===bk?.vehicleId); const base=veh?.price||0; const now=Date.now(); const retMs=bk?.returnDate? new Date(bk.returnDate).getTime():0; const overdueMs=retMs? Math.max(0, now-retMs):0; const overdueHours=overdueMs>0? Math.ceil(overdueMs/(1000*60*60)):0; const fee=overdueHours*5; const total=base+fee; if(!bk||!base){ showToast('Booking or vehicle price missing'); return; } try{ const bidEl=document.getElementById('paymentBookingId'); const amtEl=document.getElementById('paymentAmount'); bidEl.value = (bk.fireId || bk.id)+'_extend1w'; amtEl.value = String(total); bidEl.readOnly=true; amtEl.readOnly=true; bidEl.dataset.locked='1'; amtEl.dataset.locked='1'; goto('payments'); showToast(`Extension ready • Base $${base} + $${fee} late`); }catch{} return; }
 });
 
 // Customer My Bookings manual refresh
@@ -1120,6 +1140,28 @@ document.addEventListener('click', (e)=>{
     refreshCustomerBookingsFromFirestore(email).then(()=>{ showToast('Bookings refreshed'); });
   }catch(err){ console.warn('Refresh failed:', err?.message||err); }
 });
+
+// Handle Stripe Checkout success redirect (hash params: #payments?paid=1&bookingId=...)
+function handleStripeSuccess(){
+  if(!location.hash.startsWith('#payments')) return;
+  const parts = location.hash.split('?');
+  if(parts.length < 2) return;
+  const params = new URLSearchParams(parts[1]);
+  if(params.get('paid') !== '1') return;
+  const bookingId = params.get('bookingId');
+  if(!bookingId) return;
+  const baseId = bookingId.replace('_extend1w','');
+  const email = getSessionEmail(); if(!email) return;
+  loadBookingsForEmail(email);
+  const bk = MY_BOOKINGS.find(b=>b.id===baseId || b.fireId===baseId);
+  if(!bk) { console.warn('Stripe success booking not found', baseId); return; }
+  if(bk.status !== 'rented'){
+    bk.status='rented'; bk.rentedAt=Date.now(); saveBookingsForEmail(email);
+    try{ const db=getDB(); const { doc, updateDoc } = getUtils(); if(db && bk.fireId){ updateDoc(doc(db,'bookings',bk.fireId), { status:'rented', rentedAt: bk.rentedAt }); } }catch(err){ console.warn('Firestore stripe success update failed', err.message); }
+    renderAccountBookings(); showToast('Payment confirmed. Booking rented.');
+  }
+}
+setTimeout(handleStripeSuccess, 500);
 
 // Signup validation
 document.addEventListener('input', (e)=>{
@@ -2123,10 +2165,10 @@ function initStripeCheckoutButton(){
   if(!btn || btn.dataset.bound) return;
   btn.dataset.bound = '1';
   btn.addEventListener('click', async ()=>{
-    const { bookingId, amountCents, amountFloat } = getBookingAndAmount();
+    const { bookingId, amountCents } = getBookingAndAmount();
     const msgEl = document.getElementById('payment-message');
     if(!bookingId || !amountCents || amountCents < 50){
-      if(msgEl){ msgEl.style.display='block'; msgEl.style.color='#c1121f'; msgEl.textContent='Enter valid booking ID and amount.'; }
+      if(msgEl){ msgEl.style.display='block'; msgEl.style.color='#c1121f'; msgEl.textContent='Missing or invalid locked booking amount.'; }
       return;
     }
     btn.disabled = true; btn.textContent = 'Redirecting…';
@@ -2178,6 +2220,12 @@ function initPayPalHostedButton(){
         const verify = await resp.json();
         showPayPalHostedStatus('PayPal payment successful!', false, true);
         console.log('PayPal verify response', verify);
+        // Mark booking as rented locally & Firestore
+        if(bookingId){
+          const baseId = bookingId.replace('_extend1w','');
+          const email=getSessionEmail(); if(email){ loadBookingsForEmail(email); const bk=MY_BOOKINGS.find(b=>b.id===baseId||b.fireId===baseId); if(bk){ bk.status='rented'; bk.rentedAt = Date.now(); saveBookingsForEmail(email); try{ const db=getDB(); const { doc, updateDoc } = getUtils(); if(db && bk.fireId){ updateDoc(doc(db,'bookings',bk.fireId), { status:'rented', rentedAt: bk.rentedAt }); } }catch(err){ console.warn('Firestore update (PayPal rented) failed', err.message); } renderAccountBookings(); showToast('Booking marked rented'); }
+          }
+        }
       }catch(err){ console.error('PayPal approve error', err); showPayPalHostedStatus(err.message||'PayPal failed', true); }
     },
     onError: (err) => { console.error('PayPal button error', err); showPayPalHostedStatus('PayPal error: '+(err.message||'Unknown'), true); }

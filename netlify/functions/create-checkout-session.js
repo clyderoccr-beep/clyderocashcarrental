@@ -57,7 +57,8 @@ exports.handler = async (event) => {
         bookingId,
         origin: 'stripe_checkout',
       },
-      success_url: 'https://clyderoccr.com/#payment-success',
+      // Include bookingId + paid flag so frontend can mark booking as rented
+      success_url: `https://clyderoccr.com/#payments?paid=1&bookingId=${encodeURIComponent(bookingId)}`,
       cancel_url: 'https://clyderoccr.com/#payment-cancel',
     });
 
