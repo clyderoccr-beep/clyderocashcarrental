@@ -2205,6 +2205,13 @@ document.addEventListener('click', (e)=>{
 
 // Initialize when arriving directly on payments via hash or programmatic navigation
 document.addEventListener('DOMContentLoaded', ()=>{
+  // Safe bootstrap: if vehicles are not yet loaded, render defaults to avoid empty layout
+  try{
+    if(!Array.isArray(VEHICLES) || VEHICLES.length===0){
+      VEHICLES.length=0; DEFAULT_VEHICLES.forEach(v=> VEHICLES.push({ ...v }));
+      renderVehicles(); seedBooking();
+    }
+  }catch{}
   if(location.hash.includes('payments')){ setTimeout(()=> initHostedPayments(), 100); }
   // Ensure bindings exist even if not navigating via tab
   setTimeout(()=> initHostedPayments(), 300);
