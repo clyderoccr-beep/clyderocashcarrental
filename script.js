@@ -2417,6 +2417,22 @@ document.addEventListener('DOMContentLoaded', ()=>{
       showPayPalHostedStatus('Saving PayPal for future charges requires PayPal Vault/Reference Transactions. Contact PayPal to enable this on your account.', false);
     });
   }
+  // Terms agreement handling for payments
+  const termsChk = document.getElementById('paymentTermsAgree');
+  const statusMsg = document.getElementById('termsAgreeStatus');
+  function updatePayButtonsDisabled(){
+    const agreed = termsChk && termsChk.checked;
+    const stripeBtn = document.getElementById('stripeCheckoutBtn');
+    const appleBtn = document.getElementById('applePayBtn');
+    if(stripeBtn) stripeBtn.disabled = !agreed;
+    if(appleBtn) appleBtn.disabled = !agreed;
+    if(statusMsg) statusMsg.style.display = agreed? 'none':'block';
+    // Render PayPal buttons only after agree
+    if(agreed){
+      try{ if(!document.getElementById('paypal-button-container')?.dataset.loaded){ initPayPalHostedButton(); } }catch{}
+    }
+  }
+  if(termsChk){ termsChk.addEventListener('change', updatePayButtonsDisabled); updatePayButtonsDisabled(); }
 });
 window.addEventListener('hashchange', ()=>{
   if(location.hash.includes('payments')){ setTimeout(()=> initHostedPayments(), 100); }
@@ -2514,6 +2530,8 @@ function initStripeCheckoutButton(){
   if(!btn || btn.dataset.bound) return;
   btn.dataset.bound = '1';
   btn.addEventListener('click', async ()=>{
+    if(!document.getElementById('paymentTermsAgree')?.checked){ showToast('Please agree to terms first.'); return; }
+    await recordTermsAcceptanceSafe();
     const { bookingId, amountFloat } = getBookingAndAmount();
     const msgEl = document.getElementById('payment-message');
     if(!bookingId || !amountFloat || amountFloat <= 0){
@@ -2555,6 +2573,8 @@ function initApplePayButton(){
   if(!btn || btn.dataset.bound) return;
   btn.dataset.bound = '1';
   btn.addEventListener('click', async ()=>{
+    if(!document.getElementById('paymentTermsAgree')?.checked){ showToast('Agree to terms first.'); return; }
+    await recordTermsAcceptanceSafe();
     const { bookingId, amountFloat } = getBookingAndAmount();
     const msgEl = document.getElementById('payment-message');
     const aMsg = document.getElementById('apple-status');
@@ -2592,6 +2612,7 @@ function initApplePayButton(){
 function initPayPalHostedButton(){
   const wrap = document.getElementById('paypal-button-container');
   if(!wrap || wrap.dataset.loaded) return;
+  if(!document.getElementById('paymentTermsAgree')?.checked){ wrap.innerHTML='<small style="color:#666">Agree to terms to enable PayPal.</small>'; return; }
   if(typeof paypal === 'undefined'){ wrap.innerHTML='<small style="color:#666">Loading PayPal…</small>'; return; }
   wrap.dataset.loaded='1';
   paypal.Buttons({
@@ -2612,6 +2633,8 @@ function initPayPalHostedButton(){
     },
     onApprove: async (data, actions) => {
       try{
+        if(!document.getElementById('paymentTermsAgree')?.checked){ throw new Error('Terms not accepted'); }
+        await recordTermsAcceptanceSafe();
         const details = await actions.order.capture();
         showPayPalHostedStatus('Payment captured. Verifying…', false);
         const { bookingId, amountFloat } = getBookingAndAmount();
@@ -2650,4 +2673,30 @@ function initPayPalHostedButton(){
 function showPayPalHostedStatus(msg, isError=false, success=false){
   const el = document.getElementById('paypal-status');
   if(!el) return; el.style.display='block'; el.textContent=msg; el.style.color = success? '#2d6a4f' : (isError? '#c1121f' : '#666');
+}
+
+// ===== Terms Acceptance Recording =====
+const TERMS_VERSION = '2025-12';
+async function recordTermsAcceptanceSafe(){
+  try{ await recordTermsAcceptance(); }catch(e){ console.warn('recordTermsAcceptance failed', e.message); }
+}
+async function recordTermsAcceptance(){
+  const email = getSessionEmail(); if(!email) return; // Only store for logged-in users
+  const agreed = document.getElementById('paymentTermsAgree')?.checked; if(!agreed) return;
+  // Avoid repeat writes within short window
+  const last = recordTermsAcceptance._last; const now = Date.now(); if(last && (now - last < 15000)) return; recordTermsAcceptance._last = now;
+  let ip = '';
+  try{ const resp = await fetch('https://api.ipify.org?format=json',{cache:'no-store'}); if(resp.ok){ const data = await resp.json(); ip = data.ip || ''; } }catch{}
+  try{
+    const db=getDB(); const utils=getUtils()||{}; const authEmail=email;
+    if(db && utils.collection && utils.query && utils.where && utils.getDocs && utils.doc && utils.updateDoc){
+      const q = await utils.getDocs(utils.query(utils.collection(db,'users'), utils.where('email','==',authEmail)));
+      if(!q.empty){
+        const ref = q.docs[0].ref;
+        await utils.updateDoc(ref, { termsAcceptance: { version: TERMS_VERSION, agreed:true, ts:new Date().toISOString(), ip } });
+        console.log('Stored terms acceptance for', authEmail);
+      }
+    }
+    localStorage.setItem('termsAccepted_'+TERMS_VERSION, '1');
+  }catch(e){ console.warn('Failed to persist terms acceptance', e.message); }
 }

@@ -155,6 +155,7 @@
         <button class="navbtn" data-nav="about">About</button>
         <button class="navbtn" data-nav="booking" style="display:none">Booking</button>
         <button class="navbtn" data-nav="payments" style="display:none">Payments</button>
+        <button class="navbtn" data-nav="terms">Terms</button>
         <button class="navbtn" data-nav="login">Login</button>
         <button class="navbtn" data-nav="membership">Membership</button>
         <button class="navbtn" data-nav="contact">Contact</button>
@@ -837,6 +838,14 @@
                 <span style="color:#000;font-weight:600">Total: <span id="paypalTotal">$0.00</span></span>
               </div>
             </div>
+            <!-- Terms Agreement Checkbox -->
+            <div style="margin-bottom:16px;padding:10px;border:1px solid #ddd;border-radius:6px;background:#fcfcfc;font-size:12px">
+              <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
+                <input type="checkbox" id="paymentTermsAgree" style="margin-top:2px">
+                <span style="color:#000">By paying, I agree to CCR’s Payment, Billing & Late Fee Authorization Agreement and allow CCR to save my Stripe/PayPal payment method for future rental extensions or late fees. (<a href="#terms" style="color:#0d6efd">View full agreement</a>)</span>
+              </label>
+              <div id="termsAgreeStatus" style="margin-top:6px;color:#c1121f;display:none">You must agree before paying.</div>
+            </div>
             <!-- Stripe Checkout Triggers (separated) -->
             <button id="stripeCheckoutBtn" class="navbtn" style="width:100%;margin-bottom:8px">Pay with Card</button>
             <button id="applePayBtn" class="navbtn" style="width:100%;margin-bottom:8px">Pay with Apple Pay</button>
@@ -884,6 +893,53 @@
             </div>
           </div>
         </form>
+      </div>
+    </section>
+
+    <section id="terms" class="section" style="display:none">
+      <div class="wrap">
+        <h2>CCR Online Payment, Billing & Authorization Agreement</h2>
+        <div class="card" style="max-width:900px">
+          <div class="body" style="font-size:14px;line-height:1.5;color:#000">
+            <p><strong>Last Updated:</strong> December 2025</p>
+            <p>By submitting a payment, creating an account, or booking any vehicle on Clydero Cash Car Rental (CCR), you agree to the following terms. This agreement applies to all customers, whether renting, extending a rental, or paying late fees.</p>
+            <h3 style="margin-top:24px">1. General Agreement</h3>
+            <ul style="padding-left:18px">
+              <li>CCR is a private rental service located in Atlanta, GA.</li>
+              <li>All payments made on this website are for vehicle rental, extensions, late fees, or rent-to-own payments.</li>
+              <li>You must provide valid identity, a valid driver’s license, and accurate contact information.</li>
+            </ul>
+            <h3 style="margin-top:24px">2. Payment Authorization</h3>
+            <p>You authorize CCR to process payments using any method you choose at checkout, including Debit/Credit Card (Stripe), Apple Pay (Stripe), and PayPal (including PayPal Vault/Billing Agreements when enabled). Your payment method may be securely saved by Stripe or PayPal for future rental extensions or late fees. No card or PayPal data is stored on CCR servers.</p>
+            <h3 style="margin-top:24px">3. Saved Payment Methods & Future Charges</h3>
+            <p><strong>a. Stripe (Card / Apple Pay)</strong><br>Stripe creates a secure token for your card. You authorize CCR to charge this saved method ONLY for approved rental extensions, late fees, outlined damage fees, and mileage overages (if applicable).</p>
+            <p><strong>b. PayPal Vault / Billing Agreement</strong><br>If you pay using PayPal, PayPal may create a Billing Agreement/Vault token. CCR may bill that agreement for rental extensions, late fees, and other agreed charges under your rental contract. These charges are limited to those listed in this agreement and CCR policies.</p>
+            <h3 style="margin-top:24px">4. Late Fees</h3>
+            <p>Late fee structure: $5.00 per hour past the scheduled return time OR the daily rental rate, whichever is higher. Late fees begin immediately after the scheduled return time unless an extension is approved. You authorize CCR to use your saved Stripe or PayPal payment method for late fees if you return late, fail to communicate, or do not pay an approved extension before the deadline.</p>
+            <h3 style="margin-top:24px">5. Rental Extensions</h3>
+            <p>Extensions must be paid before the previous rental period ends. If not paid on time, late fees may apply automatically. Extensions can be paid with any available payment method or saved method.</p>
+            <h3 style="margin-top:24px">6. Rent-to-Own Terms</h3>
+            <p>If approved for rent-to-own: You are responsible for insurance, maintenance, and damages. Payments are weekly unless otherwise agreed in writing. Missing payments may result in late fees, recovery of the vehicle, or termination of the agreement. Title transfers only after full payment.</p>
+            <h3 style="margin-top:24px">7. Damages & Responsibility</h3>
+            <ul style="padding-left:18px">
+              <li>All damages while the vehicle is in your possession.</li>
+              <li>Loss of keys.</li>
+              <li>Towing or impound fees.</li>
+              <li>Traffic and parking violations.</li>
+              <li>Mechanical or physical damage caused by neglect or abuse.</li>
+            </ul>
+            <h3 style="margin-top:24px">8. Refunds</h3>
+            <p>All payments are non-refundable. Once a booking or extension is paid, CCR does not offer refunds.</p>
+            <h3 style="margin-top:24px">9. Fraud & Non-Payment</h3>
+            <p>Fraudulent chargebacks will be disputed. GPS data and executed rental agreements may be used as evidence. Non-payment may result in fees, recovery of the vehicle, and civil legal action.</p>
+            <h3 style="margin-top:24px">10. Acceptance</h3>
+            <p>By clicking “Pay,” “Book,” or submitting any payment, you acknowledge you have read, understand, and agree to this agreement and authorize CCR to charge your selected or saved payment method as described.</p>
+            <h3 style="margin-top:24px">11. Contact</h3>
+            <p>Clydero Cash Car Rental (CCR)<br>Atlanta, GA<br>Email: clyderoccr@gmail.com<br>Website: clyderoccr.com</p>
+            <h3 style="margin-top:24px">12. Acceptance Record</h3>
+            <p>When you check the agreement box or pay, CCR records the acceptance timestamp and may record the IP for security and audit purposes.</p>
+          </div>
+        </div>
       </div>
     </section>
 
