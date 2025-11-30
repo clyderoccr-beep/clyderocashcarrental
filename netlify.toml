@@ -1,7 +1,6 @@
 [build]
   publish = "."
-  # Install serverless function dependencies before bundling
-  command = "npm --prefix netlify/functions ci"
+  command = ""
 
 [build.environment]
   NETLIFY_SKIP_SECRET_SCANNING = "true"
@@ -11,7 +10,6 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
-# Optional: pin Node version used by Netlify build image
 [build.environment]
   NETLIFY_SKIP_SECRET_SCANNING = "true"
   NODE_VERSION = "20"
