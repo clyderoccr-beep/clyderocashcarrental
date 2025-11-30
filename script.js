@@ -2095,7 +2095,7 @@ async function updateAdminBookingStatus(id, status){
     // Update local vehicle availability/pending
     const adminBk = ADMIN_BOOKINGS.find(b=>b.id===id);
     if(adminBk){ const v = VEHICLES.find(x=> x.id===adminBk.vehicleId); if(v){
-      if(status==='accepted'){ v.pending=true; v.available=false; }
+      if(status==='accepted'){ v.pending=true; v.available=true; }
       else if(status==='rented'){ v.pending=false; v.available=false; }
       else if(status==='rejected' || status==='cancelled'){ v.pending=false; v.available=true; }
       renderVehicles();
