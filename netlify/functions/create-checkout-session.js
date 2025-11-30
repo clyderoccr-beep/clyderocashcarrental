@@ -27,7 +27,7 @@ exports.handler = async (event) => {
 
   try {
     const body = JSON.parse(event.body || '{}');
-    const { bookingId, amount } = body;
+    const { bookingId, amount, email } = body;
 
     if (!process.env.STRIPE_SECRET_KEY) {
       return { statusCode: 500, body: 'Missing STRIPE_SECRET_KEY env variable.' };
@@ -39,10 +39,12 @@ exports.handler = async (event) => {
       return { statusCode: 400, body: 'Invalid amount (must be integer cents >= 50).' };
     }
 
-    // Create a Checkout Session
+    // Create a Checkout Session (also save card for future via setup_future_usage)
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       payment_method_types: ['card'], // Restrict to card; Apple Pay appears automatically if eligible
+      customer_email: email || undefined,
+      payment_intent_data: { setup_future_usage: 'off_session', metadata: { bookingId, userEmail: email||'' } },
       line_items: [
         {
           price_data: {
@@ -56,6 +58,7 @@ exports.handler = async (event) => {
       metadata: {
         bookingId,
         origin: 'stripe_checkout',
+        userEmail: email||'',
       },
       // Include bookingId + paid flag so frontend can mark booking as rented
       success_url: `https://clyderoccr.com/#payments?paid=1&bookingId=${encodeURIComponent(bookingId)}`,

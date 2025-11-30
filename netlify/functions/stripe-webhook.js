@@ -90,6 +90,26 @@ exports.handler = async (event) => {
                 const ref = q.docs[0]?.ref; if(ref){ await ref.update({ status:'paid', lateFeePaid:true, lateFeeCents, paidAt: new Date().toISOString() }); }
               }
             }
+            // Also store saved card details for future late-fee charges
+            try{
+              const email = session.customer_details?.email || session.metadata?.userEmail || '';
+              if(email && session.payment_intent){
+                const pi = await stripe.paymentIntents.retrieve(session.payment_intent);
+                const customer = pi.customer || session.customer;
+                const pm = pi.payment_method;
+                if(customer && pm){
+                  const uq = await db.collection('users').where('email','==',email).limit(1).get();
+                  if(!uq.empty){
+                    await uq.docs[0].ref.update({
+                      stripeCustomerId: String(customer),
+                      stripeDefaultPm: String(pm),
+                      cardOnFile: true,
+                      cardSavedAt: new Date().toISOString()
+                    });
+                  }
+                }
+              }
+            }catch(e){ console.warn('Failed to store saved card from payment', e.message); }
           }catch(e){ console.warn('Firestore booking update failed in webhook', e.message); }
         }
         break;

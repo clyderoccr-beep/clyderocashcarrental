@@ -1237,6 +1237,22 @@ document.addEventListener('click', (e)=>{
   }catch(err){ console.warn('Refresh failed:', err?.message||err); }
 });
 
+// Remove saved card (user-controlled)
+document.addEventListener('click', async (e)=>{
+  const btn = e.target.closest('#removeSavedCard');
+  if(!btn) return;
+  const email = getSessionEmail();
+  if(!email){ alert('Please log in first.'); return; }
+  if(!confirm('Remove saved card from your account?')) return;
+  try{
+    btn.disabled = true; const prev = btn.textContent; btn.textContent = 'Removing…';
+    const resp = await fetch('/.netlify/functions/remove-saved-card', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email }) });
+    if(!resp.ok){ const txt=await resp.text().catch(()=>resp.statusText); throw new Error(txt); }
+    showToast('Saved card removed');
+  }catch(err){ alert('Failed to remove card: '+(err.message||err)); }
+  finally{ btn.disabled=false; btn.textContent='Remove Saved Card'; }
+});
+
 // Handle Stripe Checkout success redirect (hash params: #payments?paid=1&bookingId=...)
 function handleStripeSuccess(){
   if(!location.hash.startsWith('#payments')) return;
@@ -2189,6 +2205,7 @@ function renderAdminBookings(){
     const dates = `${b.pickupDate||''} → ${b.returnDate||''}`;
     const cust = b.customer||{};
     const ts = b.createdAt? new Date(b.createdAt).toLocaleString() : '';
+    const isLate = (()=>{ try{ if(!b.returnDate) return false; const due=new Date(b.returnDate).getTime(); return Date.now()>due; }catch{ return false; } })();
     const card=document.createElement('article'); card.className='card';
     card.innerHTML = `<div class='body'>
       <div style='display:flex;gap:8px;align-items:center'>
@@ -2213,6 +2230,7 @@ function renderAdminBookings(){
         <button class='navbtn' data-bk-reject='${b.id}'>Reject</button>
         <button class='navbtn' data-bk-rented='${b.id}'>Mark Rented</button>
         <button class='navbtn' data-bk-delete='${b.id}' style='background:#c1121f;border-color:#c1121f'>Delete</button>
+        <button class='navbtn' data-bk-charge-late='${b.id}' ${isLate?'' : 'disabled'} title='Charge saved card for late fee now' style='background:#0d6efd;border-color:#0d6efd'>Charge Late Fee Now</button>
       </div>
     </div>`;
     wrap.appendChild(card);
@@ -2284,6 +2302,20 @@ document.addEventListener('click',async (e)=>{
   }
   const del = e.target.closest('[data-bk-delete]');
   if(del){ const id=del.dataset.bkDelete; if(confirm('Delete this booking?')){ deleteAdminBooking(id).then(()=>{ loadAdminBookings().then(renderAdminBookings); showToast('Booking deleted'); }); } return; }
+  const charge = e.target.closest('[data-bk-charge-late]');
+  if(charge){
+    const id = charge.dataset.bkChargeLate;
+    try{
+      charge.disabled = true; const prev=charge.textContent; charge.textContent='Charging…';
+      const resp = await fetch('/.netlify/functions/charge-late-fee', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ bookingId: id }) });
+      if(!resp.ok){ const txt=await resp.text().catch(()=>resp.statusText); throw new Error(txt); }
+      const data = await resp.json().catch(()=>({}));
+      if(data.charged){ showToast('Late fee charged'); } else { showToast(data.reason==='not_late'?'Not late yet':'Could not charge'); }
+      loadAdminBookings().then(renderAdminBookings);
+    }catch(err){ alert('Charge failed: '+(err.message||err)); }
+    finally{ charge.disabled=false; charge.textContent='Charge Late Fee Now'; }
+    return;
+  }
 });
 
 // ===== Hosted Payment Integration (Stripe Checkout + PayPal) =====
@@ -2494,7 +2526,7 @@ function initStripeCheckoutButton(){
       const res = await fetch(endpoint, {
         method:'POST',
         headers:{ 'Content-Type':'application/json' },
-        body: JSON.stringify({ bookingId, amount: stripeTotalCents, metadata: { lateFee: Math.round(lateFee*100) } })
+        body: JSON.stringify({ bookingId, amount: stripeTotalCents, email: getSessionEmail()||'', metadata: { lateFee: Math.round(lateFee*100) } })
       });
       if(!res.ok){
         const txt = await res.text().catch(()=>res.statusText);
@@ -2537,7 +2569,7 @@ function initApplePayButton(){
       const endpoint = '/.netlify/functions/create-checkout-session';
       const res = await fetch(endpoint, {
         method:'POST', headers:{ 'Content-Type':'application/json' },
-        body: JSON.stringify({ bookingId, amount: stripeTotalCents })
+        body: JSON.stringify({ bookingId, amount: stripeTotalCents, email: getSessionEmail()||'' })
       });
       if(!res.ok){ const txt=await res.text().catch(()=>res.statusText); throw new Error(`Checkout create failed (${res.status}): ${txt}`); }
       const data = await res.json(); if(!data.url) throw new Error('No session URL returned');
