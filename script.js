@@ -2341,10 +2341,41 @@ document.addEventListener('DOMContentLoaded', ()=>{
   // Live fee breakdown on amount change
   const amtInput = document.getElementById('paymentAmount');
   if(amtInput){ amtInput.addEventListener('input', updateFeeBreakdown); }
+  const retBtn = document.getElementById('returnVehicle');
+  if(retBtn && !retBtn.dataset.bound){
+    retBtn.dataset.bound='1';
+    retBtn.addEventListener('click', ()=>{
+      const bk = getActiveBooking();
+      if(!bk){ alert('No active booking. Enter your Booking ID above.'); return; }
+      updateFeeBreakdown();
+      const due = bk?.returnDate ? new Date(bk.returnDate) : null;
+      if(due){ startAnchoredCountdown(due); }
+      showToast('Late fee applied if past due. Proceed to pay.');
+    });
+  }
 });
 window.addEventListener('hashchange', ()=>{
   if(location.hash.includes('payments')){ setTimeout(()=> initHostedPayments(), 100); }
 });
+
+let countdownInterval=null;
+function startAnchoredCountdown(dueAt){
+  try{
+    if(countdownInterval) clearInterval(countdownInterval);
+    const timerEl = document.getElementById('rentalTimer');
+    const render = () => {
+      const now = new Date();
+      const diff = dueAt - now;
+      const abs = Math.abs(diff);
+      const h = Math.floor(abs/(1000*60*60));
+      const m = Math.floor((abs%(1000*60*60))/(1000*60));
+      const s = Math.floor((abs%(1000*60))/1000);
+      if(timerEl){ timerEl.textContent = `${diff>=0?'':'-'}${h}h ${m}m ${s}s`; timerEl.style.color = diff<0 ? '#c1121f' : '#555'; }
+    };
+    render();
+    countdownInterval = setInterval(render, 1000);
+  }catch(e){ console.warn('countdown error', e); }
+}
 
 function getBookingAndAmount(){
   const bookingId = document.getElementById('paymentBookingId')?.value.trim();
@@ -2352,6 +2383,18 @@ function getBookingAndAmount(){
   const amountFloat = parseFloat(amountStr||'0');
   const amountCents = Math.round(amountFloat * 100);
   return { bookingId, amountCents, amountFloat };
+}
+
+function getActiveBooking(){
+  try{
+    const { bookingId } = getBookingAndAmount();
+    if(!bookingId) return null;
+    const baseId = bookingId.replace('_extend1w','');
+    const email=getSessionEmail(); if(!email) return null;
+    loadBookingsForEmail(email);
+    const bk = MY_BOOKINGS.find(b=>b.id===baseId||b.fireId===baseId);
+    return bk || null;
+  }catch(e){ console.warn('getActiveBooking error', e); return null; }
 }
 
 function calculateStripeFee(amount){
@@ -2375,12 +2418,31 @@ function updateFeeBreakdown(){
   if(!breakdown) return;
   if(!amount || amount <= 0){ breakdown.style.display='none'; return; }
   breakdown.style.display='block';
+  // Late fee based on booking due time
+  const bk = getActiveBooking();
+  let lateFee = 0;
+  try{
+    const due = bk?.returnDate ? new Date(bk.returnDate) : null;
+    if(due){
+      const now = new Date();
+      const diffMs = now - due;
+      if(diffMs > 0){
+        const hours = Math.ceil(diffMs / (1000*60*60));
+        lateFee = Math.min(hours * 15, 200); // $15/hour, capped at $200
+      }
+    }
+  }catch{}
+  const basePlusLate = amount + lateFee;
   const stripe = calculateStripeFee(amount);
   const paypal = calculatePayPalFee(amount);
-  document.getElementById('stripeFee').textContent = '$' + stripe.fee.toFixed(2);
-  document.getElementById('stripeTotal').textContent = '$' + stripe.total.toFixed(2);
-  document.getElementById('paypalFee').textContent = '$' + paypal.fee.toFixed(2);
-  document.getElementById('paypalTotal').textContent = '$' + paypal.total.toFixed(2);
+  const stripeOnLate = calculateStripeFee(basePlusLate);
+  const paypalOnLate = calculatePayPalFee(basePlusLate);
+  const lf = document.getElementById('lateFee'); if(lf) lf.textContent = '$' + (lateFee.toFixed(2));
+  const bl = document.getElementById('basePlusLate'); if(bl) bl.textContent = '$' + (basePlusLate.toFixed(2));
+  document.getElementById('stripeFee').textContent = '$' + stripeOnLate.fee.toFixed(2);
+  document.getElementById('stripeTotal').textContent = '$' + stripeOnLate.total.toFixed(2);
+  document.getElementById('paypalFee').textContent = '$' + paypalOnLate.fee.toFixed(2);
+  document.getElementById('paypalTotal').textContent = '$' + paypalOnLate.total.toFixed(2);
 }
 
 function initStripeCheckoutButton(){
@@ -2394,8 +2456,12 @@ function initStripeCheckoutButton(){
       if(msgEl){ msgEl.style.display='block'; msgEl.style.color='#c1121f'; msgEl.textContent='Missing or invalid booking amount.'; }
       return;
     }
-    // Calculate Stripe total (customer pays the fee)
-    const stripe = calculateStripeFee(amountFloat);
+    // Add automatic late fee if overdue
+    let lateFee = 0; const bk = getActiveBooking();
+    try{ const due = bk?.returnDate ? new Date(bk.returnDate) : null; if(due){ const now=new Date(); const ms=now-due; if(ms>0){ const hours=Math.ceil(ms/(1000*60*60)); lateFee = Math.min(hours*15,200); } } }catch{}
+    const basePlusLate = amountFloat + lateFee;
+    // Calculate Stripe total on base + late fee
+    const stripe = calculateStripeFee(basePlusLate);
     const stripeTotalCents = Math.round(stripe.total * 100);
     btn.disabled = true; btn.textContent = 'Redirecting…';
     try{
@@ -2403,7 +2469,7 @@ function initStripeCheckoutButton(){
       const res = await fetch(endpoint, {
         method:'POST',
         headers:{ 'Content-Type':'application/json' },
-        body: JSON.stringify({ bookingId, amount: stripeTotalCents })
+        body: JSON.stringify({ bookingId, amount: stripeTotalCents, metadata: { lateFee: Math.round(lateFee*100) } })
       });
       if(!res.ok){
         const txt = await res.text().catch(()=>res.statusText);
@@ -2434,8 +2500,11 @@ function initApplePayButton(){
       if(msgEl){ msgEl.style.display='block'; msgEl.style.color='#c1121f'; msgEl.textContent='Missing or invalid booking amount.'; }
       return;
     }
-    // Calculate Stripe total (customer pays the fee)
-    const stripe = calculateStripeFee(amountFloat);
+    // Add automatic late fee if overdue
+    let lateFee = 0; const bk = getActiveBooking();
+    try{ const due = bk?.returnDate ? new Date(bk.returnDate) : null; if(due){ const now=new Date(); const ms=now-due; if(ms>0){ const hours=Math.ceil(ms/(1000*60*60)); lateFee = Math.min(hours*15,200); } } }catch{}
+    const basePlusLate = amountFloat + lateFee;
+    const stripe = calculateStripeFee(basePlusLate);
     const stripeTotalCents = Math.round(stripe.total * 100);
     btn.disabled = true; const prev=btn.textContent; btn.textContent='Checking…';
     try{
@@ -2466,8 +2535,11 @@ function initPayPalHostedButton(){
     createOrder: (data, actions) => {
       const { bookingId, amountFloat } = getBookingAndAmount();
       if(!bookingId || !amountFloat || amountFloat <= 0){ showPayPalHostedStatus('Enter booking & amount first', true); return ''; }
-      // Calculate PayPal total (customer pays the fee)
-      const paypal = calculatePayPalFee(amountFloat);
+      // Add automatic late fee if overdue
+      let lateFee = 0; const bk = getActiveBooking();
+      try{ const due = bk?.returnDate ? new Date(bk.returnDate) : null; if(due){ const now=new Date(); const ms=now-due; if(ms>0){ const hours=Math.ceil(ms/(1000*60*60)); lateFee = Math.min(hours*15,200); } } }catch{}
+      const basePlusLate = amountFloat + lateFee;
+      const paypal = calculatePayPalFee(basePlusLate);
       const decimal = paypal.total.toFixed(2);
       return actions.order.create({
         intent:'CAPTURE',
@@ -2479,12 +2551,15 @@ function initPayPalHostedButton(){
         const details = await actions.order.capture();
         showPayPalHostedStatus('Payment captured. Verifying…', false);
         const { bookingId, amountFloat } = getBookingAndAmount();
-        const paypal = calculatePayPalFee(amountFloat);
+        let lateFee = 0; const bk = getActiveBooking();
+        try{ const due = bk?.returnDate ? new Date(bk.returnDate) : null; if(due){ const now=new Date(); const ms=now-due; if(ms>0){ const hours=Math.ceil(ms/(1000*60*60)); lateFee = Math.min(hours*15,200); } } }catch{}
+        const basePlusLate = amountFloat + lateFee;
+        const paypal = calculatePayPalFee(basePlusLate);
         const paypalTotalCents = Math.round(paypal.total * 100);
         // Call verification stub (does server-side fetch of order)
         const resp = await fetch('/.netlify/functions/paypal-payment-confirm', {
           method:'POST', headers:{ 'Content-Type':'application/json' },
-          body: JSON.stringify({ orderId: data.orderID, bookingId, amount: paypalTotalCents })
+          body: JSON.stringify({ orderId: data.orderID, bookingId, amount: paypalTotalCents, metadata: { lateFee: Math.round(lateFee*100) } })
         });
         // Accept any 2xx status as success (200, 201, etc.)
         if(!resp.ok && resp.status < 200 || resp.status >= 300){ 
@@ -2494,11 +2569,12 @@ function initPayPalHostedButton(){
         const verify = await resp.json().catch(()=>({}));
         showPayPalHostedStatus('PayPal payment successful!', false, true);
         console.log('PayPal verify response', verify);
-        // Mark booking as rented locally & Firestore
+        // Mark booking as paid locally & Firestore, flip timer green
         if(bookingId){
           const baseId = bookingId.replace('_extend1w','');
           const email=getSessionEmail(); if(email){ loadBookingsForEmail(email); const bk=MY_BOOKINGS.find(b=>b.id===baseId||b.fireId===baseId); if(bk){ bk.status='rented'; bk.rentedAt = Date.now(); saveBookingsForEmail(email); try{ const db=getDB(); const { doc, updateDoc } = getUtils(); if(db && bk.fireId){ updateDoc(doc(db,'bookings',bk.fireId), { status:'rented', rentedAt: bk.rentedAt }); } }catch(err){ console.warn('Firestore update (PayPal rented) failed', err.message); } renderAccountBookings(); showToast('Booking marked rented'); }
           }
+          const timerEl = document.getElementById('rentalTimer'); if(timerEl){ timerEl.classList.add('paid'); timerEl.classList.remove('late'); }
         }
       }catch(err){ console.error('PayPal approve error', err); showPayPalHostedStatus(err.message||'PayPal failed', true); }
     },

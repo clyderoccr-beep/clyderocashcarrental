@@ -45,8 +45,26 @@ exports.handler = async (event) => {
       case 'checkout.session.completed': {
         const session = evt.data.object;
         const bookingId = session.metadata?.bookingId;
-        console.log('Checkout completed for booking', bookingId, 'session', session.id);
-        // TODO: Update booking status (accepted / paid) in Firestore or your DB.
+        const lateFeeCents = Number(session.metadata?.lateFee || 0);
+        console.log('Checkout completed for booking', bookingId, 'session', session.id, 'lateFeeCents', lateFeeCents);
+        // Mark booking paid in Firestore if available
+        try{
+          const admin = require('firebase-admin');
+          if(!admin.apps.length){ admin.initializeApp({ projectId: process.env.FIREBASE_PROJECT_ID }); }
+          const db = admin.firestore();
+          if(bookingId){
+            // bookingId may be our custom id or Firestore doc ID
+            const docRef = db.collection('bookings').doc(bookingId);
+            const docSnap = await docRef.get();
+            if(docSnap.exists){
+              await docRef.update({ status:'paid', lateFeePaid:true, lateFeeCents, paidAt: new Date().toISOString() });
+            } else {
+              // fallback: try field lookup
+              const q = await db.collection('bookings').where('id','==',bookingId).limit(1).get();
+              const ref = q.docs[0]?.ref; if(ref){ await ref.update({ status:'paid', lateFeePaid:true, lateFeeCents, paidAt: new Date().toISOString() }); }
+            }
+          }
+        }catch(e){ console.warn('Firestore booking update failed in webhook', e.message); }
         break;
       }
       default:

@@ -5,6 +5,7 @@
   "description": "Netlify serverless functions for Clydero Cash Car Rental",
   "license": "UNLICENSED",
   "dependencies": {
-    "stripe": "^14.25.0"
+    "stripe": "^14.25.0",
+    "firebase-admin": "^12.5.0"
   }
 }
