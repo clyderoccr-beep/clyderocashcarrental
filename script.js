@@ -2110,10 +2110,11 @@ async function loadMembers(){
     MEMBERS.length=0; 
     snap.forEach(d=> {
       const data = d.data();
-      console.log('Loaded member:', d.id, data.email);
+      console.log('Loaded member:', d.id, data.email, 'photoUrl:', data.licensePhotoUrl || 'NONE');
       MEMBERS.push({ id:d.id, ...data });
     });
     console.log('Total members loaded:', MEMBERS.length);
+    console.log('Full MEMBERS array:', MEMBERS);
     return MEMBERS; 
   }catch(err){ 
     console.error('Failed to load members:', err.message); 
