@@ -786,16 +786,10 @@ document.addEventListener('input', (e)=>{
   }
 });
 
-// Vehicles
-const VEHICLES=[
-  {id:'veh_dodge_journey_2014',name:'2014 Dodge Journey',type:'SUV',seats:7,price:250,imgs:['assets/2014-dodge-journey-exterior-1.jpg']},
-  {id:'veh_hyundai_accent_2016',name:'2016 Hyundai Accent',type:'Sedan',seats:5,price:200,imgs:['assets/2016-hyundai-accent-exterior-1.webp','assets/2016-hyundai.jpg']},
-  {id:'veh_red_kia',name:'Red Kia',type:'Sedan',seats:5,price:220,imgs:['assets/red-kia-exterior-1.webp','assets/red-kia-exterior-2.webp','assets/red-kia-exterior-3.webp','assets/red-kia-exterior-4.webp','assets/red-kia-interior-1.webp','assets/red-kia-interior-2.webp']},
-  {id:'veh_ford_freestyle',name:'Ford Freestyle',type:'SUV',seats:7,price:240,imgs:['assets/ford-freestyle.jpg']},
-  {id:'veh_nissan_xterra',name:'Nissan Xterra',type:'SUV',seats:5,price:260,imgs:['assets/xterra.jpg','assets/hero-xterra.jpg']}
-];
-// Preserve defaults for fallback when Firestore returns empty
-const DEFAULT_VEHICLES = VEHICLES.map(v=>({ ...v }));
+// Vehicles (no hard-coded defaults to avoid duplication with Firestore)
+const VEHICLES = [];
+// Preserve defaults for fallback when Firestore returns empty (empty by design)
+const DEFAULT_VEHICLES = [];
 
 // Merge Firestore vehicles with defaults so missing entries don't disappear
 function mergeVehiclesWithDefaults(fireList){
