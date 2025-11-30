@@ -2117,6 +2117,8 @@ document.addEventListener('click',(e)=>{
   if(acc){
     const id=acc.dataset.bkAccept;
     const adminBk = ADMIN_BOOKINGS.find(b=>b.id===id);
+    // Immediate UI feedback: mark vehicle pending and disable Book
+    if(adminBk){ const v = VEHICLES.find(x=> x.id===adminBk.vehicleId); if(v){ v.pending=true; v.available=true; renderVehicles(); }}
     updateAdminBookingStatus(id,'accepted').then(async ()=>{
       loadAdminBookings().then(renderAdminBookings);
       showToast('Booking accepted');
@@ -2138,6 +2140,8 @@ document.addEventListener('click',(e)=>{
     const id=rent.dataset.bkRented;
     const adminBk = ADMIN_BOOKINGS.find(b=>b.id===id);
     const now=Date.now();
+    // Immediate UI feedback: mark vehicle unavailable
+    if(adminBk){ const v = VEHICLES.find(x=> x.id===adminBk.vehicleId); if(v){ v.pending=false; v.available=false; renderVehicles(); }}
     updateAdminBookingStatus(id,'rented').then(()=>{
       loadAdminBookings().then(renderAdminBookings);
       showToast('Marked rented at '+ new Date(now).toLocaleString());
