@@ -806,18 +806,21 @@ function renderVehicles(){
   if(!VEHICLES.length){ DEFAULT_VEHICLES.forEach(v=>VEHICLES.push({ ...v })); }
   VEHICLES.forEach(v=>{
     const isAvail = v.available !== false;
+    const isPending = v.pending === true;
     const el=document.createElement('article'); el.className='card';
-    const bookBtn = isAvail
+    const bookBtn = (isAvail && !isPending)
       ? `<button class='navbtn' aria-label='Book ${v.name}' data-nav='booking' data-veh='${v.id}'>Book</button>`
       : `<button class='navbtn' disabled title='Unavailable' aria-disabled='true'>Book</button>`;
-    const statusBadge = isAvail ? '' : `<span class='badge unavailable' style='margin-left:8px'>Unavailable</span>`;
+    const statusBadge = isAvail
+      ? (isPending? `<span class='badge' style='margin-left:8px;background:#ffc10733;border-color:#ffc10766;color:#7a5e00'>Pending</span>` : '')
+      : `<span class='badge unavailable' style='margin-left:8px'>Unavailable</span>`;
     const firstImg = (v.imgs&&v.imgs[0])||'';
     const imgHtml = firstImg 
       ? `<img alt="Photo of ${v.name}" loading="lazy" src="${firstImg}" onerror="this.src='https://via.placeholder.com/400x300.png?text=No+Image';this.onerror=null;" style="width:100%;height:auto;min-height:200px;object-fit:cover;background:#f0f0f0">` 
       : `<div style="width:100%;height:200px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;color:#999">No Image</div>`;
     el.innerHTML=`${imgHtml}\n<div class='body'>
       <div style='display:flex;align-items:center;gap:8px'>
-        <span class='veh-dot ${isAvail?'available':'unavailable'}' title='${isAvail?'Available':'Unavailable'}'></span>
+        <span class='veh-dot ${isAvail && !isPending?'available':'unavailable'}' title='${isAvail && !isPending?'Available':(isPending?'Pending':'Unavailable')}'></span>
         <div style='font-weight:800'>${v.name}</div>
       </div>
       <div class='muted' style='margin:6px 0'>Seats ${v.seats} • ${v.type}</div>
@@ -2089,6 +2092,14 @@ async function updateAdminBookingStatus(id, status){
   try{
     const payload = status==='rented' ? { status, rentedAt: Date.now() } : { status };
     await updateDoc(doc(db,'bookings',id), payload);
+    // Update local vehicle availability/pending
+    const adminBk = ADMIN_BOOKINGS.find(b=>b.id===id);
+    if(adminBk){ const v = VEHICLES.find(x=> x.id===adminBk.vehicleId); if(v){
+      if(status==='accepted'){ v.pending=true; v.available=false; }
+      else if(status==='rented'){ v.pending=false; v.available=false; }
+      else if(status==='rejected' || status==='cancelled'){ v.pending=false; v.available=true; }
+      renderVehicles();
+    }}
   }catch(err){ console.error('Failed to update booking status:', err.message); }
 }
 async function deleteAdminBooking(id){
