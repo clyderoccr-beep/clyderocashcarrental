@@ -21,8 +21,6 @@
  *   POST https://api-m.paypal.com/v2/checkout/orders/{orderId}/capture
  */
 
-const fetch = (...args) => import('node-fetch').then(({default: f}) => f(...args)); // For Node < 18 compatibility; otherwise remove.
-
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
@@ -57,9 +55,7 @@ exports.handler = async (event) => {
     const accessToken = tokenJson.access_token;
 
     // Fetch order details
-    const orderRes = await fetch(`https://api-m.sandbox.paypal.com/v2/checkout/orders/${orderId}`, {
-      headers: { 'Authorization': 'Bearer ' + accessToken }
-    });
+    const orderRes = await fetch(`https://api-m.sandbox.paypal.com/v2/checkout/orders/${orderId}`, { headers: { 'Authorization': 'Bearer ' + accessToken } });
     const orderJson = await orderRes.json();
     if (!orderRes.ok) {
       throw new Error('PayPal order fetch failed ' + orderRes.status + ': ' + JSON.stringify(orderJson));
