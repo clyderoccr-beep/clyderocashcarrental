@@ -787,6 +787,36 @@ const VEHICLES=[
 // Preserve defaults for fallback when Firestore returns empty
 const DEFAULT_VEHICLES = VEHICLES.map(v=>({ ...v }));
 
+// Merge Firestore vehicles with defaults so missing entries don't disappear
+function mergeVehiclesWithDefaults(fireList){
+  const byId = new Map();
+  // seed defaults first
+  DEFAULT_VEHICLES.forEach(v=>{
+    const base = { ...v };
+    base.available = v.available !== false;
+    base.pending = v.pending === true;
+    base.imgs = Array.isArray(v.imgs) ? v.imgs : [];
+    byId.set(v.id, base);
+  });
+  // overlay Firestore values
+  (fireList||[]).forEach(v=>{
+    const curr = byId.get(v.id) || { id:v.id };
+    const merged = {
+      ...curr,
+      name: v.name ?? curr.name,
+      type: v.type ?? curr.type,
+      seats: v.seats ?? curr.seats,
+      price: v.price ?? curr.price,
+      imgs: Array.isArray(v.imgs) ? v.imgs : (curr.imgs||[]),
+      available: v.available !== false,
+      pending: v.pending === true,
+      details: v.details ?? curr.details
+    };
+    byId.set(v.id, merged);
+  });
+  return Array.from(byId.values());
+}
+
 function seedBooking(){
   const sel=document.getElementById('vehicle-select'); if(!sel) return;
   sel.innerHTML='';
@@ -1353,17 +1383,17 @@ function setupRealtimeForRole(){
   const db=getDB(); const utils=getUtils(); if(!db || !utils.onSnapshot) return;
   // Public (vehicles + about) always
   if(!_aboutUnsub){ try{ _aboutUnsub = utils.onSnapshot(utils.doc(db,'site_content','about'), snap=>{ if(snap.exists()){ ABOUT_CONTENT = snap.data(); renderAbout(); } }); }catch(e){ console.warn('About realtime failed', e.message); } }
-  if(!_vehUnsub){ try{ _vehUnsub = utils.onSnapshot(utils.collection(db,'vehicles'), snap=>{ 
-    VEHICLES.length=0; 
-    snap.forEach(d=> VEHICLES.push({ id:d.id, ...d.data() })); 
-    // If Firestore has vehicles, use them; otherwise keep defaults
-    if(VEHICLES.length === 0){ 
-      DEFAULT_VEHICLES.forEach(v=>VEHICLES.push({ ...v })); 
+  if(!_vehUnsub){ try{ _vehUnsub = utils.onSnapshot(utils.collection(db,'vehicles'), async snap=>{ 
+    const fireList = []; snap.forEach(d=> fireList.push({ id:d.id, ...d.data() }));
+    const merged = mergeVehiclesWithDefaults(fireList);
+    VEHICLES.length=0; merged.forEach(v=> VEHICLES.push(v));
+    renderVehicles(); seedBooking();
+    const isOwner = getSessionEmail()===OWNER_EMAIL; if(isOwner){
+      // If some defaults missing in Firestore, republish them
+      const missing = DEFAULT_VEHICLES.filter(d=> !fireList.find(f=> f.id===d.id));
+      for(const m of missing){ try{ await saveVehicleToFirestore(m); }catch{} }
+      renderAdminVehicles();
     }
-    renderVehicles(); 
-    seedBooking(); 
-    const isOwner = getSessionEmail()===OWNER_EMAIL; 
-    if(isOwner){ renderAdminVehicles(); } 
   }); }catch(e){ console.warn('Vehicles realtime failed', e.message); } }
 
   // Current user membership doc realtime (improves account panel updates)
