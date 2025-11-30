@@ -1384,15 +1384,22 @@ function setupRealtimeForRole(){
   // Public (vehicles + about) always
   if(!_aboutUnsub){ try{ _aboutUnsub = utils.onSnapshot(utils.doc(db,'site_content','about'), snap=>{ if(snap.exists()){ ABOUT_CONTENT = snap.data(); renderAbout(); } }); }catch(e){ console.warn('About realtime failed', e.message); } }
   if(!_vehUnsub){ try{ _vehUnsub = utils.onSnapshot(utils.collection(db,'vehicles'), async snap=>{ 
-    const fireList = []; snap.forEach(d=> fireList.push({ id:d.id, ...d.data() }));
-    const merged = mergeVehiclesWithDefaults(fireList);
-    VEHICLES.length=0; merged.forEach(v=> VEHICLES.push(v));
-    renderVehicles(); seedBooking();
-    const isOwner = getSessionEmail()===OWNER_EMAIL; if(isOwner){
-      // If some defaults missing in Firestore, republish them
-      const missing = DEFAULT_VEHICLES.filter(d=> !fireList.find(f=> f.id===d.id));
-      for(const m of missing){ try{ await saveVehicleToFirestore(m); }catch{} }
-      renderAdminVehicles();
+    try{
+      const fireList = []; snap.forEach(d=> fireList.push({ id:d.id, ...d.data() }));
+      let merged = mergeVehiclesWithDefaults(fireList);
+      if(!Array.isArray(merged) || merged.length===0){ merged = DEFAULT_VEHICLES.map(v=>({ ...v })); }
+      VEHICLES.length=0; merged.forEach(v=> VEHICLES.push(v));
+      renderVehicles(); seedBooking();
+      const isOwner = getSessionEmail()===OWNER_EMAIL; if(isOwner){
+        // If some defaults missing in Firestore, republish them
+        const missing = DEFAULT_VEHICLES.filter(d=> !fireList.find(f=> f.id===d.id));
+        for(const m of missing){ try{ await saveVehicleToFirestore(m); }catch{} }
+        renderAdminVehicles();
+      }
+    }catch(err){
+      console.warn('Vehicles snapshot merge failed:', err?.message||err);
+      VEHICLES.length=0; DEFAULT_VEHICLES.forEach(v=> VEHICLES.push({ ...v }));
+      renderVehicles(); seedBooking();
     }
   }); }catch(e){ console.warn('Vehicles realtime failed', e.message); } }
 
