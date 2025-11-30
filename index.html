@@ -812,7 +812,20 @@
             <div style="margin-bottom:20px">
               <label style="color:#000;font-weight:600">Amount (USD)</label>
               <input id="paymentAmount" type="number" min="1" step="0.01" placeholder="250.00" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px">
-              <small style="color:#666;display:block;margin-top:4px">Weekly rental total (example: 250.00)</small>
+              <small style="color:#666;display:block;margin-top:4px">Weekly rental price</small>
+            </div>
+            <!-- Live Fee Breakdown -->
+            <div id="feeBreakdown" style="background:#f9f9f9;border:1px solid #ddd;border-radius:6px;padding:12px;margin-bottom:16px;font-size:13px;display:none">
+              <div style="margin-bottom:8px">
+                <strong style="color:#000">Card / Apple Pay:</strong><br>
+                <span style="color:#666">Processing fee: <span id="stripeFee">$0.00</span></span><br>
+                <span style="color:#000;font-weight:600">Total: <span id="stripeTotal">$0.00</span></span>
+              </div>
+              <div style="border-top:1px solid #ddd;padding-top:8px">
+                <strong style="color:#000">PayPal:</strong><br>
+                <span style="color:#666">Processing fee: <span id="paypalFee">$0.00</span></span><br>
+                <span style="color:#000;font-weight:600">Total: <span id="paypalTotal">$0.00</span></span>
+              </div>
             </div>
             <!-- Stripe Checkout Triggers (separated) -->
             <button id="stripeCheckoutBtn" class="navbtn" style="width:100%;margin-bottom:8px">Pay with Card</button>

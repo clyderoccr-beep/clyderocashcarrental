@@ -2260,7 +2260,7 @@ function initHostedPayments(){
 // Initialize on navigation to payments section
 document.addEventListener('click', (e)=>{
   const payTab = e.target.closest('[data-nav="payments"]');
-  if(payTab){ setTimeout(()=> initHostedPayments(), 100); }
+  if(payTab){ setTimeout(()=> { initHostedPayments(); updateFeeBreakdown(); }, 100); }
 });
 
 // Initialize when arriving directly on payments via hash or programmatic navigation
@@ -2272,9 +2272,12 @@ document.addEventListener('DOMContentLoaded', ()=>{
       renderVehicles(); seedBooking();
     }
   }catch{}
-  if(location.hash.includes('payments')){ setTimeout(()=> initHostedPayments(), 100); }
+  if(location.hash.includes('payments')){ setTimeout(()=> { initHostedPayments(); updateFeeBreakdown(); }, 100); }
   // Ensure bindings exist even if not navigating via tab
   setTimeout(()=> initHostedPayments(), 300);
+  // Live fee breakdown on amount change
+  const amtInput = document.getElementById('paymentAmount');
+  if(amtInput){ amtInput.addEventListener('input', updateFeeBreakdown); }
 });
 window.addEventListener('hashchange', ()=>{
   if(location.hash.includes('payments')){ setTimeout(()=> initHostedPayments(), 100); }
@@ -2288,24 +2291,56 @@ function getBookingAndAmount(){
   return { bookingId, amountCents, amountFloat };
 }
 
+function calculateStripeFee(amount){
+  // Stripe: 2.9% + $0.30
+  const total = amount * 1.029 + 0.30;
+  const fee = total - amount;
+  return { fee, total };
+}
+
+function calculatePayPalFee(amount){
+  // PayPal: 3.49% + $0.49
+  const total = amount * 1.0349 + 0.49;
+  const fee = total - amount;
+  return { fee, total };
+}
+
+function updateFeeBreakdown(){
+  const amountStr = document.getElementById('paymentAmount')?.value.trim();
+  const amount = parseFloat(amountStr||'0');
+  const breakdown = document.getElementById('feeBreakdown');
+  if(!breakdown) return;
+  if(!amount || amount <= 0){ breakdown.style.display='none'; return; }
+  breakdown.style.display='block';
+  const stripe = calculateStripeFee(amount);
+  const paypal = calculatePayPalFee(amount);
+  document.getElementById('stripeFee').textContent = '$' + stripe.fee.toFixed(2);
+  document.getElementById('stripeTotal').textContent = '$' + stripe.total.toFixed(2);
+  document.getElementById('paypalFee').textContent = '$' + paypal.fee.toFixed(2);
+  document.getElementById('paypalTotal').textContent = '$' + paypal.total.toFixed(2);
+}
+
 function initStripeCheckoutButton(){
   const btn = document.getElementById('stripeCheckoutBtn');
   if(!btn || btn.dataset.bound) return;
   btn.dataset.bound = '1';
   btn.addEventListener('click', async ()=>{
-    const { bookingId, amountCents } = getBookingAndAmount();
+    const { bookingId, amountFloat } = getBookingAndAmount();
     const msgEl = document.getElementById('payment-message');
-    if(!bookingId || !amountCents || amountCents < 50){
-      if(msgEl){ msgEl.style.display='block'; msgEl.style.color='#c1121f'; msgEl.textContent='Missing or invalid locked booking amount.'; }
+    if(!bookingId || !amountFloat || amountFloat <= 0){
+      if(msgEl){ msgEl.style.display='block'; msgEl.style.color='#c1121f'; msgEl.textContent='Missing or invalid booking amount.'; }
       return;
     }
+    // Calculate Stripe total (customer pays the fee)
+    const stripe = calculateStripeFee(amountFloat);
+    const stripeTotalCents = Math.round(stripe.total * 100);
     btn.disabled = true; btn.textContent = 'Redirecting…';
     try{
       const endpoint = '/.netlify/functions/create-checkout-session';
       const res = await fetch(endpoint, {
         method:'POST',
         headers:{ 'Content-Type':'application/json' },
-        body: JSON.stringify({ bookingId, amount: amountCents })
+        body: JSON.stringify({ bookingId, amount: stripeTotalCents })
       });
       if(!res.ok){
         const txt = await res.text().catch(()=>res.statusText);
@@ -2327,22 +2362,25 @@ function initApplePayButton(){
   if(!btn || btn.dataset.bound) return;
   btn.dataset.bound = '1';
   btn.addEventListener('click', async ()=>{
-    const { bookingId, amountCents } = getBookingAndAmount();
+    const { bookingId, amountFloat } = getBookingAndAmount();
     const msgEl = document.getElementById('payment-message');
     const aMsg = document.getElementById('apple-status');
     const appleSupported = typeof window.ApplePaySession !== 'undefined' && ApplePaySession.canMakePayments && ApplePaySession.canMakePayments();
     if(!appleSupported){ if(aMsg){ aMsg.style.display='block'; aMsg.textContent='Apple Pay not available on this device. We\'ll open secure checkout where you can still use your card.'; } }
-    if(!bookingId || !amountCents || amountCents < 50){
-      if(msgEl){ msgEl.style.display='block'; msgEl.style.color='#c1121f'; msgEl.textContent='Missing or invalid locked booking amount.'; }
+    if(!bookingId || !amountFloat || amountFloat <= 0){
+      if(msgEl){ msgEl.style.display='block'; msgEl.style.color='#c1121f'; msgEl.textContent='Missing or invalid booking amount.'; }
       return;
     }
+    // Calculate Stripe total (customer pays the fee)
+    const stripe = calculateStripeFee(amountFloat);
+    const stripeTotalCents = Math.round(stripe.total * 100);
     btn.disabled = true; const prev=btn.textContent; btn.textContent='Checking…';
     try{
       // Use the same Checkout session. On Apple devices, Apple Pay shows as an option on Checkout.
       const endpoint = '/.netlify/functions/create-checkout-session';
       const res = await fetch(endpoint, {
         method:'POST', headers:{ 'Content-Type':'application/json' },
-        body: JSON.stringify({ bookingId, amount: amountCents })
+        body: JSON.stringify({ bookingId, amount: stripeTotalCents })
       });
       if(!res.ok){ const txt=await res.text().catch(()=>res.statusText); throw new Error(`Checkout create failed (${res.status}): ${txt}`); }
       const data = await res.json(); if(!data.url) throw new Error('No session URL returned');
@@ -2363,9 +2401,11 @@ function initPayPalHostedButton(){
   paypal.Buttons({
     style:{ layout:'vertical', color:'gold', shape:'rect', label:'pay' },
     createOrder: (data, actions) => {
-      const { bookingId, amountCents } = getBookingAndAmount();
-      if(!bookingId || !amountCents){ showPayPalHostedStatus('Enter booking & amount first', true); return ''; }
-      const decimal = (amountCents/100).toFixed(2);
+      const { bookingId, amountFloat } = getBookingAndAmount();
+      if(!bookingId || !amountFloat || amountFloat <= 0){ showPayPalHostedStatus('Enter booking & amount first', true); return ''; }
+      // Calculate PayPal total (customer pays the fee)
+      const paypal = calculatePayPalFee(amountFloat);
+      const decimal = paypal.total.toFixed(2);
       return actions.order.create({
         intent:'CAPTURE',
         purchase_units:[{ reference_id: bookingId, amount:{ currency_code:'USD', value: decimal }, description:`CCR Booking ${bookingId}` }]
@@ -2375,11 +2415,13 @@ function initPayPalHostedButton(){
       try{
         const details = await actions.order.capture();
         showPayPalHostedStatus('Payment captured. Verifying…', false);
-        const { bookingId, amountCents } = getBookingAndAmount();
+        const { bookingId, amountFloat } = getBookingAndAmount();
+        const paypal = calculatePayPalFee(amountFloat);
+        const paypalTotalCents = Math.round(paypal.total * 100);
         // Call verification stub (does server-side fetch of order)
         const resp = await fetch('/.netlify/functions/paypal-payment-confirm', {
           method:'POST', headers:{ 'Content-Type':'application/json' },
-          body: JSON.stringify({ orderId: data.orderID, bookingId, amount: amountCents })
+          body: JSON.stringify({ orderId: data.orderID, bookingId, amount: paypalTotalCents })
         });
         // Accept any 2xx status as success (200, 201, etc.)
         if(!resp.ok && resp.status < 200 || resp.status >= 300){ 
