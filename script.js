@@ -1442,6 +1442,7 @@ async function saveVehicleToFirestore(vehicle){
       price: vehicle.price,
       imgs: vehicle.imgs || [],
       available: vehicle.available !== false,
+      pending: vehicle.pending === true,
       details: vehicle.details || ''
     });
     console.log('[saveVehicle] SetDoc success for', vehicle.id);
@@ -2099,6 +2100,7 @@ async function updateAdminBookingStatus(id, status){
       else if(status==='rented'){ v.pending=false; v.available=false; }
       else if(status==='rejected' || status==='cancelled'){ v.pending=false; v.available=true; }
       renderVehicles();
+      try{ await saveVehicleToFirestore(v); }catch{}
     }}
   }catch(err){ console.error('Failed to update booking status:', err.message); }
 }
@@ -2118,7 +2120,7 @@ document.addEventListener('click',(e)=>{
     const id=acc.dataset.bkAccept;
     const adminBk = ADMIN_BOOKINGS.find(b=>b.id===id);
     // Immediate UI feedback: mark vehicle pending and disable Book
-    if(adminBk){ const v = VEHICLES.find(x=> x.id===adminBk.vehicleId); if(v){ v.pending=true; v.available=true; renderVehicles(); }}
+    if(adminBk){ const v = VEHICLES.find(x=> x.id===adminBk.vehicleId); if(v){ v.pending=true; v.available=true; renderVehicles(); try{ await saveVehicleToFirestore(v); }catch{} }}
     updateAdminBookingStatus(id,'accepted').then(async ()=>{
       loadAdminBookings().then(renderAdminBookings);
       showToast('Booking accepted');
@@ -2141,7 +2143,7 @@ document.addEventListener('click',(e)=>{
     const adminBk = ADMIN_BOOKINGS.find(b=>b.id===id);
     const now=Date.now();
     // Immediate UI feedback: mark vehicle unavailable
-    if(adminBk){ const v = VEHICLES.find(x=> x.id===adminBk.vehicleId); if(v){ v.pending=false; v.available=false; renderVehicles(); }}
+    if(adminBk){ const v = VEHICLES.find(x=> x.id===adminBk.vehicleId); if(v){ v.pending=false; v.available=false; renderVehicles(); try{ await saveVehicleToFirestore(v); }catch{} }}
     updateAdminBookingStatus(id,'rented').then(()=>{
       loadAdminBookings().then(renderAdminBookings);
       showToast('Marked rented at '+ new Date(now).toLocaleString());
