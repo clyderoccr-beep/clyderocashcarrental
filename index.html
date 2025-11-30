@@ -15,8 +15,7 @@
   <link rel="canonical" href="https://your-domain.example/" />
   <link rel="icon" type="image/jpeg" href="assets/icon3.jpeg" />
   <title>Clydero Cash Car Rental</title>
-  <!-- PayPal SDK: sandbox client ID provided by user -->
-  <script src="https://www.paypal.com/sdk/js?client-id=AVqjiDY8TF1Hd00F4KEP4a9-oWhQSC84W8r95wB_LDs-oZ2rVphvV4g3jEyibiPkR34JMt6AWHazUZ0UC&currency=USD" defer></script>
+  <!-- PayPal SDK will be loaded dynamically in script.js (sb for local, prod ID for site) -->
   <style>
     :root{
       /* Core palette */
@@ -166,6 +165,7 @@
     <section id="vehicles" class="section">
       <div class="wrap">
         <h1>Vehicles</h1>
+        <div id="vehicle-empty" class="muted" style="margin-bottom:8px;display:none">No vehicles available right now. Please check back soon.</div>
         <div id="vehicle-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px"></div>
       </div>
     </section>

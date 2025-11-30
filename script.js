@@ -1,5 +1,15 @@
 'use strict';
 
+// Enable Firebase AppCheck debug for local dev to reduce reCAPTCHA errors
+try{
+  (function(){
+    const proto = (location && location.protocol) || '';
+    const host = (location && location.hostname) || '';
+    const isLocal = proto === 'file:' || host === '127.0.0.1' || host === 'localhost';
+    if(isLocal){ self.FIREBASE_APPCHECK_DEBUG_TOKEN = true; console.log('AppCheck debug token enabled (local)'); }
+  })();
+}catch{}
+
 // Firestore helpers
 function getDB(){ return window.firestoreDB; }
 function getUtils(){ return window.firestoreUtils; }
@@ -862,7 +872,24 @@ function renderVehicles(){
     </div>`;
     grid.appendChild(el);
   });
+  // Toggle empty-state message visibility
+  try{
+    const emptyMsg = document.getElementById('vehicle-empty');
+    if(emptyMsg){ emptyMsg.style.display = VEHICLES.length ? 'none' : 'block'; }
+  }catch{}
 }
+
+// Safety bootstrap: ensure vehicles render even if earlier init fails
+try{
+  window.addEventListener('load', ()=>{
+    try{
+      const grid = document.getElementById('vehicle-grid');
+      if(grid && (!grid.children || grid.children.length===0)){
+        renderVehicles();
+      }
+    }catch{}
+  });
+}catch{}
 
 // ==== My Bookings (local per-user) ====
 let MY_BOOKINGS = [];
@@ -1380,8 +1407,22 @@ async function loadFromFirestore(){
 let _vehUnsub=null, _aboutUnsub=null, _adminBookingsUnsub=null, _inboxUnsub=null, _membersUnsub=null, _currentUserUnsub=null;
 let _isUpdatingVehicles = false;
 
+// Detect local/offline mode (e.g., 127.0.0.1, localhost, or file://)
+function isOfflineMode(){
+  try{
+    const host = (location && location.hostname) || '';
+    const proto = (location && location.protocol) || '';
+    return proto === 'file:' || host === '127.0.0.1' || host === 'localhost';
+  }catch{ return false; }
+}
+
 function setupRealtimeForRole(){
   const db=getDB(); const utils=getUtils(); if(!db || !utils.onSnapshot) return;
+  // In offline/local preview, skip Firestore listeners and show defaults
+  if(isOfflineMode()){
+    try{ VEHICLES.length=0; DEFAULT_VEHICLES.forEach(v=> VEHICLES.push({ ...v })); renderVehicles(); seedBooking(); }catch{}
+    return;
+  }
   // Public (vehicles + about) always
   if(!_aboutUnsub){ try{ _aboutUnsub = utils.onSnapshot(utils.doc(db,'site_content','about'), snap=>{ if(snap.exists()){ ABOUT_CONTENT = snap.data(); renderAbout(); } }); }catch(e){ console.warn('About realtime failed', e.message); } }
   if(!_vehUnsub){ try{ _vehUnsub = utils.onSnapshot(utils.collection(db,'vehicles'), snap=>{ 
@@ -2148,7 +2189,7 @@ document.addEventListener('click',(e)=>{ const tab=e.target.closest('#adminTab')
 document.addEventListener('click',(e)=>{ if(e.target?.id==='adminBookingsRefresh'){ loadAdminBookings().then(renderAdminBookings); }});
 
 // Admin booking action handlers
-document.addEventListener('click',(e)=>{
+document.addEventListener('click',async (e)=>{
   const acc = e.target.closest('[data-bk-accept]');
   if(acc){
     const id=acc.dataset.bkAccept;
@@ -2192,9 +2233,33 @@ document.addEventListener('click',(e)=>{
 // NOTE: Stripe publishable key is NOT required for redirect-to-Checkout approach.
 // If needed later for client-side Stripe features, place pk_live_... here.
 
+// Production PayPal Client ID (used on deployed domain)
+const PAYPAL_CLIENT_ID_PROD = 'AVqjiDY8TF1Hd00F4KEP4a9-oWhQSC84W8r95wB_LDs-oZ2rVphvV4g3jEyibiPkR34JMt6AWHazUZ0UC';
+
+function ensurePayPalSdkLoaded(){
+  return new Promise((resolve, reject)=>{
+    try{
+      if(typeof paypal !== 'undefined'){ resolve(); return; }
+      const proto = (location && location.protocol) || '';
+      const host = (location && location.hostname) || '';
+      const isLocal = proto === 'file:' || host === '127.0.0.1' || host === 'localhost';
+      const clientId = isLocal ? 'sb' : PAYPAL_CLIENT_ID_PROD;
+      const src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=USD`;
+      const s = document.createElement('script'); s.src = src; s.async = true; s.crossOrigin = 'anonymous';
+      s.onload = () => { if(typeof paypal === 'undefined'){ reject(new Error('PayPal SDK loaded, but not available')); } else { resolve(); } };
+      s.onerror = () => reject(new Error('Failed to load PayPal SDK'));
+      document.head.appendChild(s);
+      // Fallback resolve after timeout if paypal becomes available
+      setTimeout(()=>{ if(typeof paypal !== 'undefined'){ resolve(); } }, 8000);
+    }catch(err){ reject(err); }
+  });
+}
+
 function initHostedPayments(){
   try{ initStripeCheckoutButton(); }catch(e){ console.warn('Stripe init failed', e); }
-  try{ initPayPalHostedButton(); }catch(e){ console.warn('PayPal init failed', e); }
+  ensurePayPalSdkLoaded()
+    .then(()=>{ try{ initPayPalHostedButton(); }catch(e){ console.warn('PayPal init failed', e); } })
+    .catch((e)=>{ console.warn('PayPal SDK load failed', e?.message||e); const wrap=document.getElementById('paypal-button-container'); if(wrap){ wrap.innerHTML='<small style="color:#666">PayPal unavailable (SDK failed to load).</small>'; } });
 }
 
 // Initialize on navigation to payments section
@@ -2265,7 +2330,7 @@ function initStripeCheckoutButton(){
 function initPayPalHostedButton(){
   const wrap = document.getElementById('paypal-button-container');
   if(!wrap || wrap.dataset.loaded) return;
-  if(typeof paypal === 'undefined'){ wrap.innerHTML='<small style="color:#666">PayPal SDK not loaded.</small>'; return; }
+  if(typeof paypal === 'undefined'){ wrap.innerHTML='<small style="color:#666">Loading PayPal…</small>'; return; }
   wrap.dataset.loaded='1';
   paypal.Buttons({
     style:{ layout:'vertical', color:'gold', shape:'rect', label:'pay' },
