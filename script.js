@@ -691,6 +691,7 @@ document.addEventListener('submit', async (e)=>{
         reader.readAsDataURL(photoInput.files[0]);
       });
       updates.licensePhotoData = photoData;
+      updates.licensePhotoUrl = photoData; // Also save to licensePhotoUrl for admin viewer consistency
     } catch(err){
       console.error('Failed to read photo:', err);
       alert('Failed to process photo. Please try again.');
@@ -1797,12 +1798,13 @@ document.addEventListener('click',(e)=>{
     d.textContent = lines.join('\n'); 
     const img=document.getElementById('memberPhoto'); 
     if(img){ 
-      const photoUrl = u.licensePhotoUrl || '';
-      console.log('Member photo URL:', photoUrl);
+      // Check both licensePhotoUrl (Storage) and licensePhotoData (base64 from updates)
+      const photoUrl = u.licensePhotoUrl || u.licensePhotoData || '';
+      console.log('Member photo - URL:', u.licensePhotoUrl || 'NONE', 'Data:', u.licensePhotoData ? 'EXISTS' : 'NONE');
       if(photoUrl){ 
         img.src = photoUrl; 
         img.style.display='block';
-        img.onerror = ()=>{ console.error('Failed to load photo:', photoUrl); img.src=''; img.alt='Photo failed to load'; };
+        img.onerror = ()=>{ console.error('Failed to load photo:', photoUrl.substring(0,50)+'...'); img.src=''; img.alt='Photo failed to load'; };
       } else { 
         img.src=''; 
         img.style.display='none'; 
