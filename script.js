@@ -685,10 +685,35 @@ document.addEventListener('submit', async (e)=>{
   if(photoInput?.files?.[0]){
     try {
       const photoData = await new Promise((resolve, reject)=>{
+        const file = photoInput.files[0];
         const reader = new FileReader();
-        reader.onload = (ev)=> resolve(ev.target.result);
+        reader.onload = (ev)=>{
+          const img = new Image();
+          img.onload = ()=>{
+            // Compress image to fit Firestore 1MB limit
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+            const MAX_WIDTH = 1200;
+            const MAX_HEIGHT = 1200;
+            if(width > height){
+              if(width > MAX_WIDTH){ height = height * (MAX_WIDTH / width); width = MAX_WIDTH; }
+            } else {
+              if(height > MAX_HEIGHT){ width = width * (MAX_HEIGHT / height); height = MAX_HEIGHT; }
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            // Compress to JPEG with 0.7 quality to reduce size
+            const compressed = canvas.toDataURL('image/jpeg', 0.7);
+            resolve(compressed);
+          };
+          img.onerror = reject;
+          img.src = ev.target.result;
+        };
         reader.onerror = reject;
-        reader.readAsDataURL(photoInput.files[0]);
+        reader.readAsDataURL(file);
       });
       updates.licensePhotoData = photoData;
       updates.licensePhotoUrl = photoData; // Also save to licensePhotoUrl for admin viewer consistency
@@ -734,8 +759,24 @@ document.getElementById('updateLicensePhoto')?.addEventListener('change', (e)=>{
   if(!file) return;
   const reader = new FileReader();
   reader.onload = (ev)=>{
-    const preview = document.getElementById('updatePhotoPreview');
-    preview.innerHTML = `<img src="${ev.target.result}" alt="New license photo preview" style="width:100%;height:auto;border-radius:8px;border:1px solid #ccc">`;
+    const img = new Image();
+    img.onload = ()=>{
+      // Compress preview
+      const canvas = document.createElement('canvas');
+      let width = img.width;
+      let height = img.height;
+      const MAX = 800;
+      if(width > height){ if(width > MAX){ height *= (MAX/width); width = MAX; } }
+      else { if(height > MAX){ width *= (MAX/height); height = MAX; } }
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      const compressed = canvas.toDataURL('image/jpeg', 0.8);
+      const preview = document.getElementById('updatePhotoPreview');
+      preview.innerHTML = `<img src="${compressed}" alt="New license photo preview" style="width:100%;height:auto;border-radius:8px;border:1px solid #ccc">`;
+    };
+    img.src = ev.target.result;
   };
   reader.readAsDataURL(file);
 });
