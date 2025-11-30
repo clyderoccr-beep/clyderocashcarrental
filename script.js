@@ -2228,7 +2228,7 @@ document.addEventListener('click',async (e)=>{
 // If needed later for client-side Stripe features, place pk_live_... here.
 
 // Production PayPal Client ID (used on deployed domain)
-const PAYPAL_CLIENT_ID_PROD = 'AVqjiDY8TF1Hd00F4KEP4a9-oWhQSC84W8r95wB_LDs-oZ2rVphvV4g3jEyibiPkR34JMt6AWHazUZ0UC';
+const PAYPAL_CLIENT_ID_PROD = 'AZR88w1f5wJ_0a0pcxmxfHgiDZ0mTrLc6ViykHsecG1cs51ORMsGwuKNDligcYDelRkk5rPIjC22ynMj';
 
 function ensurePayPalSdkLoaded(){
   return new Promise((resolve, reject)=>{
