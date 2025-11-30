@@ -2152,6 +2152,14 @@ document.addEventListener('click', (e)=>{
   if(payTab){ setTimeout(()=> initHostedPayments(), 100); }
 });
 
+// Initialize when arriving directly on payments via hash or programmatic navigation
+document.addEventListener('DOMContentLoaded', ()=>{
+  if(location.hash.includes('payments')){ setTimeout(()=> initHostedPayments(), 100); }
+});
+window.addEventListener('hashchange', ()=>{
+  if(location.hash.includes('payments')){ setTimeout(()=> initHostedPayments(), 100); }
+});
+
 function getBookingAndAmount(){
   const bookingId = document.getElementById('paymentBookingId')?.value.trim();
   const amountStr = document.getElementById('paymentAmount')?.value.trim();
