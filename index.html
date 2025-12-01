@@ -220,26 +220,49 @@
           <a class="navbtn" data-nav="signup">Go to Sign Up</a>
         </div>
         <div id="accountPanel" style="display:none">
-          <div class="card" style="max-width:560px">
+          <div class="card" style="max-width:780px">
             <div class="body">
-              <h3 style="margin-top:0">My Account</h3>
-              <div id="accountSummary" style="white-space:pre-wrap;font-size:14px"></div>
-              <div id="paymentMethodStatus" style="margin-top:6px;font-size:12px;color:#111"></div>
-              <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
-                <button class="navbtn" id="accountLogout" type="button">Logout</button>
-                <button class="navbtn" id="updateInfoBtn" type="button">Update Info</button>
-                <button class="navbtn" id="accountDelete" type="button" style="background:#c1121f;border-color:#c1121f">Delete Account</button>
-              </div>
-              <div style="margin-top:16px">
-                <h3 style="margin:0 0 8px 0">My Bookings</h3>
-                <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-                  <button class="navbtn" id="accountBookingsRefresh" type="button">Refresh</button>
+              <!-- Account Info Section (Collapsible) -->
+              <details open style="margin-bottom:16px;border:1px solid #e0e0e0;border-radius:8px;padding:12px;background:#fafafa">
+                <summary style="cursor:pointer;font-weight:700;font-size:16px;color:#111;user-select:none;outline:none">
+                  📋 Account Information
+                </summary>
+                <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e0e0e0">
+                  <div id="accountSummary" style="white-space:pre-wrap;font-size:14px;color:#333;line-height:1.6"></div>
+                  <div id="paymentMethodStatus" style="margin-top:8px;font-size:12px;color:#111;padding:8px;background:#fff;border-radius:6px;border:1px solid #e0e0e0"></div>
+                  <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+                    <button class="navbtn" id="accountLogout" type="button">Logout</button>
+                    <button class="navbtn" id="updateInfoBtn" type="button">Update Info</button>
+                    <button class="navbtn" id="accountDelete" type="button" style="background:#c1121f;border-color:#c1121f">Delete Account</button>
+                  </div>
                 </div>
-                <div id="accountBookings" style="display:grid;gap:8px"></div>
-                <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
-                  <button class="navbtn" id="removeSavedCard" type="button" style="background:#6c757d;border-color:#6c757d">Remove Saved Card</button>
+              </details>
+
+              <!-- My Bookings Section (Collapsible) -->
+              <details open style="margin-bottom:16px;border:1px solid #e0e0e0;border-radius:8px;padding:12px;background:#fafafa">
+                <summary style="cursor:pointer;font-weight:700;font-size:16px;color:#111;user-select:none;outline:none">
+                  🚗 My Bookings
+                </summary>
+                <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e0e0e0">
+                  <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+                    <button class="navbtn" id="accountBookingsRefresh" type="button">Refresh</button>
+                  </div>
+                  <div id="accountBookings" style="display:grid;gap:12px"></div>
                 </div>
-              </div>
+              </details>
+
+              <!-- Payment Methods Section (Collapsible) -->
+              <details style="border:1px solid #e0e0e0;border-radius:8px;padding:12px;background:#fafafa">
+                <summary style="cursor:pointer;font-weight:700;font-size:16px;color:#111;user-select:none;outline:none">
+                  💳 Payment Methods
+                </summary>
+                <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e0e0e0">
+                  <p style="color:#666;font-size:13px;margin:0 0 12px 0">Manage your saved payment methods here.</p>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap">
+                    <button class="navbtn" id="removeSavedCard" type="button" style="background:#6c757d;border-color:#6c757d">Remove Saved Card</button>
+                  </div>
+                </div>
+              </details>
             </div>
           </div>
         </div>
