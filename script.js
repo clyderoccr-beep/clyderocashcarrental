@@ -40,6 +40,8 @@ try{
       updateMembershipPanel(); 
       updateAdminVisibility(); 
       setupRealtimeForRole(); 
+      // Start/stop customer bookings realtime on auth changes
+      try{ if(user){ startMyBookingsRealtime(); } else { stopMyBookingsRealtime(); } }catch(_){ }
     }); 
   } 
 }catch(err){ 
@@ -1391,15 +1393,21 @@ document.addEventListener('click',(e)=>{
 });
 
 // Customer My Bookings manual refresh
-document.addEventListener('click', (e)=>{
+document.addEventListener('click', async (e)=>{
   const btn = e.target.closest('#accountBookingsRefresh');
   if(!btn) return;
   const email = getSessionEmail();
   if(!email){ showToast('Log in to view bookings.'); return; }
   try{
-    // Prefer Firestore-backed refresh for latest status
-    refreshCustomerBookingsFromFirestore(email).then(()=>{ showToast('Bookings refreshed'); });
-  }catch(err){ console.warn('Refresh failed:', err?.message||err); }
+    btn.disabled = true; const prev=btn.textContent; btn.textContent = 'Refreshing…';
+    // Ensure realtime is running
+    try{ startMyBookingsRealtime(); }catch(_){ }
+    // Force a fresh pull from Firestore and re-render
+    await refreshCustomerBookingsFromFirestore(email);
+    try{ updateMembershipPanel(); }catch(_){ }
+    showToast('Bookings refreshed');
+  }catch(err){ console.warn('Refresh failed:', err?.message||err); alert('Could not refresh bookings right now.'); }
+  finally{ btn.disabled=false; btn.textContent='Refresh'; }
 });
 
 // Remove saved card (user-controlled)
