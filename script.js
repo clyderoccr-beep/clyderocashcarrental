@@ -31,7 +31,11 @@ async function uploadViaFunction(kind, blob){
     method:'POST', headers:{ 'Content-Type':'application/json', 'Authorization': 'Bearer '+token },
     body: JSON.stringify({ kind, dataUrl })
   });
-  if(!res.ok) throw new Error('function_upload_failed');
+  if(!res.ok){
+    let detail = '';
+    try{ const j = await res.json(); detail = j && (j.error||j.detail) ? (j.error+ (j.detail? (': '+j.detail):'')) : ''; }catch{ try{ detail = await res.text(); }catch{} }
+    throw new Error('function_upload_failed'+ (detail? (' - '+detail):''));
+  }
   const json = await res.json();
   if(!json.url) throw new Error('function_no_url');
   return json.url;
