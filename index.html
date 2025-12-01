@@ -228,6 +228,13 @@
                   📋 Account Information
                 </summary>
                 <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e0e0e0">
+                  <!-- Profile Cover -->
+                  <div id="accountCover" style="height:160px;border-radius:8px;border:1px solid #d0d0d0;background:#e9ecef center/cover no-repeat;position:relative;overflow:hidden"></div>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px 0">
+                    <input id="accountCoverFile" type="file" accept="image/*" style="display:none">
+                    <button class="navbtn" id="accountChangeCover" type="button">Change Cover</button>
+                    <button class="navbtn" id="accountRemoveCover" type="button" style="background:#6c757d;border-color:#6c757d">Remove Cover</button>
+                  </div>
                   <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px">
                     <div id="accountAvatar" style="width:72px;height:72px;border-radius:50%;overflow:hidden;border:1px solid #d0d0d0;background:#eee;display:flex;align-items:center;justify-content:center;font-weight:700;color:#555"></div>
                     <div style="display:flex;gap:8px;flex-wrap:wrap">

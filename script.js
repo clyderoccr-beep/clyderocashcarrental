@@ -2403,6 +2403,78 @@ document.getElementById('accountRemovePhoto')?.addEventListener('click', async (
   }catch(err){ console.warn('Profile photo remove failed', err?.message||err); alert('Failed to remove photo'); }
 });
 
+// Cover photo management
+document.getElementById('accountChangeCover')?.addEventListener('click',()=>{
+  document.getElementById('accountCoverFile')?.click();
+});
+document.getElementById('accountCoverFile')?.addEventListener('change', async (e)=>{
+  const file = e.target.files?.[0]; if(file) handleCoverFile(file);
+});
+
+async function handleCoverFile(file){
+  try{
+    const email = getSessionEmail(); if(!email){ alert('Please log in first.'); return; }
+    const storage = getStorage(); const utilsStore = getStorageUtils()||{};
+    const { storageRef, uploadBytes, getDownloadURL } = utilsStore;
+    if(!storage || !storageRef || !uploadBytes || !getDownloadURL){ alert('Storage not available'); return; }
+    const processed = await prepareCoverBlob(file);
+    const safeName = (file.name||'cover.jpg').replace(/[^a-zA-Z0-9._-]/g,'_').toLowerCase().replace(/\.(png|jpeg|jpg|webp)$/,'') + '.jpg';
+    const path = `profile_covers/${email}_${Date.now()}_${safeName}`;
+    const ref = storageRef(storage, path);
+    await uploadBytes(ref, processed, { contentType:'image/jpeg' });
+    const url = await getDownloadURL(ref);
+    // Save to Firestore user doc
+    const db = getDB(); const { collection, getDocs, query, where, limit, doc, updateDoc } = getUtils()||{};
+    if(!db || !collection || !getDocs || !query || !where || !limit || !doc || !updateDoc){ alert('Database not available'); return; }
+    const q = query(collection(db,'users'), where('email','==',email), limit(1));
+    const snap = await getDocs(q);
+    const d = snap.docs[0]; if(!d){ alert('User record not found'); return; }
+    await updateDoc(doc(db,'users', d.id), { coverUrl: url, coverUpdatedAt: new Date().toISOString() });
+    // Update UI
+    const cover = document.getElementById('accountCover'); if(cover){ cover.style.backgroundImage = `url('${url}')`; }
+    showToast('Cover photo updated');
+  }catch(err){ console.warn('Cover photo update failed', err?.message||err); alert('Failed to update cover'); }
+}
+document.getElementById('accountRemoveCover')?.addEventListener('click', async ()=>{
+  try{
+    const email = getSessionEmail(); if(!email){ alert('Please log in first.'); return; }
+    const db = getDB(); const { collection, getDocs, query, where, limit, doc, updateDoc } = getUtils()||{};
+    if(!db || !collection || !getDocs || !query || !where || !limit || !doc || !updateDoc){ alert('Database not available'); return; }
+    const q = query(collection(db,'users'), where('email','==',email), limit(1));
+    const snap = await getDocs(q); const d = snap.docs[0]; if(!d){ alert('User record not found'); return; }
+    await updateDoc(doc(db,'users', d.id), { coverUrl: '', coverUpdatedAt: new Date().toISOString() });
+    const cover = document.getElementById('accountCover'); if(cover){ cover.style.backgroundImage='none'; }
+    showToast('Cover photo removed');
+  }catch(err){ console.warn('Cover photo remove failed', err?.message||err); alert('Failed to remove cover'); }
+});
+
+// Resize and letterbox cover image to ~1200x400 JPEG
+async function prepareCoverBlob(originalFile){
+  return new Promise((resolve)=>{
+    try{
+      const img = new Image();
+      img.onload = ()=>{
+        const targetW = 1200, targetH = 400; // 3:1
+        const canvas = document.createElement('canvas');
+        canvas.width = targetW; canvas.height = targetH;
+        const ctx = canvas.getContext('2d');
+        // Fill background light gray to avoid black bars
+        ctx.fillStyle = '#f2f2f2';
+        ctx.fillRect(0,0,targetW,targetH);
+        // Scale image to cover the area (object-fit: cover)
+        const srcW = img.width, srcH = img.height;
+        const scale = Math.max(targetW/srcW, targetH/srcH);
+        const drawW = srcW * scale, drawH = srcH * scale;
+        const dx = (targetW - drawW)/2, dy = (targetH - drawH)/2;
+        ctx.drawImage(img, dx, dy, drawW, drawH);
+        canvas.toBlob((blob)=> resolve(blob || originalFile), 'image/jpeg', 0.9);
+      };
+      img.onerror = ()=> resolve(originalFile);
+      img.src = URL.createObjectURL(originalFile);
+    }catch{ resolve(originalFile); }
+  });
+}
+
 function renderAccountSummary(){
   try{
     const el = document.getElementById('accountSummary'); if(!el) return;
@@ -2412,6 +2484,14 @@ function renderAccountSummary(){
     getDocs(query(collection(db,'users'), where('email','==',email), limit(1))).then(snap=>{
       const data = snap.docs[0]?.data()||{};
       const name = `${data.firstName||''} ${data.lastName||''}`.trim()||email;
+      // Cover image
+      try{
+        const coverEl = document.getElementById('accountCover');
+        if(coverEl){
+          const cover = data.coverUrl || '';
+          coverEl.style.backgroundImage = cover ? `url('${cover}')` : 'none';
+        }
+      }catch(_){ }
       const avatarEl = document.getElementById('accountAvatar'); if(avatarEl){
         const url = data.photoUrl;
         if(url){ avatarEl.innerHTML = `<img src='${url}' alt='avatar' style='width:100%;height:100%;object-fit:cover'>`; }
