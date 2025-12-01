@@ -1216,20 +1216,20 @@ document.addEventListener('submit',(e)=>{
           licenseIssueDate: member.licenseIssueDate||'', licenseExpireDate: member.licenseExpireDate||''
         } : { email }
       };
-      addDoc(collection(db,'bookings'), payload).then(async ref=>{ 
+      addDoc(collection(db,'bookings'), payload).then(ref=>{ 
         localBk.fireId = ref.id; 
         saveBookingsForEmail(email); 
         console.log('Booking saved to Firestore with ID:', ref.id, payload);
-        // Audit: booking created
+        // Audit: booking created (non-blocking)
         try{
           const veh = VEHICLES.find(v=>v.id===vehId);
-          await fetch('/.netlify/functions/audit-booking-event', {
+          fetch('/.netlify/functions/audit-booking-event', {
             method:'POST', headers:{'Content-Type':'application/json'},
             body: JSON.stringify({
               bookingId: ref.id, eventType: 'created', userEmail: email, weeks, rateCents: (veh?.price||0)*100,
               returnDateISO: returnDate, agreementVersion: '', snapshot: { booking: payload, vehicle: veh||{} }
             })
-          });
+          }).catch(e=>console.warn('Audit create failed', e.message));
         }catch(e){ console.warn('Audit create failed', e.message); }
       }).catch(err=>console.warn('Add booking failed:', err.message));
     }
@@ -1254,7 +1254,7 @@ document.addEventListener('click',(e)=>{
       try{ const db=getDB(); const { doc, deleteDoc } = getUtils(); if(db && bk.fireId){ deleteDoc(doc(db,'bookings',bk.fireId)).then(()=>console.log('Booking deleted from Firestore:',bk.fireId)).catch(err=>console.warn('Failed to delete from Firestore:',err.message)); } }catch(err){ console.warn('Failed to delete booking from Firestore:', err.message); }
       showToast('Booking deleted'); } } } return; }
   const extendBtn=e.target.closest('[data-bk-extend]');
-    if(extendBtn){ const email=getSessionEmail(); if(!email) return; loadBookingsForEmail(email); const id=extendBtn.dataset.bkExtend; const bk=MY_BOOKINGS.find(b=>b.id===id); if(!bk || bk.status!=='active') return; const modal=document.getElementById('extendModal'); const extCurr=document.getElementById('extendCurrent'); const extWeeks=document.getElementById('extendWeeks'); const extPrev=document.getElementById('extendPreview'); const curr=bk.returnDate||bk.pickupDate; modal.style.display='block'; extCurr.textContent=curr; function updatePreview(){ const w=parseInt(extWeeks.value,10)||1; const d=new Date(curr); d.setDate(d.getDate()+7*w); extPrev.textContent=d.toISOString().slice(0,10); } updatePreview(); extWeeks.onchange=updatePreview; const onSave=()=>{ const w=parseInt(extWeeks.value,10)||1; const d=new Date(curr); d.setDate(d.getDate()+7*w); bk.returnDate=d.toISOString().slice(0,10); saveBookingsForEmail(email); renderAccountBookings(); modal.style.display='none'; cleanup();
+    if(extendBtn){ const email=getSessionEmail(); if(!email) return; loadBookingsForEmail(email); const id=extendBtn.dataset.bkExtend; const bk=MY_BOOKINGS.find(b=>b.id===id); if(!bk || bk.status!=='active') return; const modal=document.getElementById('extendModal'); const extCurr=document.getElementById('extendCurrent'); const extWeeks=document.getElementById('extendWeeks'); const extPrev=document.getElementById('extendPreview'); const curr=bk.returnDate||bk.pickupDate; modal.style.display='block'; extCurr.textContent=curr; function updatePreview(){ const w=parseInt(extWeeks.value,10)||1; const d=new Date(curr); d.setDate(d.getDate()+7*w); extPrev.textContent=d.toISOString().slice(0,10); } updatePreview(); extWeeks.onchange=updatePreview; const onSave=async ()=>{ const w=parseInt(extWeeks.value,10)||1; const d=new Date(curr); d.setDate(d.getDate()+7*w); bk.returnDate=d.toISOString().slice(0,10); saveBookingsForEmail(email); renderAccountBookings(); modal.style.display='none'; cleanup();
       // Firestore update on extend
       try{ const db=getDB(); const { doc, updateDoc } = getUtils(); if(db && bk.fireId){ updateDoc(doc(db,'bookings',bk.fireId), { returnDate: bk.returnDate, status: 'extended' }); } }catch(err){ console.warn('Failed to update Firestore booking on extend:', err.message); }
       // Audit: booking extended
