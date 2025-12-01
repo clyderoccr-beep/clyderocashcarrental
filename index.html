@@ -1159,7 +1159,6 @@
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
     import { getFirestore, doc, getDoc, setDoc, collection, getDocs, updateDoc, deleteDoc, addDoc, onSnapshot, query, where, limit } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
     import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
-    import { initializeAppCheck, ReCaptchaV3Provider } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check.js';
     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
     import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js';
     
@@ -1173,11 +1172,7 @@
     };
     
     const app = initializeApp(firebaseConfig);
-    // Firebase App Check with reCAPTCHA v3
-    const appCheck = initializeAppCheck(app, {
-      provider: new ReCaptchaV3Provider('6LfphxosAAAAAMIiMO7feXcuKotxRCtkq6hFYGVp'),
-      isTokenAutoRefreshEnabled: true
-    });
+    // App Check temporarily disabled to resolve upload CORS/403; re-enable after configuring domain/site key & enforcement.
     const db = getFirestore(app);
     const storage = getStorage(app, 'gs://clyderocashcarrental.appspot.com');
     const auth = getAuth(app);
