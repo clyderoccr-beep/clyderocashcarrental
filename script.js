@@ -2518,6 +2518,17 @@ function renderAccountSummary(){
   });
 })();
 
+// Drag-and-drop support on cover
+(()=>{
+  const cover = document.getElementById('accountCover'); if(!cover) return;
+  cover.addEventListener('dragover', (e)=>{ e.preventDefault(); cover.style.outline='2px dashed #d4af37'; });
+  cover.addEventListener('dragleave', ()=>{ cover.style.outline='none'; });
+  cover.addEventListener('drop', (e)=>{
+    e.preventDefault(); cover.style.outline='none';
+    const f = e.dataTransfer?.files?.[0]; if(f) handleCoverFile(f);
+  });
+})();
+
 function loadMembersAndRender(){ loadMembers().then(renderMembers); }
 async function loadMembers(){
   const db = getDB(); const { collection, getDocs } = getUtils(); 
