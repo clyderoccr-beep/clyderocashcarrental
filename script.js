@@ -403,7 +403,7 @@ function updateMembershipPanel(){
         `Member Since: ${member.createdTs? new Date(member.createdTs).toLocaleDateString() : ''}`
       ]; summary.textContent = lines.join('\n');
       const hasCard = !!member.cardOnFile && !!member.stripeDefaultPm;
-      if(pmStatus){ pmStatus.innerHTML = `<span style="font-weight:700">Payment Method:</span> <span class="badge" style="${hasCard?'background:#2d6a4f33;border-color:#2d6a4f66;color:#2d6a4f':'background:#6c757d22;border-color:#6c757d55;color:#6c757d'}">Card on file: ${hasCard?'Yes':'No'}</span>`; }
+      if(pmStatus){ pmStatus.innerHTML = `<span style="font-weight:700">Payment Method:</span> <span class="badge" style="${hasCard?'background:#2d6a4f33;border-color:#2d6a4f66;color:#2d6a4f':'background:#6c757d22;border-color:#6c757d55;color:#6c757d'}">Card on file: ${hasCard?'Yes':'No'}</span>${member.cardRemovalOverride? '<span class="badge" style="margin-left:6px;background:#ffc10733;border-color:#ffc10766;color:#7a5e00">Waiver</span>':''}`; }
       const rmBtn = document.getElementById('removeSavedCard'); if(rmBtn){ rmBtn.style.display = hasCard ? 'inline-block' : 'none'; }
       // Async debt check: disable removal if any overdue unpaid booking
       setTimeout(async ()=>{
@@ -1297,6 +1297,28 @@ document.addEventListener('click',(e)=>{
     if(extend1wBtn){ const email=getSessionEmail(); if(!email) return; loadBookingsForEmail(email); const id=extend1wBtn.dataset.bkExtend1w; const bk=MY_BOOKINGS.find(b=>b.id===id); const veh=VEHICLES.find(v=>v.id===bk?.vehicleId); const base=veh?.price||0; const now=Date.now(); const retMs=bk?.returnDate? new Date(bk.returnDate).getTime():0; const overdueMs=retMs? Math.max(0, now-retMs):0; const overdueHours=overdueMs>0? Math.ceil(overdueMs/(1000*60*60)):0; const fee=overdueHours*5; const total=base+fee; if(!bk||!base){ showToast('Booking or vehicle price missing'); return; } try{ const bidEl=document.getElementById('paymentBookingId'); const amtEl=document.getElementById('paymentAmount'); bidEl.value = (bk.fireId || bk.id)+'_extend1w'; amtEl.value = String(total); bidEl.readOnly=true; amtEl.readOnly=true; bidEl.dataset.locked='1'; amtEl.dataset.locked='1'; goto('payments'); }catch{} return; }
 });
 
+// Admin member waiver grant/revoke
+document.addEventListener('click',(e)=>{
+  const btn = e.target.closest('[data-member-waiver]');
+  if(!btn) return;
+  const userId = btn.getAttribute('data-member-waiver');
+  const adminEmail = getSessionEmail();
+  if(!adminEmail){ alert('Admin login required'); return; }
+  const member = MEMBERS.find(m=>m.id===userId);
+  if(!member){ alert('Member not found'); return; }
+  const targetEmail = member.email;
+  const grant = !member.cardRemovalOverride;
+  btn.disabled=true; const prev=btn.textContent; btn.textContent = grant? 'Granting…':'Revoking…';
+  fetch(`/.netlify/functions/${grant? 'grant-card-removal-waiver':'revoke-card-removal-waiver'}`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ targetEmail, adminEmail })
+  }).then(async resp=>{
+    if(!resp.ok){ throw new Error(await resp.text()); }
+    showToast(grant? 'Waiver granted':'Waiver revoked');
+  }).catch(err=>{ alert('Waiver change failed: '+(err.message||err)); })
+  .finally(()=>{ btn.disabled=false; btn.textContent=prev; setTimeout(()=>{ renderMembers(); },800); });
+});
+
 // Customer My Bookings manual refresh
 document.addEventListener('click', (e)=>{
   const btn = e.target.closest('#accountBookingsRefresh');
@@ -1776,16 +1798,18 @@ function renderMembers(){
     const banned = status==='banned';
     const name = `${u.first||''} ${u.last||''}`.trim() || '(no name)';
     const since = u.createdTs ? new Date(u.createdTs).toLocaleDateString() : '';
+    const waiver = u.cardRemovalOverride ? `<span class='badge' style='background:#2d6a4f22;border-color:#2d6a4f66;color:#2d6a4f;margin-left:6px'>Waiver Active</span>` : '';
     card.innerHTML = `<div class='body'>
       <div style='display:flex;gap:8px;align-items:center'>
         <div style='font-weight:700'>${name}</div>
         <span class='muted' style='margin-left:auto;font-size:12px'>${u.email||''}</span>
       </div>
-      <div class='muted' style='font-size:12px;margin-top:4px'>Member since ${since} • ${status}</div>
+      <div class='muted' style='font-size:12px;margin-top:4px'>Member since ${since} • ${status} ${waiver}</div>
       <div style='display:flex;gap:8px;margin-top:8px;flex-wrap:wrap'>
         <button class='navbtn' data-member-view='${u.id}'>View</button>
         <button class='navbtn' data-member-ban='${u.id}'>${banned?'Unban':'Ban'}</button>
         <button class='navbtn' data-member-delete='${u.id}' style='background:#c1121f;border-color:#c1121f'>Delete</button>
+        <button class='navbtn' data-member-waiver='${u.id}' style='${u.cardRemovalOverride? 'background:#ffc107;border-color:#ffc107;color:#000':'background:#2d6a4f;border-color:#2d6a4f'}'>${u.cardRemovalOverride? 'Revoke Waiver':'Grant Waiver'}</button>
       </div>
     </div>`;
     wrap.appendChild(card);

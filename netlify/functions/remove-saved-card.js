@@ -20,6 +20,8 @@ exports.handler = async (event) => {
     const uq = await db.collection('users').where('email','==',email).limit(1).get();
     if(uq.empty) return { statusCode:404, body:'User not found' };
     const ref = uq.docs[0].ref; const user = uq.docs[0].data();
+    // Honor admin override / waiver
+    const override = !!user.cardRemovalOverride;
     // Debt / overdue check: block removal if any overdue unpaid booking or unpaid late fee
     try{
       const bookingsQ = await db.collection('bookings').where('userEmail','==',email).get();
@@ -33,7 +35,7 @@ exports.handler = async (event) => {
         const activeStatus = ['active','extended','pending','rented'].includes(b.status||'');
         if(activeStatus && (unpaidLate || (overdue && !b.paidAt))) owes = true;
       });
-      if(owes){
+      if(!override && owes){
         return { statusCode:400, body:'Cannot remove card: outstanding overdue booking or unpaid late fee.' };
       }
     }catch(e){ console.warn('Debt check failed (remove card)', e.message); }
