@@ -2720,10 +2720,16 @@ async function recordTermsAcceptance(){
         const acceptance = { version: TERMS_VERSION, agreed:true, ts:new Date().toISOString(), ip };
         await utils.updateDoc(ref, { termsAcceptance: acceptance });
         console.log('Stored terms acceptance for', authEmail);
-        // Send email notification to owner only once per version per user
+        // Send email notification to owner only once per version per user via server function
         const localKey = 'termsAccepted_'+TERMS_VERSION;
         if(!localStorage.getItem(localKey)){
-          try{ await sendTermsAcceptanceEmail({ to:'clyderoccr@gmail.com', userEmail: authEmail, acceptance, user:userData }); }catch(e){ console.warn('Send acceptance email failed', e.message); }
+          try{
+            const resp = await fetch('/.netlify/functions/notify-terms-acceptance', {
+              method:'POST', headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({ to:'clyderoccr@gmail.com', userEmail: authEmail, acceptance, user: userData })
+            });
+            if(!resp.ok){ console.warn('Notify terms failed', await resp.text().catch(()=>resp.statusText)); }
+          }catch(e){ console.warn('Notify terms error', e.message); }
         }
       }
     }
@@ -2731,38 +2737,4 @@ async function recordTermsAcceptance(){
   }catch(e){ console.warn('Failed to persist terms acceptance', e.message); }
 }
 
-async function sendTermsAcceptanceEmail({ to, userEmail, acceptance, user }){
-  try{
-    if(!window.emailjs){ console.warn('EmailJS not loaded; skip acceptance email'); return; }
-    initEmailJS();
-    const summaryParts = [];
-    summaryParts.push('User Email: '+userEmail);
-    if(user?.firstName||user?.lastName) summaryParts.push('Name: '+(user.firstName||'')+' '+(user.lastName||''));
-    if(user?.licenseNumber) summaryParts.push('License #: '+user.licenseNumber);
-    if(user?.licenseCountry) summaryParts.push('License Country: '+user.licenseCountry);
-    if(user?.licenseIssueDate) summaryParts.push('License Issue: '+user.licenseIssueDate);
-    if(user?.licenseExpireDate) summaryParts.push('License Expire: '+user.licenseExpireDate);
-    if(user?.address) summaryParts.push('Address: '+user.address);
-    if(user?.state) summaryParts.push('State: '+user.state);
-    if(user?.country) summaryParts.push('Country: '+user.country);
-    summaryParts.push('Agreement Version: '+acceptance.version);
-    summaryParts.push('Accepted At: '+acceptance.ts);
-    summaryParts.push('IP: '+(acceptance.ip||'unknown'));
-    const body = summaryParts.join('\n');
-    // Use EmailJS generic send method
-    const cfg = window.EMAILJS_CONFIG || {};
-    if(cfg.serviceId && cfg.templateId){
-      await window.emailjs.send(cfg.serviceId, cfg.templateId, {
-        to_email: to,
-        to_name: 'Owner',
-        from_email: 'clyderoccr@gmail.com',
-        from_name: 'CCR Terms Bot',
-        subject: 'New Terms Acceptance: '+userEmail,
-        message: body
-      });
-      console.log('Acceptance email sent for', userEmail);
-    }else{
-      console.warn('EmailJS config missing serviceId/templateId');
-    }
-  }catch(e){ console.warn('sendTermsAcceptanceEmail error', e.message); }
-}
+// (Client-side EmailJS path removed; using server function for reliability)
