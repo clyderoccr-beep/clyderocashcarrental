@@ -2404,9 +2404,9 @@ document.getElementById('accountRemovePhoto')?.addEventListener('click', async (
 });
 
 // Cover photo management
-document.getElementById('accountChangeCover')?.addEventListener('click',()=>{
-  document.getElementById('accountCoverFile')?.click();
-});
+// Cover change triggers (small camera overlay or legacy button)
+document.getElementById('accountChangeCover')?.addEventListener('click',()=>{ document.getElementById('accountCoverFile')?.click(); });
+document.getElementById('coverEditBtn')?.addEventListener('click',()=>{ document.getElementById('accountCoverFile')?.click(); });
 document.getElementById('accountCoverFile')?.addEventListener('change', async (e)=>{
   const file = e.target.files?.[0]; if(file) handleCoverFile(file);
 });
@@ -2435,7 +2435,20 @@ async function handleCoverFile(file){
     showToast('Cover photo updated');
   }catch(err){ console.warn('Cover photo update failed', err?.message||err); alert('Failed to update cover'); }
 }
+// Cover remove triggers (small X overlay or legacy button)
 document.getElementById('accountRemoveCover')?.addEventListener('click', async ()=>{
+  try{
+    const email = getSessionEmail(); if(!email){ alert('Please log in first.'); return; }
+    const db = getDB(); const { collection, getDocs, query, where, limit, doc, updateDoc } = getUtils()||{};
+    if(!db || !collection || !getDocs || !query || !where || !limit || !doc || !updateDoc){ alert('Database not available'); return; }
+    const q = query(collection(db,'users'), where('email','==',email), limit(1));
+    const snap = await getDocs(q); const d = snap.docs[0]; if(!d){ alert('User record not found'); return; }
+    await updateDoc(doc(db,'users', d.id), { coverUrl: '', coverUpdatedAt: new Date().toISOString() });
+    const cover = document.getElementById('accountCover'); if(cover){ cover.style.backgroundImage='none'; }
+    showToast('Cover photo removed');
+  }catch(err){ console.warn('Cover photo remove failed', err?.message||err); alert('Failed to remove cover'); }
+});
+document.getElementById('coverRemoveBtn')?.addEventListener('click', async ()=>{
   try{
     const email = getSessionEmail(); if(!email){ alert('Please log in first.'); return; }
     const db = getDB(); const { collection, getDocs, query, where, limit, doc, updateDoc } = getUtils()||{};
@@ -2490,6 +2503,7 @@ function renderAccountSummary(){
         if(coverEl){
           const cover = data.coverUrl || '';
           coverEl.style.backgroundImage = cover ? `url('${cover}')` : 'none';
+          const rm = document.getElementById('coverRemoveBtn'); if(rm){ rm.style.display = cover ? 'flex' : 'none'; }
         }
       }catch(_){ }
       const avatarEl = document.getElementById('accountAvatar'); if(avatarEl){
