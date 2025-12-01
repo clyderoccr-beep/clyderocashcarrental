@@ -1116,7 +1116,7 @@ function renderAccountBookings(){
     const retMs = b.returnDate ? new Date(b.returnDate).getTime() : 0;
     const overdueMs = retMs ? Math.max(0, nowMs - retMs) : 0;
     const overdueHours = overdueMs > 0 ? Math.ceil(overdueMs / (1000*60*60)) : 0;
-    const lateFee = overdueHours * 5; // $5/hour late fee
+    const lateFee = overdueHours * 15; // $15/hour late fee
     // Determine if late and compute overdue fee for display
     const nowMS = Date.now();
     let overdueHoursDisplay = '';
@@ -1125,7 +1125,7 @@ function renderAccountBookings(){
       const overdueMs = nowMS - retMS;
       if(overdueMs > 0){
         const overdueHours = Math.ceil(overdueMs / (1000*60*60));
-        overdueHoursDisplay = `<div style='margin-top:6px;font-size:11px;color:#c1121f;font-weight:600'>Late by ${overdueHours}h • $${overdueHours*5} late fee accruing</div>`;
+        overdueHoursDisplay = `<div style='margin-top:6px;font-size:11px;color:#c1121f;font-weight:600'>Late by ${overdueHours}h • $${overdueHours*15} late fee accruing</div>`;
       }
     }
     card.innerHTML=`<div class='body'>
@@ -1141,7 +1141,7 @@ function renderAccountBookings(){
       <div style='margin-top:4px'>${badge}</div>
       ${status==='rented'?`<div class='muted' style='margin-top:4px;font-size:12px'>Rented at ${b.rentedAt? new Date(b.rentedAt).toLocaleString():''}</div>`:''}
       ${status==='rented'?`<div style='margin-top:4px;font-size:12px'><strong>Time until payment/return:</strong> <span class='countdown' data-return='${b.returnDate||''}' data-rented='${b.rentedAt||''}'>—</span></div>`:''}
-      ${status==='rented'?`<div style='margin-top:8px;padding:8px;background:rgba(255,193,7,.1);border-left:3px solid #ffc107;font-size:11px;line-height:1.4'><strong>⚠️ Important:</strong> If extending, pay before timer expires. If returning, return before timer expires or a late fee of <strong>$5/hour</strong> will be added.</div>`:''}
+      ${status==='rented'?`<div style='margin-top:8px;padding:8px;background:rgba(255,193,7,.1);border-left:3px solid #ffc107;font-size:11px;line-height:1.4'><strong>⚠️ Important:</strong> If extending, pay before timer expires. If returning, return before timer expires or a late fee of <strong>$15/hour</strong> will be added.</div>`:''}
       ${(status==='active'||status==='accepted'||status==='cancelled'||status==='rejected'||status==='rented')?`<div style='display:flex;gap:8px;margin-top:8px;flex-wrap:wrap'>
         ${status==='accepted'?`<button class='navbtn' data-bk-pay-now='${b.id}'>Pay Now</button>`:''}
         ${(status==='active'||status==='accepted')?`<button class='navbtn' data-bk-cancel='${b.id}'>Cancel</button>`:''}
@@ -1365,7 +1365,7 @@ document.addEventListener('click',(e)=>{
   const payNowBtn=e.target.closest('[data-bk-pay-now]');
     if(payNowBtn){ const email=getSessionEmail(); if(!email) return; loadBookingsForEmail(email); const id=payNowBtn.dataset.bkPayNow; const bk=MY_BOOKINGS.find(b=>b.id===id); const veh=VEHICLES.find(v=>v.id===bk?.vehicleId); const amount=veh?.price||0; if(!bk||!amount){ showToast('Booking or amount missing'); return; } try{ const bidEl=document.getElementById('paymentBookingId'); const amtEl=document.getElementById('paymentAmount'); bidEl.value = bk.fireId || bk.id; amtEl.value = String(amount); bidEl.readOnly=true; amtEl.readOnly=true; bidEl.dataset.locked='1'; amtEl.dataset.locked='1'; goto('payments'); }catch{} return; }
   const extend1wBtn=e.target.closest('[data-bk-extend1w]');
-    if(extend1wBtn){ const email=getSessionEmail(); if(!email) return; loadBookingsForEmail(email); const id=extend1wBtn.dataset.bkExtend1w; const bk=MY_BOOKINGS.find(b=>b.id===id); const veh=VEHICLES.find(v=>v.id===bk?.vehicleId); const base=veh?.price||0; const now=Date.now(); const retMs=bk?.returnDate? new Date(bk.returnDate).getTime():0; const overdueMs=retMs? Math.max(0, now-retMs):0; const overdueHours=overdueMs>0? Math.ceil(overdueMs/(1000*60*60)):0; const fee=overdueHours*5; const total=base+fee; if(!bk||!base){ showToast('Booking or vehicle price missing'); return; } try{ const bidEl=document.getElementById('paymentBookingId'); const amtEl=document.getElementById('paymentAmount'); bidEl.value = (bk.fireId || bk.id)+'_extend1w'; amtEl.value = String(total); bidEl.readOnly=true; amtEl.readOnly=true; bidEl.dataset.locked='1'; amtEl.dataset.locked='1'; goto('payments'); }catch{} return; }
+    if(extend1wBtn){ const email=getSessionEmail(); if(!email) return; loadBookingsForEmail(email); const id=extend1wBtn.dataset.bkExtend1w; const bk=MY_BOOKINGS.find(b=>b.id===id); const veh=VEHICLES.find(v=>v.id===bk?.vehicleId); const base=veh?.price||0; const now=Date.now(); const retMs=bk?.returnDate? new Date(bk.returnDate).getTime():0; const overdueMs=retMs? Math.max(0, now-retMs):0; const overdueHours=overdueMs>0? Math.ceil(overdueMs/(1000*60*60)):0; const fee=overdueHours*15; const total=base+fee; if(!bk||!base){ showToast('Booking or vehicle price missing'); return; } try{ const bidEl=document.getElementById('paymentBookingId'); const amtEl=document.getElementById('paymentAmount'); bidEl.value = (bk.fireId || bk.id)+'_extend1w'; amtEl.value = String(total); bidEl.readOnly=true; amtEl.readOnly=true; bidEl.dataset.locked='1'; amtEl.dataset.locked='1'; goto('payments'); }catch{} return; }
 });
 
 // Admin member waiver grant/revoke
@@ -2499,7 +2499,7 @@ function renderAdminBookings(){
       </div>
       ${status==='rented'?`<div class='muted' style='margin-top:4px;font-size:12px'>Rented at ${b.rentedAt? new Date(b.rentedAt).toLocaleString():''}</div>`:''}
       ${status==='rented'?`<div style='margin-top:4px;font-size:12px'><strong>Time until payment/return:</strong> <span class='countdown' data-return='${b.returnDate||''}' data-rented='${b.rentedAt||''}'>—</span></div>`:''}
-      ${status==='rented'?`<div style='margin-top:8px;padding:8px;background:rgba(255,193,7,.1);border-left:3px solid #ffc107;font-size:11px;line-height:1.4'><strong>⚠️ Important:</strong> If the customer is extending, they must pay before the timer expires. If returning, the vehicle must be returned before the timer expires or a late fee of <strong>$5/hour</strong> will be added.</div>`:''}
+      ${status==='rented'?`<div style='margin-top:8px;padding:8px;background:rgba(255,193,7,.1);border-left:3px solid #ffc107;font-size:11px;line-height:1.4'><strong>⚠️ Important:</strong> If the customer is extending, they must pay before the timer expires. If returning, the vehicle must be returned before the timer expires or a late fee of <strong>$15/hour</strong> will be added.</div>`:''}
       <div style='display:flex;gap:8px;margin-top:8px;flex-wrap:wrap'>
         <span class='badge' style='background:rgba(255,255,255,.08)'>${status}</span>
         <button class='navbtn' data-bk-accept='${b.id}'>Accept</button>
