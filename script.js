@@ -1193,24 +1193,66 @@ function startCountdowns(){
   }, 1000);
 }
 
-// Booking submit -> save and route to account
-document.addEventListener('submit',(e)=>{
-  const form=e.target.closest('#booking-form'); if(!form) return;
-  e.preventDefault();
-  const email=getSessionEmail(); if(!email){ alert('Please log in before booking.'); goto('login'); return; }
-  const vehId=document.getElementById('vehicle-select')?.value;
-  const pickupDate=document.getElementById('pickupDate')?.value;
-  // Enforce weekly-only booking by computing return date from weeks
-  const weeksSel = document.getElementById('bookingWeeks');
-  const weeks = Math.max(1, parseInt(weeksSel?.value||'1',10) || 1);
-  const returnDate = (function(){
-    if(!pickupDate) return '';
-    const d=new Date(pickupDate);
-    d.setDate(d.getDate() + 7*weeks);
-    return d.toISOString().slice(0,10);
-  })();
-  const retInput = document.getElementById('returnDate'); if(retInput){ retInput.value = returnDate; }
-  if(!vehId || !pickupDate || !returnDate){ alert('Select vehicle and dates.'); return; }
+// ===== Booking Terms & Conditions Modal =====
+// Store pending booking data when terms modal is shown
+let pendingBookingData = null;
+
+// Checkbox controls the "I Agree" button
+const bookingTermsCheckbox = document.getElementById('bookingTermsCheckbox');
+const bookingTermsAgreeBtn = document.getElementById('bookingTermsAgree');
+if(bookingTermsCheckbox && bookingTermsAgreeBtn){
+  bookingTermsCheckbox.addEventListener('change', ()=>{
+    if(bookingTermsCheckbox.checked){
+      bookingTermsAgreeBtn.disabled = false;
+      bookingTermsAgreeBtn.style.opacity = '1';
+    } else {
+      bookingTermsAgreeBtn.disabled = true;
+      bookingTermsAgreeBtn.style.opacity = '0.5';
+    }
+  });
+}
+
+// Decline button - close modal and cancel booking
+const bookingTermsDeclineBtn = document.getElementById('bookingTermsDecline');
+if(bookingTermsDeclineBtn){
+  bookingTermsDeclineBtn.addEventListener('click', ()=>{
+    const modal = document.getElementById('bookingTermsModal');
+    if(modal){ modal.style.display = 'none'; }
+    if(bookingTermsCheckbox){ bookingTermsCheckbox.checked = false; }
+    if(bookingTermsAgreeBtn){ 
+      bookingTermsAgreeBtn.disabled = true; 
+      bookingTermsAgreeBtn.style.opacity = '0.5'; 
+    }
+    pendingBookingData = null;
+    showToast('Booking cancelled - Terms not accepted');
+  });
+}
+
+// Agree button - process the booking
+if(bookingTermsAgreeBtn){
+  bookingTermsAgreeBtn.addEventListener('click', ()=>{
+    if(!pendingBookingData){ 
+      showToast('No pending booking data'); 
+      return; 
+    }
+    // Close modal
+    const modal = document.getElementById('bookingTermsModal');
+    if(modal){ modal.style.display = 'none'; }
+    // Reset checkbox for next time
+    if(bookingTermsCheckbox){ bookingTermsCheckbox.checked = false; }
+    if(bookingTermsAgreeBtn){ 
+      bookingTermsAgreeBtn.disabled = true; 
+      bookingTermsAgreeBtn.style.opacity = '0.5'; 
+    }
+    // Process the booking
+    processBooking(pendingBookingData);
+    pendingBookingData = null;
+  });
+}
+
+// Process booking function (extracted from original submit handler)
+function processBooking(data){
+  const { email, vehId, pickupDate, returnDate, weeks } = data;
   loadBookingsForEmail(email);
   const id='bk_'+Date.now();
   const createdTs = Date.now();
@@ -1248,7 +1290,7 @@ document.addEventListener('submit',(e)=>{
             method:'POST', headers:{'Content-Type':'application/json'},
             body: JSON.stringify({
               bookingId: ref.id, eventType: 'created', userEmail: email, weeks, rateCents: (veh?.price||0)*100,
-              returnDateISO: returnDate, agreementVersion: '', snapshot: { booking: payload, vehicle: veh||{} }
+              returnDateISO: returnDate, agreementVersion: TERMS_VERSION, snapshot: { booking: payload, vehicle: veh||{} }
             })
           }).catch(e=>console.warn('Audit create failed', e.message));
         }catch(e){ console.warn('Audit create failed', e.message); }
@@ -1258,6 +1300,35 @@ document.addEventListener('submit',(e)=>{
   alert('Booking submitted. You can manage it in My Account.');
   goto('membership');
   updateMembershipPanel();
+}
+
+// Booking submit -> show terms modal first
+document.addEventListener('submit',(e)=>{
+  const form=e.target.closest('#booking-form'); if(!form) return;
+  e.preventDefault();
+  const email=getSessionEmail(); if(!email){ alert('Please log in before booking.'); goto('login'); return; }
+  const vehId=document.getElementById('vehicle-select')?.value;
+  const pickupDate=document.getElementById('pickupDate')?.value;
+  // Enforce weekly-only booking by computing return date from weeks
+  const weeksSel = document.getElementById('bookingWeeks');
+  const weeks = Math.max(1, parseInt(weeksSel?.value||'1',10) || 1);
+  const returnDate = (function(){
+    if(!pickupDate) return '';
+    const d=new Date(pickupDate);
+    d.setDate(d.getDate() + 7*weeks);
+    return d.toISOString().slice(0,10);
+  })();
+  const retInput = document.getElementById('returnDate'); if(retInput){ retInput.value = returnDate; }
+  if(!vehId || !pickupDate || !returnDate){ alert('Select vehicle and dates.'); return; }
+  
+  // Store booking data and show terms modal
+  pendingBookingData = { email, vehId, pickupDate, returnDate, weeks };
+  const modal = document.getElementById('bookingTermsModal');
+  if(modal){ 
+    modal.style.display = 'block';
+    // Scroll modal to top
+    modal.scrollTop = 0;
+  }
 });
 
 // Booking actions: cancel + extend + copy ID
