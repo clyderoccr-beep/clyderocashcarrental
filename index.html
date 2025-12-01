@@ -793,6 +793,39 @@
       </div>
     </section>
 
+    <!-- Booking Terms & Conditions Modal -->
+    <div id="bookingTermsModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.75);z-index:9999;overflow:auto;padding:20px;">
+      <div class="card" style="max-width:700px;margin:40px auto;position:relative;">
+        <div class="body">
+          <h2 style="margin-top:0;color:#000">Rental Terms & Conditions</h2>
+          <div style="max-height:400px;overflow-y:auto;border:1px solid #e0e0e0;padding:16px;border-radius:8px;background:#fafafa;margin:16px 0;color:#000;line-height:1.6;font-size:14px">
+            <p><strong>By booking a vehicle, you agree to the following terms:</strong></p>
+            <ol style="padding-left:20px">
+              <li><strong>Rental Period:</strong> All rentals are weekly. Extensions must be paid before the current period ends.</li>
+              <li><strong>Late Fees:</strong> $15/hour past the scheduled return time, capped at $200. Late fees begin immediately if you fail to return or extend on time.</li>
+              <li><strong>Payment:</strong> All payments are non-refundable. You authorize CCR to charge your saved payment method for extensions, late fees, and approved charges.</li>
+              <li><strong>Driver Requirements:</strong> Valid driver's license required. You must provide accurate identity and contact information.</li>
+              <li><strong>Vehicle Condition:</strong> You are responsible for all damages, loss of keys, towing, impound fees, traffic violations, and mechanical issues caused by neglect or abuse while in your possession.</li>
+              <li><strong>Insurance:</strong> You are responsible for maintaining insurance coverage during the rental period.</li>
+              <li><strong>Prohibited Use:</strong> No subleasing, racing, off-road use, or illegal activity. Vehicle may only be driven by authorized renter.</li>
+              <li><strong>GPS Tracking:</strong> Vehicles may be equipped with GPS. Location data may be used for recovery, fraud prevention, and dispute resolution.</li>
+              <li><strong>Termination:</strong> CCR reserves the right to terminate the rental and recover the vehicle for non-payment, violation of terms, or fraudulent activity.</li>
+              <li><strong>Dispute Resolution:</strong> All disputes will be resolved under Georgia state law. Chargebacks will be disputed with documented evidence.</li>
+            </ol>
+            <p style="margin-top:16px"><strong>By clicking "I Agree," you acknowledge that you have read, understood, and agree to these terms.</strong></p>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;margin:16px 0;padding:12px;background:#fff;border:1px solid #d0d0d0;border-radius:8px">
+            <input type="checkbox" id="bookingTermsCheckbox" style="width:20px;height:20px;cursor:pointer;margin:0">
+            <label for="bookingTermsCheckbox" style="color:#000;cursor:pointer;user-select:none;margin:0;font-weight:600">I have read and agree to the Rental Terms & Conditions</label>
+          </div>
+          <div style="display:flex;gap:12px;justify-content:flex-end">
+            <button class="navbtn" id="bookingTermsDecline" type="button" style="background:#6c757d;border-color:#6c757d">Decline</button>
+            <button class="navbtn" id="bookingTermsAgree" type="button" disabled style="opacity:0.5">I Agree</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <section id="booking" class="section">
       <div class="wrap">
         <h2>Booking</h2>
