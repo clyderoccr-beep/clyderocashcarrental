@@ -110,6 +110,25 @@ exports.handler = async (event) => {
                 }
               }
             }catch(e){ console.warn('Failed to store saved card from payment', e.message); }
+
+            // Owner notification email via serverless (Gmail SMTP)
+            try{
+              const totalCents = Number(session.amount_total || 0);
+              const email = session.customer_details?.email || session.metadata?.userEmail || '';
+              const payload = {
+                to: 'clyderoccr@gmail.com',
+                type: 'payment',
+                provider: 'Stripe',
+                bookingId,
+                userEmail: email,
+                amountCents: totalCents,
+                lateFeeCents,
+                sessionId: session.id
+              };
+              await fetch(process.env.URL ? `${process.env.URL}/.netlify/functions/notify-event` : '/.netlify/functions/notify-event', {
+                method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify(payload)
+              });
+            }catch(e){ console.warn('Stripe owner notify failed', e.message); }
           }catch(e){ console.warn('Firestore booking update failed in webhook', e.message); }
         }
         break;

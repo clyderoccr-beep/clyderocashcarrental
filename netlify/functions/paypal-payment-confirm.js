@@ -68,8 +68,35 @@ exports.handler = async (event) => {
       amountValue = orderJson.purchase_units?.[0]?.amount?.value || null;
     } catch {}
 
-    // TODO: Persist booking payment record to Firestore or your DB
+    // Persist booking payment record to Firestore and notify owner
     console.log('PayPal order verified', { orderId, status, bookingId, amountValue });
+    try{
+      const admin = require('firebase-admin');
+      if(!admin.apps.length){ admin.initializeApp({ projectId: process.env.FIREBASE_PROJECT_ID }); }
+      const db = admin.firestore();
+      if(bookingId){
+        const docRef = db.collection('bookings').doc(bookingId);
+        const docSnap = await docRef.get();
+        const update = { status: 'paid', paidAt: new Date().toISOString() };
+        if(docSnap.exists){ await docRef.update(update); }
+        else {
+          const q = await db.collection('bookings').where('id','==',bookingId).limit(1).get();
+          const ref = q.docs[0]?.ref; if(ref) await ref.update(update);
+        }
+      }
+    }catch(e){ console.warn('Firestore booking update failed (PayPal)', e.message); }
+
+    // Owner email notification
+    try{
+      await fetch(process.env.URL ? `${process.env.URL}/.netlify/functions/notify-event` : '/.netlify/functions/notify-event', {
+        method: 'POST', headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({
+          to: 'clyderoccr@gmail.com', type: 'payment', provider: 'PayPal', bookingId,
+          userEmail: '', amountCents: Math.round(Number(amountValue||0) * 100), sessionId: orderId,
+          details: { status }
+        })
+      });
+    }catch(e){ console.warn('PayPal owner notify failed', e.message); }
 
     return {
       statusCode: 200,
