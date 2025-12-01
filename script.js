@@ -2360,7 +2360,7 @@ document.addEventListener('click',(e)=>{
 });
 
 // Account avatar and photo management
-document.getElementById('accountChangePhoto')?.addEventListener('click',()=>{
+document.getElementById('avatarEditBtn')?.addEventListener('click',()=>{
   document.getElementById('accountPhotoFile')?.click();
 });
 document.getElementById('accountPhotoFile')?.addEventListener('change', async (e)=>{
@@ -2390,18 +2390,7 @@ async function handleAvatarFile(file){
     renderAccountSummary();
   }catch(err){ console.warn('Profile photo update failed', err?.message||err); alert('Failed to update photo'); }
 }
-document.getElementById('accountRemovePhoto')?.addEventListener('click', async ()=>{
-  try{
-    const email = getSessionEmail(); if(!email){ alert('Please log in first.'); return; }
-    const db = getDB(); const { collection, getDocs, query, where, limit, doc, updateDoc } = getUtils()||{};
-    if(!db || !collection || !getDocs || !query || !where || !limit || !doc || !updateDoc){ alert('Database not available'); return; }
-    const q = query(collection(db,'users'), where('email','==',email), limit(1));
-    const snap = await getDocs(q); const d = snap.docs[0]; if(!d){ alert('User record not found'); return; }
-    await updateDoc(doc(db,'users', d.id), { photoUrl: '', photoUpdatedAt: new Date().toISOString() });
-    showToast('Profile photo removed');
-    renderAccountSummary();
-  }catch(err){ console.warn('Profile photo remove failed', err?.message||err); alert('Failed to remove photo'); }
-});
+// Removed legacy remove-photo button per new design
 
 // Cover photo management
 // Cover change triggers (small camera overlay or legacy button)
