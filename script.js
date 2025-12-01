@@ -46,6 +46,15 @@ try{
         // User is signed in, store email
         sessionStorage.setItem('sessionEmail', user.email);
         console.log('Stored email in sessionStorage:', user.email);
+        // Ensure Firestore user doc keyed by uid exists (migrate from email-keyed docs)
+        try{
+          const db = getDB(); const { doc, getDoc, setDoc } = getUtils()||{};
+          const uid = user.uid; const email = user.email;
+          if(db && doc && getDoc && setDoc && uid){
+            const ref = doc(db,'users', uid);
+            getDoc(ref).then(s=>{ if(!s.exists()){ setDoc(ref, { email, status:'active', createdAt: new Date().toISOString() }).catch(()=>{}); } });
+          }
+        }catch(_){ }
       } else {
         // User is signed out, clear sessionStorage immediately
         sessionStorage.removeItem('sessionEmail');
