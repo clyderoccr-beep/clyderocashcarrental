@@ -20,6 +20,22 @@ function getStorageUtils(){ return window.storageUtils; }
 function getAuthApi(){ return window.authApi || {}; }
 function getAuthInstance(){ const api=getAuthApi(); return api.auth; }
 function authEmail(){ const a=getAuthInstance(); return a && a.currentUser ? (a.currentUser.email||'') : ''; }
+async function getIdToken(){ try{ const a=getAuthInstance(); const u=a&&a.currentUser; return u? await u.getIdToken(): null; }catch{ return null; } }
+
+function blobToDataURL(blob){ return new Promise((resolve,reject)=>{ try{ const r=new FileReader(); r.onload=()=>resolve(r.result); r.onerror=reject; r.readAsDataURL(blob);}catch(e){ reject(e);} }); }
+
+async function uploadViaFunction(kind, blob){
+  const token = await getIdToken(); if(!token) throw new Error('not_logged_in');
+  const dataUrl = await blobToDataURL(blob);
+  const res = await fetch('/.netlify/functions/upload-profile-media', {
+    method:'POST', headers:{ 'Content-Type':'application/json', 'Authorization': 'Bearer '+token },
+    body: JSON.stringify({ kind, dataUrl })
+  });
+  if(!res.ok) throw new Error('function_upload_failed');
+  const json = await res.json();
+  if(!json.url) throw new Error('function_no_url');
+  return json.url;
+}
 // Auth state listener also sets up realtime subscriptions
 try{ 
   const api=getAuthApi(); 
@@ -2378,8 +2394,14 @@ async function handleAvatarFile(file){
     const safeName = (file.name||'avatar.jpg').replace(/[^a-zA-Z0-9._-]/g,'_').toLowerCase().replace(/\.(png|jpeg|jpg|webp)$/,'') + '.jpg';
     const path = `profile_photos/${uid}/${Date.now()}_${safeName}`;
     const ref = storageRef(storage, path);
-    await uploadBytes(ref, processed, { contentType:'image/jpeg' });
-    const url = await getDownloadURL(ref);
+    let url;
+    try{
+      await uploadBytes(ref, processed, { contentType:'image/jpeg' });
+      url = await getDownloadURL(ref);
+    }catch(e){
+      console.warn('Direct Storage upload failed, using function', e?.message||e);
+      url = await uploadViaFunction('avatar', processed);
+    }
     // Save to Firestore user doc
     const db = getDB(); const { collection, getDocs, query, where, limit, doc, updateDoc } = getUtils()||{};
     if(!db || !collection || !getDocs || !query || !where || !limit || !doc || !updateDoc){ alert('Database not available'); return; }
@@ -2412,8 +2434,14 @@ async function handleCoverFile(file){
     const safeName = (file.name||'cover.jpg').replace(/[^a-zA-Z0-9._-]/g,'_').toLowerCase().replace(/\.(png|jpeg|jpg|webp)$/,'') + '.jpg';
     const path = `profile_covers/${uid}/${Date.now()}_${safeName}`;
     const ref = storageRef(storage, path);
-    await uploadBytes(ref, processed, { contentType:'image/jpeg' });
-    const url = await getDownloadURL(ref);
+    let url;
+    try{
+      await uploadBytes(ref, processed, { contentType:'image/jpeg' });
+      url = await getDownloadURL(ref);
+    }catch(e){
+      console.warn('Direct Storage upload failed, using function', e?.message||e);
+      url = await uploadViaFunction('cover', processed);
+    }
     // Save to Firestore user doc
     const db = getDB(); const { collection, getDocs, query, where, limit, doc, updateDoc } = getUtils()||{};
     if(!db || !collection || !getDocs || !query || !where || !limit || !doc || !updateDoc){ alert('Database not available'); return; }
