@@ -7,6 +7,10 @@ functions/node_modules/
 temp_patch.txt
 Thumbs.db
 .DS_Store
+# Never commit Firebase service account keys
+*firebase-adminsdk-*.json
+*-firebase-adminsdk-*.json
+serviceAccount*.json
 node_modules/
 functions/node_modules/
 .env
