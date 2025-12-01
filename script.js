@@ -2394,21 +2394,30 @@ async function handleAvatarFile(file){
   try{
     const email = getSessionEmail(); if(!email){ alert('Please log in first.'); return; }
     const auth = getAuthInstance(); const uid = auth && auth.currentUser && auth.currentUser.uid; if(!uid){ alert('Please log in first.'); return; }
-    const storage = getStorage(); const utilsStore = getStorageUtils()||{};
-    const { storageRef, uploadBytes, getDownloadURL } = utilsStore;
-    if(!storage || !storageRef || !uploadBytes || !getDownloadURL){ alert('Storage not available'); return; }
     const processed = await prepareAvatarBlob(file);
-    const safeName = (file.name||'avatar.jpg').replace(/[^a-zA-Z0-9._-]/g,'_').toLowerCase().replace(/\.(png|jpeg|jpg|webp)$/,'') + '.jpg';
-    const path = `profile_photos/${uid}/${Date.now()}_${safeName}`;
-    const ref = storageRef(storage, path);
     let url;
+    // Prioritize serverless upload to bypass Storage CORS/App Check issues
     try{
-      await uploadBytes(ref, processed, { contentType:'image/jpeg' });
-      url = await getDownloadURL(ref);
+      url = await uploadViaFunction('avatar', processed);
     }catch(e){
-      console.warn('Direct Storage upload failed, trying function', e?.message||e);
-      try{ url = await uploadViaFunction('avatar', processed); }
-      catch(e2){ console.warn('Function upload failed, falling back to inline data URL', e2?.message||e2); url = await blobToDataURL(processed); }
+      console.warn('Function upload failed, attempting direct Storage upload as fallback', e?.message||e);
+      const storage = getStorage(); const utilsStore = getStorageUtils()||{};
+      const { storageRef, uploadBytes, getDownloadURL } = utilsStore;
+      if(storage && storageRef && uploadBytes && getDownloadURL){
+        try{
+          const safeName = (file.name||'avatar.jpg').replace(/[^a-zA-Z0-9._-]/g,'_').toLowerCase().replace(/\.(png|jpeg|jpg|webp)$/,'') + '.jpg';
+          const path = `profile_photos/${uid}/${Date.now()}_${safeName}`;
+          const ref = storageRef(storage, path);
+          await uploadBytes(ref, processed, { contentType:'image/jpeg' });
+          url = await getDownloadURL(ref);
+        }catch(e2){
+          console.warn('Direct Storage upload failed, falling back to inline data URL', e2?.message||e2);
+          url = await blobToDataURL(processed);
+        }
+      }else{
+        console.warn('Storage SDK unavailable, falling back to inline data URL');
+        url = await blobToDataURL(processed);
+      }
     }
     // Save to Firestore user doc
     const db = getDB(); const { doc, updateDoc } = getUtils()||{};
@@ -2438,21 +2447,30 @@ async function handleCoverFile(file){
   try{
     const email = getSessionEmail(); if(!email){ alert('Please log in first.'); return; }
     const auth = getAuthInstance(); const uid = auth && auth.currentUser && auth.currentUser.uid; if(!uid){ alert('Please log in first.'); return; }
-    const storage = getStorage(); const utilsStore = getStorageUtils()||{};
-    const { storageRef, uploadBytes, getDownloadURL } = utilsStore;
-    if(!storage || !storageRef || !uploadBytes || !getDownloadURL){ alert('Storage not available'); return; }
     const processed = await prepareCoverBlob(file);
-    const safeName = (file.name||'cover.jpg').replace(/[^a-zA-Z0-9._-]/g,'_').toLowerCase().replace(/\.(png|jpeg|jpg|webp)$/,'') + '.jpg';
-    const path = `profile_covers/${uid}/${Date.now()}_${safeName}`;
-    const ref = storageRef(storage, path);
     let url;
+    // Prioritize serverless upload to bypass Storage CORS/App Check issues
     try{
-      await uploadBytes(ref, processed, { contentType:'image/jpeg' });
-      url = await getDownloadURL(ref);
+      url = await uploadViaFunction('cover', processed);
     }catch(e){
-      console.warn('Direct Storage upload failed, trying function', e?.message||e);
-      try{ url = await uploadViaFunction('cover', processed); }
-      catch(e2){ console.warn('Function upload failed, falling back to inline data URL', e2?.message||e2); url = await blobToDataURL(processed); }
+      console.warn('Function upload failed, attempting direct Storage upload as fallback', e?.message||e);
+      const storage = getStorage(); const utilsStore = getStorageUtils()||{};
+      const { storageRef, uploadBytes, getDownloadURL } = utilsStore;
+      if(storage && storageRef && uploadBytes && getDownloadURL){
+        try{
+          const safeName = (file.name||'cover.jpg').replace(/[^a-zA-Z0-9._-]/g,'_').toLowerCase().replace(/\.(png|jpeg|jpg|webp)$/,'') + '.jpg';
+          const path = `profile_covers/${uid}/${Date.now()}_${safeName}`;
+          const ref = storageRef(storage, path);
+          await uploadBytes(ref, processed, { contentType:'image/jpeg' });
+          url = await getDownloadURL(ref);
+        }catch(e2){
+          console.warn('Direct Storage upload failed, falling back to inline data URL', e2?.message||e2);
+          url = await blobToDataURL(processed);
+        }
+      }else{
+        console.warn('Storage SDK unavailable, falling back to inline data URL');
+        url = await blobToDataURL(processed);
+      }
     }
     // Save to Firestore user doc
     const db = getDB(); const { doc, updateDoc } = getUtils()||{};
