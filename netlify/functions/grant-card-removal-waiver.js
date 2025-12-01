@@ -1,10 +1,9 @@
-const admin = require('firebase-admin');
-function ensureAdmin(){ if(!admin.apps.length){ admin.initializeApp({ projectId: process.env.FIREBASE_PROJECT_ID }); } }
+const { getAdmin } = require('./_firebaseAdmin');
 
 exports.handler = async (event) => {
   if(event.httpMethod !== 'POST') return { statusCode:405, body:'Method Not Allowed' };
   try{
-    ensureAdmin();
+    const admin = getAdmin();
     const db = admin.firestore();
     const body = JSON.parse(event.body||'{}');
     const targetEmail = (body.targetEmail||'').trim();

@@ -5,9 +5,7 @@
  */
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-const admin = require('firebase-admin');
-
-function ensureAdmin(){ if(!admin.apps.length){ admin.initializeApp({ projectId: process.env.FIREBASE_PROJECT_ID }); } }
+const { getAdmin } = require('./_firebaseAdmin');
 
 function computeLateFeeCents(returnDateIso){
   try{
@@ -27,7 +25,7 @@ exports.handler = async (event) => {
   if(event.httpMethod !== 'POST') return { statusCode:405, body:'Method Not Allowed' };
   try{
     if(!process.env.STRIPE_SECRET_KEY){ return { statusCode:500, body:'Missing STRIPE_SECRET_KEY' }; }
-    ensureAdmin();
+    const admin = getAdmin();
     const db = admin.firestore();
     const body = JSON.parse(event.body||'{}');
     const bookingId = (body.bookingId||'').trim();

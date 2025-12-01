@@ -71,8 +71,8 @@ exports.handler = async (event) => {
     // Persist booking payment record to Firestore and notify owner
     console.log('PayPal order verified', { orderId, status, bookingId, amountValue });
     try{
-      const admin = require('firebase-admin');
-      if(!admin.apps.length){ admin.initializeApp({ projectId: process.env.FIREBASE_PROJECT_ID }); }
+      const { getAdmin } = require('./_firebaseAdmin');
+      const admin = getAdmin();
       const db = admin.firestore();
       if(bookingId){
         const docRef = db.collection('bookings').doc(bookingId);
@@ -99,8 +99,8 @@ exports.handler = async (event) => {
     }catch(e){ console.warn('PayPal owner notify failed', e.message); }
     // Audit: payment
     try{
-      const admin = require('firebase-admin');
-      if(!admin.apps.length){ admin.initializeApp({ projectId: process.env.FIREBASE_PROJECT_ID }); }
+      const { getAdmin } = require('./_firebaseAdmin');
+      const admin = getAdmin();
       const db = admin.firestore();
       const bkSnap = await db.collection('bookings').doc(bookingId).get();
       const bk = bkSnap.exists ? bkSnap.data() : {};

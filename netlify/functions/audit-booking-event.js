@@ -23,8 +23,8 @@ exports.handler = async (event) => {
       return { statusCode: 400, body: 'Missing required fields: bookingId, eventType, userEmail' };
     }
 
-    const admin = require('firebase-admin');
-    if(!admin.apps.length){ admin.initializeApp({ projectId: process.env.FIREBASE_PROJECT_ID }); }
+    const { getAdmin } = require('./_firebaseAdmin');
+    const admin = getAdmin();
     const db = admin.firestore();
 
     const tsISO = new Date().toISOString();

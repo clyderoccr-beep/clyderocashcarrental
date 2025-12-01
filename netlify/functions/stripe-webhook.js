@@ -47,8 +47,8 @@ exports.handler = async (event) => {
         // If setup mode (save card)
         if(session.mode === 'setup'){
           try{
-            const admin = require('firebase-admin');
-            if(!admin.apps.length){ admin.initializeApp({ projectId: process.env.FIREBASE_PROJECT_ID }); }
+            const { getAdmin } = require('./_firebaseAdmin');
+            const admin = getAdmin();
             const db = admin.firestore();
             const email = session.customer_details?.email || session.metadata?.userEmail || '';
             const setupIntentId = session.setup_intent;
@@ -77,8 +77,8 @@ exports.handler = async (event) => {
           console.log('Checkout completed for booking', bookingId, 'session', session.id, 'lateFeeCents', lateFeeCents);
           // Mark booking paid in Firestore if available
           try{
-            const admin = require('firebase-admin');
-            if(!admin.apps.length){ admin.initializeApp({ projectId: process.env.FIREBASE_PROJECT_ID }); }
+            const { getAdmin } = require('./_firebaseAdmin');
+            const admin = getAdmin();
             const db = admin.firestore();
             if(bookingId){
               const docRef = db.collection('bookings').doc(bookingId);
