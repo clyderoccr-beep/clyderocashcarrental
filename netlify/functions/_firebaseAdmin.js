@@ -25,13 +25,14 @@ function initAdmin() {
   if (admin.apps && admin.apps.length) { initialized = true; return admin; }
 
   const projectId = getProjectId();
+  const storageBucket = process.env.FIREBASE_STORAGE_BUCKET || (projectId ? `${projectId}.appspot.com` : undefined);
 
   // Option 1: Full service account JSON in a single env var
   const saJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   if (saJson) {
     try {
       const sa = JSON.parse(saJson);
-      admin.initializeApp({ credential: admin.credential.cert(sa), projectId });
+      admin.initializeApp({ credential: admin.credential.cert(sa), projectId, storageBucket });
       initialized = true;
       return admin;
     } catch (e) {
@@ -47,7 +48,8 @@ function initAdmin() {
     privateKey = privateKey.replace(/\\n/g, '\n');
     admin.initializeApp({
       credential: admin.credential.cert({ projectId, clientEmail, privateKey }),
-      projectId
+      projectId,
+      storageBucket
     });
     initialized = true;
     return admin;
@@ -55,7 +57,7 @@ function initAdmin() {
 
   // Option 3: No credentials provided — try projectId only (may fail without ADC)
   if (projectId) {
-    admin.initializeApp({ projectId });
+    admin.initializeApp({ projectId, storageBucket });
     initialized = true;
     return admin;
   }

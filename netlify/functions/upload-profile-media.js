@@ -22,7 +22,13 @@ exports.handler = async (event) => {
       console.error('Admin init error', e);
       return { statusCode: 500, headers: baseHeaders, body: JSON.stringify({ error:'admin_init_failed', detail: e.message||String(e) }) };
     }
-    const decoded = await admin.auth().verifyIdToken(idToken);
+    let decoded;
+    try{
+      decoded = await admin.auth().verifyIdToken(idToken);
+    }catch(e){
+      console.error('ID token verify failed', e);
+      return { statusCode: 401, headers: baseHeaders, body: JSON.stringify({ error:'invalid_id_token', detail: e.message||String(e) }) };
+    }
     const uid = decoded.uid;
 
     const body = JSON.parse(event.body||'{}');
@@ -35,7 +41,9 @@ exports.handler = async (event) => {
     }
     const buffer = Buffer.from(base64, 'base64');
 
-    const bucket = admin.storage().bucket();
+    const projectId = (admin.app().options && admin.app().options.projectId) || process.env.FIREBASE_PROJECT_ID;
+    const bucketName = process.env.FIREBASE_STORAGE_BUCKET || (projectId ? `${projectId}.appspot.com` : undefined);
+    const bucket = admin.storage().bucket(bucketName);
     const ts = Date.now();
     const dir = kind === 'cover' ? 'profile_covers' : 'profile_photos';
     const path = `${dir}/${uid}/${ts}.jpg`;
@@ -52,6 +60,6 @@ exports.handler = async (event) => {
   }catch(err){
     console.error('upload-profile-media error', err);
     const code = err && (err.code === 'auth/argument-error' || err.code === 'auth/invalid-id-token') ? 401 : 500;
-    return { statusCode: code, headers: { 'Content-Type':'application/json', 'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Authorization, Content-Type','Access-Control-Allow-Methods':'POST, OPTIONS' }, body: JSON.stringify({ error: err.message || String(err) }) };
+    return { statusCode: code, headers: { 'Content-Type':'application/json', 'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Authorization, Content-Type','Access-Control-Allow-Methods':'POST, OPTIONS' }, body: JSON.stringify({ error: 'upload_failed', detail: err.message || String(err) }) };
   }
 };

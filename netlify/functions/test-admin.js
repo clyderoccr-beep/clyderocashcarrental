@@ -11,8 +11,12 @@ exports.handler = async () => {
 
   try {
     const admin = getAdmin();
-    const projectId = admin.app().options.projectId || 'unknown';
-    
+    const projectId = (admin.app().options && admin.app().options.projectId) || process.env.FIREBASE_PROJECT_ID || 'unknown';
+    const bucketName = process.env.FIREBASE_STORAGE_BUCKET || `${projectId}.appspot.com`;
+    const bucket = admin.storage().bucket(bucketName);
+    // Touch the bucket metadata to ensure access
+    await bucket.getMetadata().catch(()=>{});
+
     return {
       statusCode: 200,
       headers,
@@ -20,6 +24,7 @@ exports.handler = async () => {
         status: 'ok',
         message: 'Firebase Admin is configured',
         projectId,
+        bucket: bucketName,
         hasAuth: !!admin.auth,
         hasStorage: !!admin.storage
       })
@@ -31,7 +36,7 @@ exports.handler = async () => {
       body: JSON.stringify({
         status: 'error',
         message: err.message || String(err),
-        hint: 'Set FIREBASE_SERVICE_ACCOUNT_JSON in Netlify environment variables'
+        hint: 'Set FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY, and (optional) FIREBASE_STORAGE_BUCKET in Netlify environment variables.'
       })
     };
   }
