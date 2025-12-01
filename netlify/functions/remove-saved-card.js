@@ -20,6 +20,23 @@ exports.handler = async (event) => {
     const uq = await db.collection('users').where('email','==',email).limit(1).get();
     if(uq.empty) return { statusCode:404, body:'User not found' };
     const ref = uq.docs[0].ref; const user = uq.docs[0].data();
+    // Debt / overdue check: block removal if any overdue unpaid booking or unpaid late fee
+    try{
+      const bookingsQ = await db.collection('bookings').where('userEmail','==',email).get();
+      const now = Date.now();
+      let owes = false;
+      bookingsQ.forEach(bdoc => {
+        const b = bdoc.data();
+        const retMs = b.returnDate ? new Date(b.returnDate).getTime() : 0;
+        const overdue = retMs && now > retMs;
+        const unpaidLate = overdue && !b.lateFeePaid;
+        const activeStatus = ['active','extended','pending','rented'].includes(b.status||'');
+        if(activeStatus && (unpaidLate || (overdue && !b.paidAt))) owes = true;
+      });
+      if(owes){
+        return { statusCode:400, body:'Cannot remove card: outstanding overdue booking or unpaid late fee.' };
+      }
+    }catch(e){ console.warn('Debt check failed (remove card)', e.message); }
     const pm = user.stripeDefaultPm;
     try{ if(pm){ await stripe.paymentMethods.detach(pm); } }catch(e){ console.warn('Stripe detach failed', e.message); }
     await ref.update({ stripeDefaultPm: admin.firestore.FieldValue.delete(), cardOnFile: false });

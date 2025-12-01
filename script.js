@@ -405,6 +405,27 @@ function updateMembershipPanel(){
       const hasCard = !!member.cardOnFile && !!member.stripeDefaultPm;
       if(pmStatus){ pmStatus.innerHTML = `<span style="font-weight:700">Payment Method:</span> <span class="badge" style="${hasCard?'background:#2d6a4f33;border-color:#2d6a4f66;color:#2d6a4f':'background:#6c757d22;border-color:#6c757d55;color:#6c757d'}">Card on file: ${hasCard?'Yes':'No'}</span>`; }
       const rmBtn = document.getElementById('removeSavedCard'); if(rmBtn){ rmBtn.style.display = hasCard ? 'inline-block' : 'none'; }
+      // Async debt check: disable removal if any overdue unpaid booking
+      setTimeout(async ()=>{
+        try{
+          if(!hasCard) return; // no card, ignore
+          const db=getDB(); const u=getUtils()||{}; if(!(db&&u.collection&&u.where&&u.getDocs&&u.query)) return;
+          const q = await u.getDocs(u.query(u.collection(db,'bookings'), u.where('userEmail','==',member.email)));
+          let owes=false; const now=Date.now();
+          q.forEach(docSnap=>{
+            const b=docSnap.data();
+            const ret=b.returnDate? new Date(b.returnDate).getTime():0;
+            const overdue = ret && now>ret;
+            const unpaidLate = overdue && !b.lateFeePaid;
+            const activeStatus = ['active','extended','pending','rented'].includes(b.status||'');
+            if(activeStatus && (unpaidLate || overdue && !b.paidAt)) owes=true;
+          });
+          if(owes && rmBtn){
+            rmBtn.disabled=true; rmBtn.title='Cannot remove saved card while an overdue or unpaid booking exists.';
+            rmBtn.textContent='Remove Saved Card (Locked)';
+          }
+        }catch(e){ console.warn('Debt check failed', e.message); }
+      },10);
     } else if(summary){ summary.textContent = `Logged in as ${email}`; }
     if(typeof renderAccountBookings==='function'){ renderAccountBookings(); }
   } else { 
