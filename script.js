@@ -2399,8 +2399,9 @@ async function handleAvatarFile(file){
       await uploadBytes(ref, processed, { contentType:'image/jpeg' });
       url = await getDownloadURL(ref);
     }catch(e){
-      console.warn('Direct Storage upload failed, using function', e?.message||e);
-      url = await uploadViaFunction('avatar', processed);
+      console.warn('Direct Storage upload failed, trying function', e?.message||e);
+      try{ url = await uploadViaFunction('avatar', processed); }
+      catch(e2){ console.warn('Function upload failed, falling back to inline data URL', e2?.message||e2); url = await blobToDataURL(processed); }
     }
     // Save to Firestore user doc
     const db = getDB(); const { doc, updateDoc } = getUtils()||{};
@@ -2437,8 +2438,9 @@ async function handleCoverFile(file){
       await uploadBytes(ref, processed, { contentType:'image/jpeg' });
       url = await getDownloadURL(ref);
     }catch(e){
-      console.warn('Direct Storage upload failed, using function', e?.message||e);
-      url = await uploadViaFunction('cover', processed);
+      console.warn('Direct Storage upload failed, trying function', e?.message||e);
+      try{ url = await uploadViaFunction('cover', processed); }
+      catch(e2){ console.warn('Function upload failed, falling back to inline data URL', e2?.message||e2); url = await blobToDataURL(processed); }
     }
     // Save to Firestore user doc
     const db = getDB(); const { doc, updateDoc } = getUtils()||{};
