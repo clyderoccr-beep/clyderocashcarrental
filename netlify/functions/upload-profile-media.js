@@ -3,15 +3,25 @@ const { getAdmin } = require('./_firebaseAdmin');
 
 exports.handler = async (event) => {
   try{
+    // Handle CORS preflight
+    const baseHeaders = { 'Content-Type':'application/json', 'Access-Control-Allow-Origin':'*', 'Access-Control-Allow-Headers':'Authorization, Content-Type', 'Access-Control-Allow-Methods':'POST, OPTIONS' };
+    if(event.httpMethod === 'OPTIONS'){
+      return { statusCode: 204, headers: baseHeaders, body: '' };
+    }
     if(event.httpMethod !== 'POST'){
-      return { statusCode: 405, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error:'method_not_allowed' }) };
+      return { statusCode: 405, headers: baseHeaders, body: JSON.stringify({ error:'method_not_allowed' }) };
     }
     const authz = event.headers && (event.headers.authorization || event.headers.Authorization);
     if(!authz || !authz.startsWith('Bearer ')){
-      return { statusCode: 401, headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ error:'missing_auth' }) };
+      return { statusCode: 401, headers: baseHeaders, body: JSON.stringify({ error:'missing_auth' }) };
     }
     const idToken = authz.slice('Bearer '.length);
-    const admin = getAdmin();
+    let admin;
+    try{ admin = getAdmin(); }
+    catch(e){
+      console.error('Admin init error', e);
+      return { statusCode: 500, headers: baseHeaders, body: JSON.stringify({ error:'admin_init_failed', detail: e.message||String(e) }) };
+    }
     const decoded = await admin.auth().verifyIdToken(idToken);
     const uid = decoded.uid;
 
@@ -38,10 +48,10 @@ exports.handler = async (event) => {
     });
 
     const url = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(path)}?alt=media&token=${token}`;
-    return { statusCode: 200, headers: { 'Content-Type':'application/json', 'Access-Control-Allow-Origin':'*' }, body: JSON.stringify({ url, path }) };
+    return { statusCode: 200, headers: baseHeaders, body: JSON.stringify({ url, path }) };
   }catch(err){
     console.error('upload-profile-media error', err);
-    const code = err && err.code === 'auth/argument-error' ? 401 : 500;
-    return { statusCode: code, headers: { 'Content-Type':'application/json', 'Access-Control-Allow-Origin':'*' }, body: JSON.stringify({ error: err.message || String(err) }) };
+    const code = err && (err.code === 'auth/argument-error' || err.code === 'auth/invalid-id-token') ? 401 : 500;
+    return { statusCode: code, headers: { 'Content-Type':'application/json', 'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Authorization, Content-Type','Access-Control-Allow-Methods':'POST, OPTIONS' }, body: JSON.stringify({ error: err.message || String(err) }) };
   }
 };
