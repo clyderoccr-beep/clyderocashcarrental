@@ -2253,6 +2253,70 @@ document.addEventListener('click',(e)=>{
   },0); 
 });
 
+// Account avatar and photo management
+document.getElementById('accountChangePhoto')?.addEventListener('click',()=>{
+  document.getElementById('accountPhotoFile')?.click();
+});
+document.getElementById('accountPhotoFile')?.addEventListener('change', async (e)=>{
+  try{
+    const file = e.target.files?.[0]; if(!file) return;
+    const email = getSessionEmail(); if(!email){ alert('Please log in first.'); return; }
+    const storage = getStorage(); const utilsStore = getStorageUtils()||{};
+    const { storageRef, uploadBytes, getDownloadURL } = utilsStore;
+    if(!storage || !storageRef || !uploadBytes || !getDownloadURL){ alert('Storage not available'); return; }
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g,'_').toLowerCase();
+    const path = `profile_photos/${email}_${Date.now()}_${safeName}`;
+    const ref = storageRef(storage, path);
+    await uploadBytes(ref, file);
+    const url = await getDownloadURL(ref);
+    // Save to Firestore user doc
+    const db = getDB(); const { collection, getDocs, query, where, limit, doc, updateDoc } = getUtils()||{};
+    if(!db || !collection || !getDocs || !query || !where || !limit || !doc || !updateDoc){ alert('Database not available'); return; }
+    const q = query(collection(db,'users'), where('email','==',email), limit(1));
+    const snap = await getDocs(q);
+    const d = snap.docs[0]; if(!d){ alert('User record not found'); return; }
+    await updateDoc(doc(db,'users', d.id), { photoUrl: url, photoUpdatedAt: new Date().toISOString() });
+    showToast('Profile photo updated');
+    renderAccountSummary();
+  }catch(err){ console.warn('Profile photo update failed', err?.message||err); alert('Failed to update photo'); }
+});
+document.getElementById('accountRemovePhoto')?.addEventListener('click', async ()=>{
+  try{
+    const email = getSessionEmail(); if(!email){ alert('Please log in first.'); return; }
+    const db = getDB(); const { collection, getDocs, query, where, limit, doc, updateDoc } = getUtils()||{};
+    if(!db || !collection || !getDocs || !query || !where || !limit || !doc || !updateDoc){ alert('Database not available'); return; }
+    const q = query(collection(db,'users'), where('email','==',email), limit(1));
+    const snap = await getDocs(q); const d = snap.docs[0]; if(!d){ alert('User record not found'); return; }
+    await updateDoc(doc(db,'users', d.id), { photoUrl: '', photoUpdatedAt: new Date().toISOString() });
+    showToast('Profile photo removed');
+    renderAccountSummary();
+  }catch(err){ console.warn('Profile photo remove failed', err?.message||err); alert('Failed to remove photo'); }
+});
+
+function renderAccountSummary(){
+  try{
+    const el = document.getElementById('accountSummary'); if(!el) return;
+    const email = getSessionEmail(); if(!email){ el.textContent = 'Log in to view.'; return; }
+    const db = getDB(); const { collection, getDocs, query, where, limit } = getUtils()||{};
+    if(!db || !collection || !getDocs || !query || !where || !limit) return;
+    getDocs(query(collection(db,'users'), where('email','==',email), limit(1))).then(snap=>{
+      const data = snap.docs[0]?.data()||{};
+      const name = `${data.firstName||''} ${data.lastName||''}`.trim()||email;
+      const avatarEl = document.getElementById('accountAvatar'); if(avatarEl){
+        const url = data.photoUrl;
+        if(url){ avatarEl.innerHTML = `<img src='${url}' alt='avatar' style='width:100%;height:100%;object-fit:cover'>`; }
+        else {
+          const initials = (name||email).split(' ').map(s=>s[0]).join('').slice(0,2).toUpperCase();
+          avatarEl.textContent = initials || '👤';
+        }
+      }
+      const license = data.licenseNumber ? `\nLicense #: ${data.licenseNumber}` : '';
+      const status = data.status||'active';
+      el.textContent = `Email: ${email}\nName: ${name}\nCountry: ${data.country||'United States'}${license}\nStatus: ${status}\nMember Since: ${data.createdAt? new Date(data.createdAt).toLocaleDateString():''}`;
+    }).catch(()=>{});
+  }catch{}
+}
+
 function loadMembersAndRender(){ loadMembers().then(renderMembers); }
 async function loadMembers(){
   const db = getDB(); const { collection, getDocs } = getUtils(); 
