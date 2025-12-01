@@ -43,6 +43,14 @@ function initAdmin() {
   // Option 2: Discrete vars
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
   let privateKey = process.env.FIREBASE_PRIVATE_KEY;
+  const privateKeyB64 = process.env.FIREBASE_PRIVATE_KEY_BASE64;
+  if (!privateKey && privateKeyB64) {
+    try {
+      privateKey = Buffer.from(privateKeyB64, 'base64').toString('utf8');
+    } catch (e) {
+      console.warn('Failed to decode FIREBASE_PRIVATE_KEY_BASE64:', e.message);
+    }
+  }
   if (clientEmail && privateKey) {
     // Handle escaped newlines from UI env var inputs
     privateKey = privateKey.replace(/\\n/g, '\n');
