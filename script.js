@@ -2405,7 +2405,7 @@ async function handleAvatarFile(file){
     }
     // Save to Firestore user doc
     const db = getDB(); const { doc, updateDoc } = getUtils()||{};
-    const auth = getAuthInstance(); const uid2 = auth && auth.currentUser && auth.currentUser.uid;
+    const uid2 = uid;
     if(!db || !doc || !updateDoc || !uid2){ alert('Database not available'); return; }
     await updateDoc(doc(db,'users', uid2), { photoUrl: url, photoUpdatedAt: new Date().toISOString(), email });
     showToast('Profile photo updated');
@@ -2444,7 +2444,7 @@ async function handleCoverFile(file){
     }
     // Save to Firestore user doc
     const db = getDB(); const { doc, updateDoc } = getUtils()||{};
-    const auth = getAuthInstance(); const uid2 = auth && auth.currentUser && auth.currentUser.uid;
+    const uid2 = uid;
     if(!db || !doc || !updateDoc || !uid2){ alert('Database not available'); return; }
     await updateDoc(doc(db,'users', uid2), { coverUrl: url, coverUpdatedAt: new Date().toISOString(), email });
     // Update UI
@@ -2487,7 +2487,7 @@ function renderAccountSummary(){
     const el = document.getElementById('accountSummary'); if(!el) return;
     const email = getSessionEmail(); if(!email){ el.textContent = 'Log in to view.'; return; }
     const db = getDB(); const { doc, getDoc } = getUtils()||{};
-    const auth = getAuthInstance(); const uid = auth && auth.currentUser && auth.currentUser.uid;
+    const uid = (getAuthInstance() && getAuthInstance().currentUser && getAuthInstance().currentUser.uid) || null;
     if(!db || !doc || !getDoc || !uid) return;
     getDoc(doc(db,'users', uid)).then(snap=>{
       const data = snap.exists() ? (snap.data()||{}) : {};
