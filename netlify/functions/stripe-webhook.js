@@ -129,6 +129,20 @@ exports.handler = async (event) => {
                 method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify(payload)
               });
             }catch(e){ console.warn('Stripe owner notify failed', e.message); }
+            // Audit: payment
+            try{
+              const bkSnap = docSnap.exists ? docSnap.data() : (await db.collection('bookings').where('id','==',bookingId).limit(1).get()).docs[0]?.data()||{};
+              await fetch(process.env.URL ? `${process.env.URL}/.netlify/functions/audit-booking-event` : '/.netlify/functions/audit-booking-event', {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({
+                  bookingId: docSnap.exists ? bookingId : (bkSnap.id||bookingId), eventType: 'payment',
+                  userEmail: session.customer_details?.email || session.metadata?.userEmail || '',
+                  rateCents: Number(session.amount_total || 0) - lateFeeCents, lateFeeCents,
+                  paymentProvider: 'Stripe', paymentSessionId: session.id, agreementVersion: '',
+                  snapshot: { booking: bkSnap, session: { id: session.id, mode: session.mode, amount_total: session.amount_total } }
+                })
+              });
+            }catch(e){ console.warn('Stripe audit failed', e.message); }
           }catch(e){ console.warn('Firestore booking update failed in webhook', e.message); }
         }
         break;

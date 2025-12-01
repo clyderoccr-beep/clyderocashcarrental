@@ -97,6 +97,22 @@ exports.handler = async (event) => {
         })
       });
     }catch(e){ console.warn('PayPal owner notify failed', e.message); }
+    // Audit: payment
+    try{
+      const admin = require('firebase-admin');
+      if(!admin.apps.length){ admin.initializeApp({ projectId: process.env.FIREBASE_PROJECT_ID }); }
+      const db = admin.firestore();
+      const bkSnap = await db.collection('bookings').doc(bookingId).get();
+      const bk = bkSnap.exists ? bkSnap.data() : {};
+      await fetch(process.env.URL ? `${process.env.URL}/.netlify/functions/audit-booking-event` : '/.netlify/functions/audit-booking-event', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          bookingId, eventType: 'payment', userEmail: bk.userEmail||'', rateCents: Math.round(Number(amountValue||0) * 100),
+          paymentProvider: 'PayPal', paymentSessionId: orderId, agreementVersion: '',
+          snapshot: { booking: bk, order: { id: orderId, status } }
+        })
+      });
+    }catch(e){ console.warn('PayPal audit failed', e.message); }
 
     return {
       statusCode: 200,

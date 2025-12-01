@@ -60,6 +60,17 @@ exports.handler = async (event) => {
     });
     // Update booking
     await doc.ref.update({ lateFeePaid:true, lateFeeCents: lateFeeCents, paidAt: new Date().toISOString(), status:'paid' });
+    // Audit: late-fee charge
+    try{
+      await fetch(process.env.URL ? `${process.env.URL}/.netlify/functions/audit-booking-event` : '/.netlify/functions/audit-booking-event', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          bookingId, eventType: 'late_fee_charged', userEmail: email, lateFeeCents,
+          paymentProvider: 'Stripe', paymentSessionId: intent.id, agreementVersion: '',
+          snapshot: { booking: bk, paymentIntent: { id: intent.id, amount: intent.amount, status: intent.status } }
+        })
+      });
+    }catch(e){ console.warn('Late-fee audit failed', e.message); }
     return { statusCode:200, headers:{'Content-Type':'application/json'}, body: JSON.stringify({ charged:true, paymentIntentId: intent.id }) };
   }catch(err){
     console.error('charge-late-fee error', err);

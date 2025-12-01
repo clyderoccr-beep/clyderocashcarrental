@@ -1216,10 +1216,21 @@ document.addEventListener('submit',(e)=>{
           licenseIssueDate: member.licenseIssueDate||'', licenseExpireDate: member.licenseExpireDate||''
         } : { email }
       };
-      addDoc(collection(db,'bookings'), payload).then(ref=>{ 
+      addDoc(collection(db,'bookings'), payload).then(async ref=>{ 
         localBk.fireId = ref.id; 
         saveBookingsForEmail(email); 
         console.log('Booking saved to Firestore with ID:', ref.id, payload);
+        // Audit: booking created
+        try{
+          const veh = VEHICLES.find(v=>v.id===vehId);
+          await fetch('/.netlify/functions/audit-booking-event', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({
+              bookingId: ref.id, eventType: 'created', userEmail: email, weeks, rateCents: (veh?.price||0)*100,
+              returnDateISO: returnDate, agreementVersion: '', snapshot: { booking: payload, vehicle: veh||{} }
+            })
+          });
+        }catch(e){ console.warn('Audit create failed', e.message); }
       }).catch(err=>console.warn('Add booking failed:', err.message));
     }
   }catch(err){ console.warn('Could not save booking to Firestore:', err.message); }
@@ -1246,6 +1257,18 @@ document.addEventListener('click',(e)=>{
     if(extendBtn){ const email=getSessionEmail(); if(!email) return; loadBookingsForEmail(email); const id=extendBtn.dataset.bkExtend; const bk=MY_BOOKINGS.find(b=>b.id===id); if(!bk || bk.status!=='active') return; const modal=document.getElementById('extendModal'); const extCurr=document.getElementById('extendCurrent'); const extWeeks=document.getElementById('extendWeeks'); const extPrev=document.getElementById('extendPreview'); const curr=bk.returnDate||bk.pickupDate; modal.style.display='block'; extCurr.textContent=curr; function updatePreview(){ const w=parseInt(extWeeks.value,10)||1; const d=new Date(curr); d.setDate(d.getDate()+7*w); extPrev.textContent=d.toISOString().slice(0,10); } updatePreview(); extWeeks.onchange=updatePreview; const onSave=()=>{ const w=parseInt(extWeeks.value,10)||1; const d=new Date(curr); d.setDate(d.getDate()+7*w); bk.returnDate=d.toISOString().slice(0,10); saveBookingsForEmail(email); renderAccountBookings(); modal.style.display='none'; cleanup();
       // Firestore update on extend
       try{ const db=getDB(); const { doc, updateDoc } = getUtils(); if(db && bk.fireId){ updateDoc(doc(db,'bookings',bk.fireId), { returnDate: bk.returnDate, status: 'extended' }); } }catch(err){ console.warn('Failed to update Firestore booking on extend:', err.message); }
+      // Audit: booking extended
+      try{
+        const veh = VEHICLES.find(v=>v.id===bk.vehicleId);
+        await fetch('/.netlify/functions/audit-booking-event', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({
+            bookingId: bk.fireId||bk.id, eventType: 'extended', userEmail: email, extensionWeeks: w,
+            returnDateISO: bk.returnDate, rateCents: (veh?.price||0)*100, agreementVersion: '',
+            snapshot: { booking: bk, vehicle: veh||{} }
+          })
+        });
+      }catch(e){ console.warn('Audit extend failed', e.message); }
       alert('Booking extended.'); }; const onCancel=()=>{ modal.style.display='none'; cleanup(); }; function cleanup(){ document.getElementById('extendSave').removeEventListener('click',onSave); document.getElementById('extendCancel').removeEventListener('click',onCancel); } document.getElementById('extendSave').addEventListener('click',onSave); document.getElementById('extendCancel').addEventListener('click',onCancel); return; }
   const payNowBtn=e.target.closest('[data-bk-pay-now]');
     if(payNowBtn){ const email=getSessionEmail(); if(!email) return; loadBookingsForEmail(email); const id=payNowBtn.dataset.bkPayNow; const bk=MY_BOOKINGS.find(b=>b.id===id); const veh=VEHICLES.find(v=>v.id===bk?.vehicleId); const amount=veh?.price||0; if(!bk||!amount){ showToast('Booking or amount missing'); return; } try{ const bidEl=document.getElementById('paymentBookingId'); const amtEl=document.getElementById('paymentAmount'); bidEl.value = bk.fireId || bk.id; amtEl.value = String(amount); bidEl.readOnly=true; amtEl.readOnly=true; bidEl.dataset.locked='1'; amtEl.dataset.locked='1'; goto('payments'); }catch{} return; }
