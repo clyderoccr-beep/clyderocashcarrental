@@ -1167,7 +1167,7 @@
       apiKey: atob("QUl6YVN5RDQ1NHAtbUloeWt3cHlLZjE1eTNDTEpYamVRWmFhV2ZB"),
       authDomain: "clyderocashcarrental.firebaseapp.com",
       projectId: "clyderocashcarrental",
-      storageBucket: "clyderocashcarrental.firebasestorage.app",
+      storageBucket: "clyderocashcarrental.appspot.com",
       messagingSenderId: "59151943771",
       appId: "1:59151943771:web:47016f11a3a5d70604977e"
     };
@@ -1179,7 +1179,7 @@
       isTokenAutoRefreshEnabled: true
     });
     const db = getFirestore(app);
-    const storage = getStorage(app);
+    const storage = getStorage(app, 'gs://clyderocashcarrental.appspot.com');
     const auth = getAuth(app);
     const functions = getFunctions(app);
     
