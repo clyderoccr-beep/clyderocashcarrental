@@ -2448,18 +2448,7 @@ document.getElementById('accountRemoveCover')?.addEventListener('click', async (
     showToast('Cover photo removed');
   }catch(err){ console.warn('Cover photo remove failed', err?.message||err); alert('Failed to remove cover'); }
 });
-document.getElementById('coverRemoveBtn')?.addEventListener('click', async ()=>{
-  try{
-    const email = getSessionEmail(); if(!email){ alert('Please log in first.'); return; }
-    const db = getDB(); const { collection, getDocs, query, where, limit, doc, updateDoc } = getUtils()||{};
-    if(!db || !collection || !getDocs || !query || !where || !limit || !doc || !updateDoc){ alert('Database not available'); return; }
-    const q = query(collection(db,'users'), where('email','==',email), limit(1));
-    const snap = await getDocs(q); const d = snap.docs[0]; if(!d){ alert('User record not found'); return; }
-    await updateDoc(doc(db,'users', d.id), { coverUrl: '', coverUpdatedAt: new Date().toISOString() });
-    const cover = document.getElementById('accountCover'); if(cover){ cover.style.backgroundImage='none'; }
-    showToast('Cover photo removed');
-  }catch(err){ console.warn('Cover photo remove failed', err?.message||err); alert('Failed to remove cover'); }
-});
+// Removed overlay remove button per design request
 
 // Resize and letterbox cover image to ~1200x400 JPEG
 async function prepareCoverBlob(originalFile){
@@ -2503,7 +2492,7 @@ function renderAccountSummary(){
         if(coverEl){
           const cover = data.coverUrl || '';
           coverEl.style.backgroundImage = cover ? `url('${cover}')` : 'none';
-          const rm = document.getElementById('coverRemoveBtn'); if(rm){ rm.style.display = cover ? 'flex' : 'none'; }
+          // Remove button no longer present
         }
       }catch(_){ }
       const avatarEl = document.getElementById('accountAvatar'); if(avatarEl){
