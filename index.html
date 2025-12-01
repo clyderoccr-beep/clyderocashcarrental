@@ -1157,7 +1157,7 @@
   <script type="module">
     // Firebase configuration
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-    import { getFirestore, doc, getDoc, setDoc, collection, getDocs, updateDoc, deleteDoc, addDoc, onSnapshot, query, where } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+    import { getFirestore, doc, getDoc, setDoc, collection, getDocs, updateDoc, deleteDoc, addDoc, onSnapshot, query, where, limit } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
     import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
     import { initializeAppCheck, ReCaptchaV3Provider } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check.js';
     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
@@ -1194,7 +1194,7 @@
     window.firestoreDB = db;
     window.firestoreStorage = storage;
     window.firestoreFunctions = functions;
-    window.firestoreUtils = { doc, getDoc, setDoc, collection, getDocs, updateDoc, deleteDoc, addDoc, onSnapshot, query, where };
+    window.firestoreUtils = { doc, getDoc, setDoc, collection, getDocs, updateDoc, deleteDoc, addDoc, onSnapshot, query, where, limit };
     window.storageUtils = { storageRef, uploadBytes, getDownloadURL };
     window.functionsUtils = { httpsCallable };
     window.authApi = { auth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, signOut, onAuthStateChanged };
