@@ -2417,7 +2417,12 @@ async function handleAvatarFile(file){
     await updateDoc(doc(db,'users', uid2), { photoUrl: url, photoUpdatedAt: new Date().toISOString(), email });
     showToast('Profile photo updated');
     renderAccountSummary();
-  }catch(err){ console.warn('Profile photo update failed', err?.message||err); alert('Failed to update photo'); }
+  }catch(err){
+    const msg = err && (err.message||err) || 'unknown';
+    console.warn('Profile photo update failed', msg);
+    showToast('Photo update failed: '+String(msg));
+    alert('Failed to update photo');
+  }
 }
 // Removed legacy remove-photo button per new design
 
@@ -2457,7 +2462,12 @@ async function handleCoverFile(file){
     // Update UI
     const cover = document.getElementById('accountCover'); if(cover){ cover.style.backgroundImage = `url('${url}')`; }
     showToast('Cover photo updated');
-  }catch(err){ console.warn('Cover photo update failed', err?.message||err); alert('Failed to update cover'); }
+  }catch(err){
+    const msg = err && (err.message||err) || 'unknown';
+    console.warn('Cover photo update failed', msg);
+    showToast('Cover update failed: '+String(msg));
+    alert('Failed to update cover');
+  }
 }
 // Cover remove overlay was removed; legacy handler deleted per design
 // Removed overlay remove button per design request
