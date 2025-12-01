@@ -47,7 +47,7 @@ try{
 }
 
 // Router: show one section at a time, default = blank
-const ROUTES = { vehicles:'#vehicles', about:'#about', booking:'#booking', payments:'#payments', login:'#login', membership:'#membership', signup:'#signup', contact:'#contact', admin:'#admin' };
+const ROUTES = { vehicles:'#vehicles', about:'#about', booking:'#booking', payments:'#payments', login:'#login', membership:'#membership', signup:'#signup', contact:'#contact', terms:'#terms', admin:'#admin' };
 const MEMBER_ONLY = new Set(['booking','payments']);
 function show(sel){ Object.values(ROUTES).forEach(id=>{ const n=document.querySelector(id); if(n) n.style.display = (id===sel)?'block':'none'; }); }
 function goto(name){ 
@@ -150,6 +150,30 @@ document.addEventListener('click', (e)=>{
     const sel=document.getElementById('vehicle-select'); 
     if(sel){ sel.value=t.dataset.veh; } 
   } 
+});
+
+// Make in-text Terms links open the Terms section
+document.addEventListener('click', (e)=>{
+  const a = e.target.closest('a[href="#terms"]');
+  if(!a) return;
+  e.preventDefault();
+  goto('terms');
+  try{
+    const el = document.getElementById('terms');
+    if(el){ el.style.display='block'; el.scrollIntoView({ behavior:'smooth', block:'start' }); }
+  }catch(_){ /* ignore */ }
+});
+
+// Back to Payments button from Terms
+document.addEventListener('click', (e)=>{
+  const btn = e.target.closest('#backToPayments');
+  if(!btn) return;
+  e.preventDefault();
+  goto('payments');
+  try{
+    const el = document.getElementById('payments');
+    if(el) el.scrollIntoView({ behavior:'smooth', block:'start' });
+  }catch(_){ /* ignore */ }
 });
 
 // Forgot password: Firebase Auth reset email with spam folder reminder
@@ -2692,11 +2716,53 @@ async function recordTermsAcceptance(){
     if(db && utils.collection && utils.query && utils.where && utils.getDocs && utils.doc && utils.updateDoc){
       const q = await utils.getDocs(utils.query(utils.collection(db,'users'), utils.where('email','==',authEmail)));
       if(!q.empty){
-        const ref = q.docs[0].ref;
-        await utils.updateDoc(ref, { termsAcceptance: { version: TERMS_VERSION, agreed:true, ts:new Date().toISOString(), ip } });
+        const ref = q.docs[0].ref; const userData = q.docs[0].data() || {};
+        const acceptance = { version: TERMS_VERSION, agreed:true, ts:new Date().toISOString(), ip };
+        await utils.updateDoc(ref, { termsAcceptance: acceptance });
         console.log('Stored terms acceptance for', authEmail);
+        // Send email notification to owner only once per version per user
+        const localKey = 'termsAccepted_'+TERMS_VERSION;
+        if(!localStorage.getItem(localKey)){
+          try{ await sendTermsAcceptanceEmail({ to:'clyderoccr@gmail.com', userEmail: authEmail, acceptance, user:userData }); }catch(e){ console.warn('Send acceptance email failed', e.message); }
+        }
       }
     }
     localStorage.setItem('termsAccepted_'+TERMS_VERSION, '1');
   }catch(e){ console.warn('Failed to persist terms acceptance', e.message); }
+}
+
+async function sendTermsAcceptanceEmail({ to, userEmail, acceptance, user }){
+  try{
+    if(!window.emailjs){ console.warn('EmailJS not loaded; skip acceptance email'); return; }
+    initEmailJS();
+    const summaryParts = [];
+    summaryParts.push('User Email: '+userEmail);
+    if(user?.firstName||user?.lastName) summaryParts.push('Name: '+(user.firstName||'')+' '+(user.lastName||''));
+    if(user?.licenseNumber) summaryParts.push('License #: '+user.licenseNumber);
+    if(user?.licenseCountry) summaryParts.push('License Country: '+user.licenseCountry);
+    if(user?.licenseIssueDate) summaryParts.push('License Issue: '+user.licenseIssueDate);
+    if(user?.licenseExpireDate) summaryParts.push('License Expire: '+user.licenseExpireDate);
+    if(user?.address) summaryParts.push('Address: '+user.address);
+    if(user?.state) summaryParts.push('State: '+user.state);
+    if(user?.country) summaryParts.push('Country: '+user.country);
+    summaryParts.push('Agreement Version: '+acceptance.version);
+    summaryParts.push('Accepted At: '+acceptance.ts);
+    summaryParts.push('IP: '+(acceptance.ip||'unknown'));
+    const body = summaryParts.join('\n');
+    // Use EmailJS generic send method
+    const cfg = window.EMAILJS_CONFIG || {};
+    if(cfg.serviceId && cfg.templateId){
+      await window.emailjs.send(cfg.serviceId, cfg.templateId, {
+        to_email: to,
+        to_name: 'Owner',
+        from_email: 'clyderoccr@gmail.com',
+        from_name: 'CCR Terms Bot',
+        subject: 'New Terms Acceptance: '+userEmail,
+        message: body
+      });
+      console.log('Acceptance email sent for', userEmail);
+    }else{
+      console.warn('EmailJS config missing serviceId/templateId');
+    }
+  }catch(e){ console.warn('sendTermsAcceptanceEmail error', e.message); }
 }
