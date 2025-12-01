@@ -2213,6 +2213,33 @@ document.getElementById('edImgFile')?.addEventListener('change', async (e)=>{
   }
 });
 
+// Square-crop + compress avatar helper
+async function prepareAvatarBlob(originalFile){
+  return new Promise((resolve)=>{
+    try{
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const img = new Image();
+        img.onload = () => {
+          const minSide = Math.min(img.width, img.height);
+          const sx = Math.floor((img.width - minSide)/2);
+          const sy = Math.floor((img.height - minSide)/2);
+          const TARGET = 256;
+          const canvas = document.createElement('canvas');
+          canvas.width = TARGET; canvas.height = TARGET;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, TARGET, TARGET);
+          canvas.toBlob(b => resolve(b || originalFile), 'image/jpeg', 0.85);
+        };
+        img.onerror = () => resolve(originalFile);
+        img.src = ev.target.result;
+      };
+      reader.onerror = () => resolve(originalFile);
+      reader.readAsDataURL(originalFile);
+    }catch{ resolve(originalFile); }
+  });
+}
+
 // Helper: reload vehicles fresh from Firestore
 async function reloadVehicles(){
   const db = getDB();
@@ -2258,16 +2285,20 @@ document.getElementById('accountChangePhoto')?.addEventListener('click',()=>{
   document.getElementById('accountPhotoFile')?.click();
 });
 document.getElementById('accountPhotoFile')?.addEventListener('change', async (e)=>{
+  const file = e.target.files?.[0]; if(file) handleAvatarFile(file);
+});
+
+async function handleAvatarFile(file){
   try{
-    const file = e.target.files?.[0]; if(!file) return;
     const email = getSessionEmail(); if(!email){ alert('Please log in first.'); return; }
     const storage = getStorage(); const utilsStore = getStorageUtils()||{};
     const { storageRef, uploadBytes, getDownloadURL } = utilsStore;
     if(!storage || !storageRef || !uploadBytes || !getDownloadURL){ alert('Storage not available'); return; }
-    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g,'_').toLowerCase();
+    const processed = await prepareAvatarBlob(file);
+    const safeName = (file.name||'avatar.jpg').replace(/[^a-zA-Z0-9._-]/g,'_').toLowerCase().replace(/\.(png|jpeg|jpg|webp)$/,'') + '.jpg';
     const path = `profile_photos/${email}_${Date.now()}_${safeName}`;
     const ref = storageRef(storage, path);
-    await uploadBytes(ref, file);
+    await uploadBytes(ref, processed, { contentType:'image/jpeg' });
     const url = await getDownloadURL(ref);
     // Save to Firestore user doc
     const db = getDB(); const { collection, getDocs, query, where, limit, doc, updateDoc } = getUtils()||{};
@@ -2279,7 +2310,7 @@ document.getElementById('accountPhotoFile')?.addEventListener('change', async (e
     showToast('Profile photo updated');
     renderAccountSummary();
   }catch(err){ console.warn('Profile photo update failed', err?.message||err); alert('Failed to update photo'); }
-});
+}
 document.getElementById('accountRemovePhoto')?.addEventListener('click', async ()=>{
   try{
     const email = getSessionEmail(); if(!email){ alert('Please log in first.'); return; }
@@ -2316,6 +2347,17 @@ function renderAccountSummary(){
     }).catch(()=>{});
   }catch{}
 }
+
+// Drag-and-drop support on avatar
+(()=>{
+  const av = document.getElementById('accountAvatar'); if(!av) return;
+  av.addEventListener('dragover', (e)=>{ e.preventDefault(); av.style.outline='2px dashed #d4af37'; });
+  av.addEventListener('dragleave', ()=>{ av.style.outline='none'; });
+  av.addEventListener('drop', (e)=>{
+    e.preventDefault(); av.style.outline='none';
+    const f = e.dataTransfer?.files?.[0]; if(f) handleAvatarFile(f);
+  });
+})();
 
 function loadMembersAndRender(){ loadMembers().then(renderMembers); }
 async function loadMembers(){
