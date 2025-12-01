@@ -22,5 +22,8 @@
       "functions/**"
     ],
     "rewrites": []
+  },
+  "storage": {
+    "rules": "storage.rules"
   }
 }

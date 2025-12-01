@@ -2370,12 +2370,13 @@ document.getElementById('accountPhotoFile')?.addEventListener('change', async (e
 async function handleAvatarFile(file){
   try{
     const email = getSessionEmail(); if(!email){ alert('Please log in first.'); return; }
+    const auth = getAuthInstance(); const uid = auth && auth.currentUser && auth.currentUser.uid; if(!uid){ alert('Please log in first.'); return; }
     const storage = getStorage(); const utilsStore = getStorageUtils()||{};
     const { storageRef, uploadBytes, getDownloadURL } = utilsStore;
     if(!storage || !storageRef || !uploadBytes || !getDownloadURL){ alert('Storage not available'); return; }
     const processed = await prepareAvatarBlob(file);
     const safeName = (file.name||'avatar.jpg').replace(/[^a-zA-Z0-9._-]/g,'_').toLowerCase().replace(/\.(png|jpeg|jpg|webp)$/,'') + '.jpg';
-    const path = `profile_photos/${email}_${Date.now()}_${safeName}`;
+    const path = `profile_photos/${uid}/${Date.now()}_${safeName}`;
     const ref = storageRef(storage, path);
     await uploadBytes(ref, processed, { contentType:'image/jpeg' });
     const url = await getDownloadURL(ref);
@@ -2403,12 +2404,13 @@ document.getElementById('accountCoverFile')?.addEventListener('change', async (e
 async function handleCoverFile(file){
   try{
     const email = getSessionEmail(); if(!email){ alert('Please log in first.'); return; }
+    const auth = getAuthInstance(); const uid = auth && auth.currentUser && auth.currentUser.uid; if(!uid){ alert('Please log in first.'); return; }
     const storage = getStorage(); const utilsStore = getStorageUtils()||{};
     const { storageRef, uploadBytes, getDownloadURL } = utilsStore;
     if(!storage || !storageRef || !uploadBytes || !getDownloadURL){ alert('Storage not available'); return; }
     const processed = await prepareCoverBlob(file);
     const safeName = (file.name||'cover.jpg').replace(/[^a-zA-Z0-9._-]/g,'_').toLowerCase().replace(/\.(png|jpeg|jpg|webp)$/,'') + '.jpg';
-    const path = `profile_covers/${email}_${Date.now()}_${safeName}`;
+    const path = `profile_covers/${uid}/${Date.now()}_${safeName}`;
     const ref = storageRef(storage, path);
     await uploadBytes(ref, processed, { contentType:'image/jpeg' });
     const url = await getDownloadURL(ref);
