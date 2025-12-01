@@ -2403,12 +2403,10 @@ async function handleAvatarFile(file){
       url = await uploadViaFunction('avatar', processed);
     }
     // Save to Firestore user doc
-    const db = getDB(); const { collection, getDocs, query, where, limit, doc, updateDoc } = getUtils()||{};
-    if(!db || !collection || !getDocs || !query || !where || !limit || !doc || !updateDoc){ alert('Database not available'); return; }
-    const q = query(collection(db,'users'), where('email','==',email), limit(1));
-    const snap = await getDocs(q);
-    const d = snap.docs[0]; if(!d){ alert('User record not found'); return; }
-    await updateDoc(doc(db,'users', d.id), { photoUrl: url, photoUpdatedAt: new Date().toISOString() });
+    const db = getDB(); const { doc, updateDoc } = getUtils()||{};
+    const auth = getAuthInstance(); const uid2 = auth && auth.currentUser && auth.currentUser.uid;
+    if(!db || !doc || !updateDoc || !uid2){ alert('Database not available'); return; }
+    await updateDoc(doc(db,'users', uid2), { photoUrl: url, photoUpdatedAt: new Date().toISOString(), email });
     showToast('Profile photo updated');
     renderAccountSummary();
   }catch(err){ console.warn('Profile photo update failed', err?.message||err); alert('Failed to update photo'); }
@@ -2443,12 +2441,10 @@ async function handleCoverFile(file){
       url = await uploadViaFunction('cover', processed);
     }
     // Save to Firestore user doc
-    const db = getDB(); const { collection, getDocs, query, where, limit, doc, updateDoc } = getUtils()||{};
-    if(!db || !collection || !getDocs || !query || !where || !limit || !doc || !updateDoc){ alert('Database not available'); return; }
-    const q = query(collection(db,'users'), where('email','==',email), limit(1));
-    const snap = await getDocs(q);
-    const d = snap.docs[0]; if(!d){ alert('User record not found'); return; }
-    await updateDoc(doc(db,'users', d.id), { coverUrl: url, coverUpdatedAt: new Date().toISOString() });
+    const db = getDB(); const { doc, updateDoc } = getUtils()||{};
+    const auth = getAuthInstance(); const uid2 = auth && auth.currentUser && auth.currentUser.uid;
+    if(!db || !doc || !updateDoc || !uid2){ alert('Database not available'); return; }
+    await updateDoc(doc(db,'users', uid2), { coverUrl: url, coverUpdatedAt: new Date().toISOString(), email });
     // Update UI
     const cover = document.getElementById('accountCover'); if(cover){ cover.style.backgroundImage = `url('${url}')`; }
     showToast('Cover photo updated');
@@ -2488,10 +2484,11 @@ function renderAccountSummary(){
   try{
     const el = document.getElementById('accountSummary'); if(!el) return;
     const email = getSessionEmail(); if(!email){ el.textContent = 'Log in to view.'; return; }
-    const db = getDB(); const { collection, getDocs, query, where, limit } = getUtils()||{};
-    if(!db || !collection || !getDocs || !query || !where || !limit) return;
-    getDocs(query(collection(db,'users'), where('email','==',email), limit(1))).then(snap=>{
-      const data = snap.docs[0]?.data()||{};
+    const db = getDB(); const { doc, getDoc } = getUtils()||{};
+    const auth = getAuthInstance(); const uid = auth && auth.currentUser && auth.currentUser.uid;
+    if(!db || !doc || !getDoc || !uid) return;
+    getDoc(doc(db,'users', uid)).then(snap=>{
+      const data = snap.exists() ? (snap.data()||{}) : {};
       const name = `${data.firstName||''} ${data.lastName||''}`.trim()||email;
       // Cover image
       try{
