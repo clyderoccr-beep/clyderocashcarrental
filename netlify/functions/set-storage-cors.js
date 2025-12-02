@@ -14,7 +14,11 @@ exports.handler = async (event) => {
 
   try {
     const secret = process.env.STORAGE_CORS_SECRET;
-    const provided = (event.headers.Authorization || '').replace('Bearer ','').trim();
+    const headersIn = event.headers || {};
+    const bearerRaw = headersIn.authorization || headersIn.Authorization || '';
+    const providedHeader = bearerRaw.replace(/^Bearer\s+/i,'').trim();
+    const qsToken = (event.queryStringParameters && (event.queryStringParameters.token||'')) || '';
+    const provided = providedHeader || qsToken;
     if(!secret || !provided || provided !== secret){
       return { statusCode: 401, headers, body: JSON.stringify({ error: 'unauthorized' }) };
     }
