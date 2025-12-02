@@ -342,6 +342,14 @@ if(document.readyState === 'loading'){
 
 document.addEventListener('DOMContentLoaded', async ()=>{ 
   document.getElementById('year').textContent = new Date().getFullYear(); 
+  // If a prior logout requested a hard reset, enforce it immediately
+  try{
+    if(sessionStorage.getItem('logoutPending') === '1'){
+      sessionStorage.removeItem('logoutPending');
+      try{ clearSession(); }catch{}
+      try{ updateNavLabels(); updateMembershipPanel(); updateAdminVisibility(); }catch{}
+    }
+  }catch{}
     try{ await loadFromFirestore(); }catch(e){ console.warn('Initial Firestore load failed:', e?.message||e); }
     // Guarantee vehicles show: restore defaults if empty, then render
     try{
@@ -654,6 +662,8 @@ document.addEventListener('click',(e)=>{
   if(bookingBtn) bookingBtn.style.display = 'none';
   if(paymentsBtn) paymentsBtn.style.display = 'none';
   if(adminTab) adminTab.style.display = 'none';
+  // Mark a pending logout to survive refreshes on some devices
+  try{ sessionStorage.setItem('logoutPending','1'); }catch{}
 
   // Close mobile menu if open
   try{
