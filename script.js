@@ -82,6 +82,20 @@ try{
       const lastLogout = localStorage.getItem('lastLogoutTime');
       const isRecentLogout = lastLogout && (Date.now() - parseInt(lastLogout, 10)) < 30000;
       
+      // If Firebase has a user but we have no sessionEmail AND no recent logout,
+      // this might be a stale Firebase session - sign out
+      const hasSessionEmail = sessionStorage.getItem('sessionEmail');
+      if(user && !hasSessionEmail && !isRecentLogout){
+        console.log('Stale Firebase session detected, signing out...');
+        try{ 
+          api.signOut(api.auth);
+          sessionStorage.removeItem('sessionEmail');
+        }catch(e){ 
+          console.error('Failed to sign out stale session:', e); 
+        }
+        return;
+      }
+      
       if(user && user.email && !isRecentLogout) {
         // User is signed in, store email (only if not recently logged out)
         sessionStorage.setItem('sessionEmail', user.email);
@@ -356,6 +370,9 @@ document.addEventListener('DOMContentLoaded', async ()=>{
       if(now - logoutTime < 30000){
         try{ clearSession(); }catch{}
         try{ updateNavLabels(); updateMembershipPanel(); updateAdminVisibility(); }catch{}
+      } else {
+        // Clear expired logout timestamp
+        localStorage.removeItem('lastLogoutTime');
       }
     }
   }catch{}
@@ -400,9 +417,16 @@ const OWNER_EMAIL = 'clyderofraser97@gmail.com';
 function getSessionEmail(){
   // Check if we just logged out (within last 30 seconds) - force logged out state
   const lastLogout = localStorage.getItem('lastLogoutTime');
-  if(lastLogout && (Date.now() - parseInt(lastLogout, 10)) < 30000){
-    console.log('getSessionEmail - recent logout detected, returning empty');
-    return '';
+  if(lastLogout){
+    const logoutTime = parseInt(lastLogout, 10);
+    const now = Date.now();
+    if(now - logoutTime < 30000){
+      console.log('getSessionEmail - recent logout detected, returning empty');
+      return '';
+    } else {
+      // Clear expired logout timestamp
+      localStorage.removeItem('lastLogoutTime');
+    }
   }
   
   // Prefer Firebase Auth current user
