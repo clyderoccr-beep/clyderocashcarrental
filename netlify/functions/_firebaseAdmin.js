@@ -20,12 +20,20 @@ function getProjectId() {
   return undefined;
 }
 
+function getAdminStorageBucket() {
+  // Admin uses FIREBASE_ADMIN_STORAGE_BUCKET or defaults to appspot.com
+  if (process.env.FIREBASE_ADMIN_STORAGE_BUCKET) return process.env.FIREBASE_ADMIN_STORAGE_BUCKET;
+  if (process.env.FIREBASE_STORAGE_BUCKET) return process.env.FIREBASE_STORAGE_BUCKET;
+  const projectId = getProjectId();
+  return projectId ? `${projectId}.appspot.com` : undefined;
+}
+
 function initAdmin() {
   if (initialized) return admin;
   if (admin.apps && admin.apps.length) { initialized = true; return admin; }
 
   const projectId = getProjectId();
-  const storageBucket = process.env.FIREBASE_STORAGE_BUCKET || (projectId ? `${projectId}.appspot.com` : undefined);
+  const storageBucket = getAdminStorageBucket();
 
   // Option 1: Full service account JSON in a single env var
   const saJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
