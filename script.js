@@ -353,6 +353,15 @@ if(document.readyState === 'loading'){
 document.addEventListener('DOMContentLoaded', async ()=>{ 
   document.getElementById('year').textContent = new Date().getFullYear(); 
   
+  // FORCE UI to logged-out state on every page load
+  // Will be updated by onAuthStateChanged if there's a valid login
+  const memberBtn = document.querySelector('nav [data-nav="membership"]');
+  const loginBtn = document.querySelector('nav [data-nav="login"]');
+  const logoutBtn = document.getElementById('accountLogout');
+  if(memberBtn) memberBtn.textContent = 'Membership';
+  if(loginBtn) loginBtn.style.display = 'inline-block';
+  if(logoutBtn) logoutBtn.style.display = 'none';
+  
   // CRITICAL: Clear all session data on page load, will be restored by Firebase if user is actually logged in
   // This prevents stale sessionStorage from showing "My Account" when logged out
   try{
