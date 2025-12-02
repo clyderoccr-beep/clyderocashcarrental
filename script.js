@@ -86,23 +86,10 @@ try{
       // Check if user explicitly logged in (set by login form)
       const hasExplicitLogin = sessionStorage.getItem('explicitLogin');
       
-      // If Firebase has a user but we don't have an explicit login flag,
-      // this is a stale/persisted Firebase session - sign out
-      if(user && !hasExplicitLogin && !isRecentLogout){
-        console.log('Stale Firebase session detected (no explicit login), signing out...');
-        try{ 
-          api.signOut(api.auth);
-          sessionStorage.removeItem('sessionEmail');
-        }catch(e){ 
-          console.error('Failed to sign out stale session:', e); 
-        }
-        return;
-      }
-      
-      if(user && user.email && !isRecentLogout) {
-        // User is signed in, store email (only if not recently logged out)
+      if(user && user.email && !isRecentLogout && hasExplicitLogin) {
+        // User is signed in AND we have explicit login flag - this is a valid session
         sessionStorage.setItem('sessionEmail', user.email);
-        console.log('Stored email in sessionStorage:', user.email);
+        console.log('Valid login: Stored email in sessionStorage:', user.email);
         // Clear any old logout timestamp since we're now logged in
         localStorage.removeItem('lastLogoutTime');
         // Ensure Firestore users/{uid} exists via serverless (bypasses client rules)
