@@ -1,4 +1,5 @@
 ## Storage CORS Configuration (Serverless Method)
+<!-- deploy ping 2025-12-01T00:01:30Z -->
 
 You can apply CORS to the Firebase Storage bucket without installing `gsutil` by using the Netlify function `set-storage-cors` added in `netlify/functions/set-storage-cors.js`.
 
