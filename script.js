@@ -398,6 +398,13 @@ document.addEventListener('DOMContentLoaded', async ()=>{
 // Simple session (non-secure placeholder; replace with Firebase Auth for production)
 const OWNER_EMAIL = 'clyderofraser97@gmail.com';
 function getSessionEmail(){
+  // Check if we just logged out (within last 30 seconds) - force logged out state
+  const lastLogout = localStorage.getItem('lastLogoutTime');
+  if(lastLogout && (Date.now() - parseInt(lastLogout, 10)) < 30000){
+    console.log('getSessionEmail - recent logout detected, returning empty');
+    return '';
+  }
+  
   // Prefer Firebase Auth current user
   const em = authEmail();
   console.log('getSessionEmail - authEmail():', em);
