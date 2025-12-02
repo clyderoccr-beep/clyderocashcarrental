@@ -420,6 +420,7 @@ function updateNavLabels(){
   const email = getSessionEmail();
   console.log('updateNavLabels - email:', email);
   const loginBtn = document.querySelector('nav [data-nav="login"]');
+    const logoutBtn = document.getElementById('accountLogout');
   const memberBtn = document.querySelector('nav [data-nav="membership"]');
   const bookingBtn = document.querySelector('nav [data-nav="booking"]');
   const paymentsBtn = document.querySelector('nav [data-nav="payments"]');
@@ -428,6 +429,11 @@ function updateNavLabels(){
   if(loginBtn){ 
     loginBtn.style.display = email ? 'none' : 'inline-block';
     console.log('Login button display:', loginBtn.style.display);
+    // Show logout button when logged in, hide when logged out
+    if(logoutBtn){ 
+      logoutBtn.style.display = email ? 'inline-block' : 'none';
+      console.log('Logout button display:', logoutBtn.style.display);
+    }
   }
   // Change membership button text based on login state
   if(memberBtn){ 
