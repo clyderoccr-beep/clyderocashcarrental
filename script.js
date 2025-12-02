@@ -493,8 +493,10 @@ function updateAdminVisibility(){
   }
 }
 function updateNavLabels(){
-  const email = getSessionEmail();
-  console.log('updateNavLabels - email:', email);
+  // CRITICAL: Only trust email if we have explicit login flag
+  const hasExplicitLogin = sessionStorage.getItem('explicitLogin');
+  const email = hasExplicitLogin ? getSessionEmail() : '';
+  console.log('updateNavLabels - explicitLogin:', hasExplicitLogin, 'email:', email);
   const loginBtn = document.querySelector('nav [data-nav="login"]');
     const logoutBtn = document.getElementById('accountLogout');
   const memberBtn = document.querySelector('nav [data-nav="membership"]');
