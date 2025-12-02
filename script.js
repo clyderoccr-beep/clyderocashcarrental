@@ -2213,7 +2213,21 @@ document.addEventListener('click',(e)=>{
   if(replyBtn){ openReply(replyBtn.dataset.msgReply); return; }
   // Member actions
   const mv = e.target.closest('[data-member-view]');
-  if(mv){ const u=MEMBERS.find(x=>x.id===mv.dataset.memberView); if(u){ 
+  if(mv){ const uid = mv.dataset.memberView; let u=MEMBERS.find(x=>x.id===uid); if(u){ 
+    // Refresh this member's doc from Firestore to ensure latest photo fields
+    try{
+      const db = getDB(); const { doc, getDoc } = getUtils()||{};
+      if(db && doc && getDoc){
+        const snap = await getDoc(doc(db,'users', uid));
+        if(snap && snap.exists()){
+          const fresh = { id: uid, ...snap.data() };
+          const idx = MEMBERS.findIndex(x=>x.id===uid);
+          if(idx>=0){ MEMBERS[idx] = fresh; } else { MEMBERS.push(fresh); }
+          u = fresh;
+          console.log('Refreshed member from Firestore for view:', uid, fresh);
+        }
+      }
+    }catch(e){ console.warn('Failed to refresh member doc for view:', e?.message||e); }
     console.log('===== MEMBER VIEW DEBUG =====');
     console.log('Member ID:', u.id);
     console.log('Member email:', u.email);
