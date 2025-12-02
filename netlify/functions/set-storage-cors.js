@@ -21,9 +21,13 @@ exports.handler = async (event) => {
     if(!secret || !provided || provided !== secret){
       return { statusCode: 401, headers, body: JSON.stringify({ error: 'unauthorized' }) };
     }
-    const bucketName = process.env.FIREBASE_STORAGE_BUCKET;
+    let bucketName = process.env.FIREBASE_STORAGE_BUCKET;
     if(!bucketName){
       return { statusCode: 500, headers, body: JSON.stringify({ error: 'missing_bucket' }) };
+    }
+    // Translate domain-style value to actual GCS bucket if needed
+    if(/\.firebasestorage\.app$/i.test(bucketName)){
+      bucketName = bucketName.replace(/\.firebasestorage\.app$/i, '.appspot.com');
     }
     // Use Firebase Admin's configured credentials to access Storage
     const admin = getAdmin();
@@ -43,6 +47,6 @@ exports.handler = async (event) => {
     await bucket.setCors(corsConfig);
     return { statusCode: 200, headers, body: JSON.stringify({ ok:true, applied: corsConfig }) };
   } catch (err){
-    return { statusCode: 500, headers, body: JSON.stringify({ error: err.message||String(err) }) };
+    return { statusCode: 500, headers, body: JSON.stringify({ error: err.message||String(err), stack: (err && err.stack) || '' }) };
   }
 };
