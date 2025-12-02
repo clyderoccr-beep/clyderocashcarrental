@@ -2574,6 +2574,53 @@ document.getElementById('edImgFile')?.addEventListener('change', async (e)=>{
   }
 });
 
+// Camera capture uses same handler as file upload
+document.getElementById('edImgCamera')?.addEventListener('change', async (e)=>{
+  const proxy = { target: { files: e.target.files } };
+  const handler = document.getElementById('edImgFile')?.onchange;
+  // Directly invoke the logic by calling the same function body
+  // Since we can't reference the inner function easily, duplicate minimal dispatch:
+  const file = e.target.files[0];
+  if(!file || _editingId === null) return;
+  // Reuse the existing flow by programmatically setting the file input's files then triggering change
+  try{
+    const fileInput = document.getElementById('edImgFile');
+    if(fileInput){
+      // Not all browsers allow setting files; fallback to manual call of upload flow by constructing a DataTransfer
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      fileInput.files = dt.files;
+      const ev = new Event('change');
+      fileInput.dispatchEvent(ev);
+      return;
+    }
+  }catch{ /* ignore */ }
+  // If dispatch fails, run a lightweight upload path: push to Storage and URL
+  const v = VEHICLES.find(x=>x.id===_editingId);
+  if(!v) return;
+  const storage = getStorage();
+  const utilsStore = getStorageUtils() || {};
+  const { storageRef, uploadBytes, getDownloadURL } = utilsStore;
+  if(storage && storageRef && uploadBytes && getDownloadURL){
+    try{
+      const timestamp = Date.now();
+      const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').toLowerCase();
+      const path = `vehicle_images/${_editingId}_${timestamp}_${safeFileName}`;
+      const ref = storageRef(storage, path);
+      await uploadBytes(ref, file);
+      const url = await getDownloadURL(ref);
+      v.imgs = v.imgs || [];
+      v.imgs.push(url);
+      await saveVehicleToFirestore(v);
+      await reloadVehicles();
+      openEditor(_editingId);
+      showToast('Photo captured & saved');
+    }catch(err){ console.error('Camera upload failed:', err); alert('Failed to upload photo.'); }
+  } else {
+    const r = new FileReader(); r.onload = async (ev)=>{ v.imgs=v.imgs||[]; v.imgs.push(ev.target.result); await saveVehicleToFirestore(v); await reloadVehicles(); openEditor(_editingId); alert('Photo saved (base64 fallback).'); }; r.readAsDataURL(file);
+  }
+});
+
 // Square-crop + compress avatar helper
 async function prepareAvatarBlob(originalFile){
   return new Promise((resolve)=>{
