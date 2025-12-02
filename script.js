@@ -2377,7 +2377,77 @@ function updateVehicleGallery(){ const v=VEHICLES.find(x=>x.id===__vgVehId); if(
 }
 
 // Tap-to-advance: clicking on the gallery image moves to next photo
-document.getElementById('vgImage')?.addEventListener('click', ()=>{ stepVehicleGallery(1); });
+// Enhanced mobile-friendly controls: tap to advance, pinch-to-zoom, swipe navigation, double-tap to toggle zoom
+(function(){
+  const img = document.getElementById('vgImage');
+  if(!img) return;
+  let scale = 1;
+  let originX = 0, originY = 0;
+  let lastTap = 0;
+  let p1 = null, p2 = null;
+  let startX = 0, startY = 0;
+  let translatingX = 0, translatingY = 0;
+
+  function applyTransform(){
+    img.style.transform = `translate(${translatingX}px, ${translatingY}px) scale(${scale})`;
+    img.style.cursor = scale>1 ? 'zoom-out' : 'zoom-in';
+  }
+
+  // Tap to advance when not zoomed in; double-tap to toggle zoom
+  img.addEventListener('click', (e)=>{
+    const now = Date.now();
+    if(now - lastTap < 300){ // Double-tap
+      if(scale>1){ scale = 1; translatingX=0; translatingY=0; }
+      else { scale = 2; }
+      applyTransform();
+    } else {
+      if(scale===1){ stepVehicleGallery(1); }
+    }
+    lastTap = now;
+  });
+
+  // Pointer events for pinch + pan + swipe
+  img.addEventListener('pointerdown', (e)=>{
+    img.setPointerCapture(e.pointerId);
+    if(!p1){ p1 = { id:e.pointerId, x:e.clientX, y:e.clientY }; }
+    else if(!p2 && e.pointerId!==p1.id){ p2 = { id:e.pointerId, x:e.clientX, y:e.clientY }; }
+    startX = e.clientX; startY = e.clientY;
+  });
+  img.addEventListener('pointermove', (e)=>{
+    // Update pointers
+    if(p1 && e.pointerId===p1.id){ p1.x=e.clientX; p1.y=e.clientY; }
+    if(p2 && e.pointerId===p2.id){ p2.x=e.clientX; p2.y=e.clientY; }
+    // Pinch zoom when two pointers
+    if(p1 && p2){
+      const dx = p2.x - p1.x; const dy = p2.y - p1.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      // Basic scaling based on distance (clamp 1..3)
+      const k = Math.max(1, Math.min(3, dist/120));
+      scale = k; applyTransform();
+    } else if(scale>1){
+      // Pan while zoomed
+      const dx = e.clientX - startX; const dy = e.clientY - startY;
+      translatingX += dx; translatingY += dy; startX = e.clientX; startY = e.clientY; applyTransform();
+    }
+  });
+  img.addEventListener('pointerup', (e)=>{
+    if(p1 && e.pointerId===p1.id){ p1=null; }
+    else if(p2 && e.pointerId===p2.id){ p2=null; }
+    img.releasePointerCapture?.(e.pointerId);
+  });
+  img.addEventListener('pointercancel', (e)=>{
+    if(p1 && e.pointerId===p1.id){ p1=null; }
+    if(p2 && e.pointerId===p2.id){ p2=null; }
+  });
+
+  // Swipe next/prev when not zoomed: detect quick horizontal movement
+  let swipeStartX=0, swipeStartY=0, swipeTime=0;
+  img.addEventListener('touchstart', (e)=>{ const t=e.changedTouches[0]; swipeStartX=t.clientX; swipeStartY=t.clientY; swipeTime=Date.now(); }, {passive:true});
+  img.addEventListener('touchend', (e)=>{ const t=e.changedTouches[0]; const dx=t.clientX - swipeStartX; const dy=t.clientY - swipeStartY; const dt=Date.now()-swipeTime; if(scale===1 && dt<600 && Math.abs(dx)>40 && Math.abs(dy)<60){ stepVehicleGallery(dx<0?1:-1); } }, {passive:true});
+
+  // Wheel zoom for desktop
+  img.addEventListener('wheel', (e)=>{ e.preventDefault(); const delta = e.deltaY<0?0.2:-0.2; scale = Math.max(1, Math.min(3, scale+delta)); applyTransform(); }, { passive:false });
+})();
 
 // Simple math captcha generator
 function initCaptcha(){
