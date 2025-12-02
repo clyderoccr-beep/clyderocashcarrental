@@ -1174,7 +1174,7 @@
     const app = initializeApp(firebaseConfig);
     // App Check temporarily disabled to resolve upload CORS/403; re-enable after configuring domain/site key & enforcement.
     const db = getFirestore(app);
-    const storage = getStorage(app, 'gs://clyderocashcarrental.appspot.com');
+    const storage = getStorage(app, 'gs://clyderocashcarrental.firebasestorage.app');
     const auth = getAuth(app);
     const functions = getFunctions(app);
     
