@@ -36,7 +36,7 @@
     }
     *{box-sizing:border-box}
     html{
-      background:url('assets/CHRISTMASBG.png') center center / cover no-repeat fixed;
+      background:url('assets/CHRISTMASBG.png') center center / cover no-repeat;
       min-height:100%;
     }
     body{
@@ -47,10 +47,26 @@
       min-height:100vh;
       position:relative;
     }
-    /* 📱 Mobile-optimized vertical background */
+    /* 📱 Mobile-optimized vertical background - use absolute positioned pseudo-element for iOS compatibility */
     @media (max-width: 768px) {
       html {
-        background:url('assets/MBACKGROUND.png') center center / cover no-repeat fixed;
+        background:none;
+      }
+      body::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: url('assets/MBACKGROUND.png') center center / cover no-repeat;
+        z-index: -1;
+      }
+    }
+    /* Desktop - use fixed attachment */
+    @media (min-width: 769px) {
+      html {
+        background-attachment: fixed;
       }
     }
     /* Subtle snowflake overlay */
