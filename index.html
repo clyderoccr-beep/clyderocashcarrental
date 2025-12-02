@@ -460,6 +460,14 @@
         cursor:pointer;
         box-shadow:0 4px 12px rgba(0,0,0,.3);
       }
+      /* 📱 Mobile: Stack vehicle editor to single column */
+      #vehEditorGrid {
+        grid-template-columns: 1fr !important;
+      }
+      #vehEditorModal {
+        max-width: 100% !important;
+        margin: 8px !important;
+      }
     }
     @keyframes slideIn {
       from { transform:translateX(-100%); }
@@ -1431,7 +1439,7 @@
         <div id="vehEditorModal" class="card" style="max-width:760px;margin-top:12px;display:none">
           <div class="body">
             <h3 style="margin-top:0">Edit Vehicle</h3>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div id="vehEditorGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
               <div>
                 <label>Name</label><input id="edName" style="width:100%">
                 <label style="margin-top:8px">Type</label><input id="edType" style="width:100%">
@@ -1444,8 +1452,8 @@
               <div>
                 <strong>Photos</strong>
                 <div id="edImgList" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px"></div>
-                <div style="display:flex;gap:8px;margin-top:8px">
-                  <input id="edImgUrl" placeholder="Paste image URL" style="flex:1">
+                <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+                  <input id="edImgUrl" placeholder="Paste image URL" style="flex:1;min-width:200px">
                   <button class="navbtn" id="edAddImgUrl" type="button">+ Add URL</button>
                   <label class="navbtn" for="edImgFile">+ Add File</label>
                   <label class="navbtn" for="edImgCamera">📷 Take Photo</label>
@@ -1454,7 +1462,7 @@
                 </div>
               </div>
             </div>
-            <div style="display:flex;gap:8px;margin-top:12px">
+            <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
               <button class="navbtn" id="edSave" type="button">Save</button>
               <button class="navbtn" id="edDelete" type="button" style="background:#c1121f;border-color:#c1121f">Delete Vehicle</button>
               <button class="navbtn" id="edCancel" type="button">Cancel</button>
