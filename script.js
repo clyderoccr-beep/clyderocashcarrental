@@ -180,6 +180,7 @@ document.addEventListener('click', (e)=>{
   // Update membership panel when navigating to membership page
   if(nav === 'membership') {
     updateMembershipPanel();
+    try{ renderAccountSummary(); }catch(_){ }
   }
   // Pre-fill vehicle booking if coming from vehicle card
   if(nav==='booking' && t.dataset.veh){ 
@@ -428,6 +429,7 @@ function updateMembershipPanel(){
     console.log('User logged in, showing account panel');
     content.style.display='none'; 
     panel.style.display='block';
+    try{ renderAccountSummary(); }catch(_){ }
     const member = (typeof MEMBERS!=='undefined')? MEMBERS.find(m=>m.email===email):null;
     if(member && summary){
       const lines = [
