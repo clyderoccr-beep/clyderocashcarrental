@@ -1,5 +1,4 @@
-const admin = require('./_firebaseAdmin');
-const { Storage } = require('@google-cloud/storage');
+const { getAdmin } = require('./_firebaseAdmin');
 
 // Expects env STORAGE_CORS_SECRET for simple auth, and FIREBASE_STORAGE_BUCKET
 // Optional STORAGE_ALLOWED_ORIGINS comma-separated (default https://clyderoccr.com)
@@ -26,9 +25,9 @@ exports.handler = async (event) => {
     if(!bucketName){
       return { statusCode: 500, headers, body: JSON.stringify({ error: 'missing_bucket' }) };
     }
-    // Initialize storage client via service account used in admin
-    const storage = new Storage({ projectId: process.env.FIREBASE_PROJECT_ID });
-    const bucket = storage.bucket(bucketName);
+    // Use Firebase Admin's configured credentials to access Storage
+    const admin = getAdmin();
+    const bucket = admin.storage().bucket(bucketName);
     const originsEnv = process.env.STORAGE_ALLOWED_ORIGINS || 'https://clyderoccr.com';
     const origins = originsEnv.split(',').map(o=>o.trim()).filter(Boolean);
     const corsConfig = [
