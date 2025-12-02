@@ -2589,6 +2589,7 @@ function startUserDocRealtime(){
   }catch(_){ }
 }
 function stopUserDocRealtime(){ try{ if(_userDocUnsub){ _userDocUnsub(); _userDocUnsub=null; } }catch(_){ }
+}
 
 // Drag-and-drop support on avatar
 (()=>{
