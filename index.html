@@ -47,12 +47,13 @@
       min-height:100vh;
       position:relative;
     }
-    /* 📱 Mobile-optimized vertical background - use absolute positioned pseudo-element for iOS compatibility */
+    /* 📱 Mobile-optimized vertical background - use wrapper pseudo-element for iOS compatibility */
     @media (max-width: 768px) {
       html {
         background:none;
+        position:relative;
       }
-      body::before {
+      html::before {
         content: '';
         position: fixed;
         top: 0;
@@ -69,7 +70,7 @@
         background-attachment: fixed;
       }
     }
-    /* Subtle snowflake overlay */
+    /* Subtle snowflake overlay - keep on body */
     body::before{
       content:'❄';
       position:fixed;
