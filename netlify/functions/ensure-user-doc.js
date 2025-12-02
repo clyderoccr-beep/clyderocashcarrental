@@ -1,3 +1,33 @@
+const admin = require('./_firebaseAdmin');
+
+exports.handler = async (event) => {
+  try{
+    if(event.httpMethod === 'OPTIONS'){
+      return { statusCode: 204, headers: corsHeaders() };
+    }
+    if(event.httpMethod !== 'POST'){
+      return { statusCode: 405, headers: corsHeaders(), body: 'Method Not Allowed' };
+    }
+    const { uid, email, fields } = JSON.parse(event.body||'{}');
+    if(!uid || !email){
+      return { statusCode: 400, headers: corsHeaders(), body: JSON.stringify({ error:'uid and email required' }) };
+    }
+    const db = admin.firestore();
+    const ref = db.collection('users').doc(uid);
+    await ref.set({ email, ...(fields||{}) }, { merge: true });
+    return { statusCode: 200, headers: corsHeaders(), body: JSON.stringify({ ok:true }) };
+  }catch(err){
+    return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: err.message||String(err) }) };
+  }
+};
+
+function corsHeaders(){
+  return {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type'
+  };
+}
 // Ensure users/{uid} doc exists using Firebase Admin (bypass client-side rules)
 const { getAdmin } = require('./_firebaseAdmin');
 

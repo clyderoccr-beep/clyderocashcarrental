@@ -2600,7 +2600,20 @@ async function ensureUserDocExists(uid, email){
     const ref = doc(db,'users', uid);
     const snap = await getDoc(ref).catch(()=>null);
     if(!snap || !snap.exists()){
-      await setDoc(ref, { email: email||getSessionEmail()||'' }, { merge: true });
+      try{
+        await setDoc(ref, { email: email||getSessionEmail()||'' }, { merge: true });
+      }catch(e){
+        // Fallback to serverless ensure-user-doc via Admin
+        try{
+          const resp = await fetch('/.netlify/functions/ensure-user-doc', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ uid, email: email||getSessionEmail()||'' })
+          });
+          if(!resp.ok){ throw new Error(await resp.text().catch(()=>resp.statusText)); }
+          const data = await resp.json().catch(()=>({}));
+          if(!data.ok){ throw new Error('Server failed to ensure user doc'); }
+        }catch(e2){ console.warn('ensure-user-doc server fallback failed', e2?.message||e2); return false; }
+      }
     }
     return true;
   }catch(_){ return false; }
