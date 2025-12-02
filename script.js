@@ -78,15 +78,18 @@ try{
   if(api.onAuthStateChanged && api.auth){ 
     api.onAuthStateChanged(api.auth, (user)=>{ 
       console.log('Auth state changed, user:', user ? user.email : 'null');
+      
       // Check if we just logged out (within last 30 seconds)
       const lastLogout = localStorage.getItem('lastLogoutTime');
       const isRecentLogout = lastLogout && (Date.now() - parseInt(lastLogout, 10)) < 30000;
       
-      // If Firebase has a user but we have no sessionEmail AND no recent logout,
-      // this might be a stale Firebase session - sign out
-      const hasSessionEmail = sessionStorage.getItem('sessionEmail');
-      if(user && !hasSessionEmail && !isRecentLogout){
-        console.log('Stale Firebase session detected, signing out...');
+      // Check if user explicitly logged in (set by login form)
+      const hasExplicitLogin = sessionStorage.getItem('explicitLogin');
+      
+      // If Firebase has a user but we don't have an explicit login flag,
+      // this is a stale/persisted Firebase session - sign out
+      if(user && !hasExplicitLogin && !isRecentLogout){
+        console.log('Stale Firebase session detected (no explicit login), signing out...');
         try{ 
           api.signOut(api.auth);
           sessionStorage.removeItem('sessionEmail');
@@ -633,6 +636,8 @@ document.addEventListener('submit', (e)=>{
         }
       }catch(e){ console.warn('Post-login status check failed:', e?.message||e); }
 
+      // Mark this as an explicit login (not a persisted Firebase session)
+      sessionStorage.setItem('explicitLogin', 'true');
       setSessionEmail(email); // Store email immediately after login
       // Clear any logout timestamp from previous session
       localStorage.removeItem('lastLogoutTime');
@@ -716,8 +721,11 @@ document.addEventListener('click',(e)=>{
   if(bookingBtn) bookingBtn.style.display = 'none';
   if(paymentsBtn) paymentsBtn.style.display = 'none';
   if(adminTab) adminTab.style.display = 'none';
-  // Mark a pending logout to survive refreshes on some devices
-  try{ localStorage.setItem('lastLogoutTime', Date.now().toString()); }catch{}
+  // Clear explicit login flag and mark logout timestamp
+  try{ 
+    sessionStorage.removeItem('explicitLogin');
+    localStorage.setItem('lastLogoutTime', Date.now().toString()); 
+  }catch{}
 
   // Close mobile menu if open
   try{
