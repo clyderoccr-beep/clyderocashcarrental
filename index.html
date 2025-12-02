@@ -35,9 +35,13 @@
       --maxw:1000px;
     }
     *{box-sizing:border-box}
+    html{
+      background:url('assets/CHRISTMASBG.png') center center / cover no-repeat fixed;
+      min-height:100%;
+    }
     body{
       margin:0; 
-      background:url('assets/CHRISTMASBG.png') center center / cover no-repeat fixed;
+      background:transparent;
       color:#2c2c2c; 
       font-family:Segoe UI,Arial,sans-serif; 
       min-height:100vh;
@@ -45,7 +49,7 @@
     }
     /* 📱 Mobile-optimized vertical background */
     @media (max-width: 768px) {
-      body {
+      html {
         background:url('assets/MBACKGROUND.png') center center / cover no-repeat fixed;
       }
     }
