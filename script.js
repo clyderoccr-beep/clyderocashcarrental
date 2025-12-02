@@ -78,8 +78,12 @@ try{
   if(api.onAuthStateChanged && api.auth){ 
     api.onAuthStateChanged(api.auth, (user)=>{ 
       console.log('Auth state changed, user:', user ? user.email : 'null');
-      if(user && user.email) {
-        // User is signed in, store email
+      // Check if we just logged out (within last 30 seconds)
+      const lastLogout = localStorage.getItem('lastLogoutTime');
+      const isRecentLogout = lastLogout && (Date.now() - parseInt(lastLogout, 10)) < 30000;
+      
+      if(user && user.email && !isRecentLogout) {
+        // User is signed in, store email (only if not recently logged out)
         sessionStorage.setItem('sessionEmail', user.email);
         console.log('Stored email in sessionStorage:', user.email);
         // Ensure Firestore users/{uid} exists via serverless (bypasses client rules)
