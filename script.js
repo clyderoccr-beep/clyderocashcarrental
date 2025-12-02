@@ -989,7 +989,7 @@ function renderVehicles(){
       <div class='muted' style='margin:6px 0'>Seats ${v.seats} • ${v.type}</div>
       <div style='display:flex;gap:8px;align-items:center'>
         ${bookBtn}
-        <span style='margin-left:auto;color:var(--gold)'>$${v.price}/week</span>${statusBadge}
+        <span style='margin-left:auto;color:#32CD32;font-weight:700'>$${v.price}/week</span>${statusBadge}
       </div>
       <div style='margin-top:8px'><button class='navbtn' data-gallery='${v.id}' aria-label='View photo gallery for ${v.name}'>View Photos</button></div>
     </div>`;
@@ -2013,7 +2013,7 @@ function renderAdminVehicles(){
       <div style='display:flex;gap:8px;align-items:center'>
         <span class='veh-dot ${avail?'available':'unavailable'}' title='${avail?'Available':'Unavailable'}'></span>
         <div style='font-weight:800'>${v.name}</div>
-        <span class='muted' style='margin-left:auto'>$${v.price}/week</span>${statusBadge}
+        <span style='margin-left:auto;color:#32CD32;font-weight:700'>$${v.price}/week</span>${statusBadge}
       </div>
       <div class='muted' style='margin:6px 0'>${v.type} • Seats ${v.seats}</div>
       <div style='display:flex;gap:8px;flex-wrap:wrap'>
