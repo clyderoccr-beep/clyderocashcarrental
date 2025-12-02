@@ -901,17 +901,17 @@ document.addEventListener('submit', async (e)=>{
     licenseExpireDate: document.getElementById('updateLicenseExpireDate').value,
   };
   
-  // Handle new license photo if uploaded
+  // Handle new license photo if uploaded — upload to Storage and save HTTPS URL
   const photoInput = document.getElementById('updateLicensePhoto');
   if(photoInput?.files?.[0]){
     try {
-      const photoData = await new Promise((resolve, reject)=>{
-        const file = photoInput.files[0];
+      const file = photoInput.files[0];
+      // Optional: compress for smaller uploads
+      const processedBlob = await new Promise((resolve, reject)=>{
         const reader = new FileReader();
         reader.onload = (ev)=>{
           const img = new Image();
           img.onload = ()=>{
-            // Compress image to fit Firestore 1MB limit
             const canvas = document.createElement('canvas');
             let width = img.width;
             let height = img.height;
@@ -926,21 +926,40 @@ document.addEventListener('submit', async (e)=>{
             canvas.height = height;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
-            // Compress to JPEG with 0.7 quality to reduce size
-            const compressed = canvas.toDataURL('image/jpeg', 0.7);
-            resolve(compressed);
+            canvas.toBlob((blob)=>{ if(blob) resolve(blob); else reject(new Error('Blob conversion failed')); }, 'image/jpeg', 0.8);
           };
           img.onerror = reject;
           img.src = ev.target.result;
         };
         reader.onerror = reject;
         reader.readAsDataURL(file);
-      });
-      updates.licensePhotoData = photoData;
-      updates.licensePhotoUrl = photoData; // Also save to licensePhotoUrl for admin viewer consistency
+      }).catch(()=>file);
+
+      const { getStorage, ref, uploadBytes, getDownloadURL } = window.firebaseStorage||{};
+      const storage = getStorage ? getStorage() : null;
+      if(storage && ref && uploadBytes && getDownloadURL){
+        const uidSafe = (uid||'unknown');
+        const ts = Date.now();
+        const path = `license_photos/${uidSafe}/${ts}.jpg`;
+        const storageRef = ref(storage, path);
+        await uploadBytes(storageRef, processedBlob, { contentType:'image/jpeg' });
+        const httpsUrl = await getDownloadURL(storageRef);
+        // Save only HTTPS URL for admin viewing; keep base64 as fallback if desired
+        updates.licensePhotoUrl = httpsUrl;
+      } else {
+        // Fallback: store base64 if Storage SDK not available
+        const base64 = await new Promise((resolve, reject)=>{
+          const fr = new FileReader();
+          fr.onload = ()=>resolve(fr.result);
+          fr.onerror = reject;
+          fr.readAsDataURL(processedBlob);
+        });
+        updates.licensePhotoUrl = base64;
+        updates.licensePhotoData = base64;
+      }
     } catch(err){
-      console.error('Failed to read photo:', err);
-      alert('Failed to process photo. Please try again.');
+      console.error('Failed to upload license photo:', err);
+      alert('Failed to process or upload photo. Please try again.');
       return;
     }
   }
@@ -2214,18 +2233,21 @@ document.addEventListener('click',(e)=>{
   // Member actions
   const mv = e.target.closest('[data-member-view]');
   if(mv){ const uid = mv.dataset.memberView; let u=MEMBERS.find(x=>x.id===uid); if(u){ 
-    // Refresh this member's doc from Firestore to ensure latest photo fields
+    // Refresh this member's doc from Firestore to ensure latest photo fields (non-async path)
     try{
       const db = getDB(); const { doc, getDoc } = getUtils()||{};
       if(db && doc && getDoc){
-        const snap = await getDoc(doc(db,'users', uid));
-        if(snap && snap.exists()){
-          const fresh = { id: uid, ...snap.data() };
-          const idx = MEMBERS.findIndex(x=>x.id===uid);
-          if(idx>=0){ MEMBERS[idx] = fresh; } else { MEMBERS.push(fresh); }
-          u = fresh;
-          console.log('Refreshed member from Firestore for view:', uid, fresh);
-        }
+        getDoc(doc(db,'users', uid)).then((snap)=>{
+          try{
+            if(snap && snap.exists()){
+              const fresh = { id: uid, ...snap.data() };
+              const idx = MEMBERS.findIndex(x=>x.id===uid);
+              if(idx>=0){ MEMBERS[idx] = fresh; } else { MEMBERS.push(fresh); }
+              u = fresh;
+              console.log('Refreshed member from Firestore for view:', uid, fresh);
+            }
+          }catch(_){ }
+        }).catch((e)=>{ console.warn('Failed to refresh member doc for view:', e?.message||e); });
       }
     }catch(e){ console.warn('Failed to refresh member doc for view:', e?.message||e); }
     console.log('===== MEMBER VIEW DEBUG =====');
