@@ -2424,10 +2424,10 @@ async function handleAvatarFile(file){
       }
     }
     // Save to Firestore user doc
-    const db = getDB(); const { doc, updateDoc } = getUtils()||{};
+    const db = getDB(); const { doc, setDoc } = getUtils()||{};
     const uid2 = uid;
-    if(!db || !doc || !updateDoc || !uid2){ alert('Database not available'); return; }
-    await updateDoc(doc(db,'users', uid2), { photoUrl: url, photoUpdatedAt: new Date().toISOString(), email });
+    if(!db || !doc || !setDoc || !uid2){ alert('Database not available'); return; }
+    await setDoc(doc(db,'users', uid2), { photoUrl: url, photoUpdatedAt: new Date().toISOString(), email }, { merge:true });
     showToast('Profile photo updated');
     renderAccountSummary();
   }catch(err){
@@ -2477,10 +2477,10 @@ async function handleCoverFile(file){
       }
     }
     // Save to Firestore user doc
-    const db = getDB(); const { doc, updateDoc } = getUtils()||{};
+    const db = getDB(); const { doc, setDoc } = getUtils()||{};
     const uid2 = uid;
-    if(!db || !doc || !updateDoc || !uid2){ alert('Database not available'); return; }
-    await updateDoc(doc(db,'users', uid2), { coverUrl: url, coverUpdatedAt: new Date().toISOString(), email });
+    if(!db || !doc || !setDoc || !uid2){ alert('Database not available'); return; }
+    await setDoc(doc(db,'users', uid2), { coverUrl: url, coverUpdatedAt: new Date().toISOString(), email }, { merge:true });
     // Update UI
     const cover = document.getElementById('accountCover'); if(cover){ cover.style.backgroundImage = `url('${url}')`; }
     showToast('Cover photo updated');
