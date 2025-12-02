@@ -100,6 +100,8 @@ try{
         // User is signed in, store email (only if not recently logged out)
         sessionStorage.setItem('sessionEmail', user.email);
         console.log('Stored email in sessionStorage:', user.email);
+        // Clear any old logout timestamp since we're now logged in
+        localStorage.removeItem('lastLogoutTime');
         // Ensure Firestore users/{uid} exists via serverless (bypasses client rules)
         (async ()=>{
           try{
