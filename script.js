@@ -634,6 +634,8 @@ document.addEventListener('submit', (e)=>{
       }catch(e){ console.warn('Post-login status check failed:', e?.message||e); }
 
       setSessionEmail(email); // Store email immediately after login
+      // Clear any logout timestamp from previous session
+      localStorage.removeItem('lastLogoutTime');
       // Immediately update UI
       updateNavLabels();
       updateMembershipPanel();
