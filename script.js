@@ -642,16 +642,26 @@ document.addEventListener('click',(e)=>{
   
   // Immediately force UI changes
   const loginBtn = document.querySelector('nav [data-nav="login"]');
+  const logoutNavBtn = document.getElementById('accountLogout');
   const memberBtn = document.querySelector('nav [data-nav="membership"]');
   const bookingBtn = document.querySelector('nav [data-nav="booking"]');
   const paymentsBtn = document.querySelector('nav [data-nav="payments"]');
   const adminTab = document.getElementById('adminTab');
   
   if(loginBtn) loginBtn.style.display = 'inline-block';
+  if(logoutNavBtn) logoutNavBtn.style.display = 'none';
   if(memberBtn) memberBtn.textContent = 'Membership';
   if(bookingBtn) bookingBtn.style.display = 'none';
   if(paymentsBtn) paymentsBtn.style.display = 'none';
   if(adminTab) adminTab.style.display = 'none';
+
+  // Close mobile menu if open
+  try{
+    const nav = document.querySelector('header nav');
+    const closeBtn = document.getElementById('mobileMenuClose');
+    if(nav) nav.classList.remove('mobile-open');
+    if(closeBtn) closeBtn.style.display = 'none';
+  }catch{}
   
   // Update membership panel
   const panel = document.getElementById('accountPanel');
@@ -666,6 +676,7 @@ document.addEventListener('click',(e)=>{
   
   // Redirect immediately
   showToast('Logged out'); 
+  try{ updateNavLabels(); }catch{}
   goto('vehicles');
 });
 
