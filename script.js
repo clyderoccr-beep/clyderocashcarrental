@@ -2237,6 +2237,13 @@ document.addEventListener('click',(e)=>{
       `Status: ${u.status||'active'}`,
     ]; 
     d.textContent = lines.join('\n'); 
+    
+    // Add photo status indicator to details
+    const hasLicense = !!(u.licensePhotoUrl || u.licensePhotoData);
+    const hasProfile = !!u.photoUrl;
+    const photoStatus = hasLicense ? '📸 License photo: ✅' : (hasProfile ? '📸 License photo: ❌ (showing profile photo)' : '📸 License photo: ❌ Not uploaded');
+    d.textContent = lines.join('\n') + '\n\n' + photoStatus;
+    
     const img=document.getElementById('memberPhoto'); 
     if(img){ 
       // Try license photo first, then fall back to profile photo URL
@@ -2250,16 +2257,16 @@ document.addEventListener('click',(e)=>{
         img.onerror = (e)=>{ 
           console.error('Image load failed for:', photoUrl.substring(0,100));
           console.error('Error event:', e);
-          // Show placeholder
-          img.src='data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23f0f0f0" width="200" height="200"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="14" fill="%23999"%3EPhoto unavailable%3C/text%3E%3C/svg%3E';
+          // Show placeholder with instruction
+          img.src='data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23f0f0f0" width="200" height="200"/%3E%3Ctext x="50%25" y="40%25" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="12" fill="%23999"%3EPhoto failed to load%3C/text%3E%3Ctext x="50%25" y="60%25" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="10" fill="%23999"%3EAsk customer to re-upload%3C/text%3E%3C/svg%3E';
           img.alt='Photo failed to load';
         };
         img.onload = ()=>{ console.log('Image loaded successfully'); };
       } else { 
-        console.warn('No photo URL found for member');
-        img.src='data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23f0f0f0" width="200" height="200"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="14" fill="%23999"%3ENo photo uploaded%3C/text%3E%3C/svg%3E';
+        console.warn('No photo URL found for member - customer needs to upload license photo');
+        img.src='data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23ffe0e0" width="200" height="200"/%3E%3Ctext x="50%25" y="35%25" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="13" fill="%23c1121f" font-weight="bold"%3E⚠️ No Photo%3C/text%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="11" fill="%23666"%3ECustomer must go to:%3C/text%3E%3Ctext x="50%25" y="62%25" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="10" fill="%23666"%3EMy Account → Update Info%3C/text%3E%3Ctext x="50%25" y="74%25" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="10" fill="%23666"%3E→ Upload license photo%3C/text%3E%3C/svg%3E';
         img.style.display='block'; 
-        img.alt='No photo uploaded'; 
+        img.alt='Customer needs to upload license photo'; 
       }
     } 
     document.getElementById('memberModal').style.display='block'; 
