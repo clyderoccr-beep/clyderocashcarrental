@@ -2345,9 +2345,12 @@ document.addEventListener('click',(e)=>{
   }
 });
 // Vehicle gallery logic
-let __vgVehId = null; let __vgIndex = 0;
-function openVehicleGallery(vehId){ const v=VEHICLES.find(x=>x.id===vehId); if(!v || !v.imgs || !v.imgs.length) return; __vgVehId=vehId; __vgIndex=0; const title=document.getElementById('vgTitle'); if(title) title.textContent=v.name; const modal=document.getElementById('vehicleGalleryModal'); if(modal){ modal.style.display='block'; setTimeout(()=>{ modal.scrollIntoView({ behavior:'smooth', block:'center' }); }, 50); } updateVehicleGallery(); }
-function closeVehicleGallery(){ __vgVehId=null; __vgIndex=0; const modal=document.getElementById('vehicleGalleryModal'); if(modal) modal.style.display='none'; }
+let __vgVehId = null; let __vgIndex = 0; let __vgTimer = null;
+function openVehicleGallery(vehId){ const v=VEHICLES.find(x=>x.id===vehId); if(!v || !v.imgs || !v.imgs.length) return; __vgVehId=vehId; __vgIndex=0; const title=document.getElementById('vgTitle'); if(title) title.textContent=v.name; const modal=document.getElementById('vehicleGalleryModal'); if(modal){ modal.style.display='block'; setTimeout(()=>{ modal.scrollIntoView({ behavior:'smooth', block:'center' }); }, 50); } updateVehicleGallery();
+  // Start auto-advance every 4 seconds
+  try{ if(__vgTimer) clearInterval(__vgTimer); __vgTimer = setInterval(()=>{ stepVehicleGallery(1); }, 4000); }catch{}
+}
+function closeVehicleGallery(){ __vgVehId=null; __vgIndex=0; const modal=document.getElementById('vehicleGalleryModal'); if(modal) modal.style.display='none'; try{ if(__vgTimer) clearInterval(__vgTimer); __vgTimer=null; }catch{} }
 function stepVehicleGallery(dir){ if(__vgVehId===null) return; const v=VEHICLES.find(x=>x.id===__vgVehId); if(!v || !v.imgs) return; __vgIndex = (__vgIndex + dir + v.imgs.length) % v.imgs.length; updateVehicleGallery(); }
 function updateVehicleGallery(){ const v=VEHICLES.find(x=>x.id===__vgVehId); if(!v || !v.imgs) return; const img=document.getElementById('vgImage'); const cap=document.getElementById('vgCaption'); if(img){ img.src = v.imgs[__vgIndex]; } if(cap){ cap.textContent = `Photo ${__vgIndex+1} of ${v.imgs.length}`; }
 }
