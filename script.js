@@ -479,12 +479,17 @@ function updateAdminVisibility(){
   console.log('updateAdminVisibility - email:', email, 'isOwner:', isOwner, 'isAdmin:', isAdmin);
   const tab = document.getElementById('adminTab');
   const admin = document.getElementById('admin');
+  const paymentMethodsSection = document.getElementById('paymentMethodsSection');
   if(tab) {
     tab.style.display = canAccessAdmin ? 'inline-block' : 'none';
     console.log('Admin tab display:', tab.style.display);
   }
   if(admin){
     if(!canAccessAdmin){ admin.style.display = 'none'; }
+  }
+  // Payment Methods in account panel is internal/admin-only
+  if(paymentMethodsSection){
+    paymentMethodsSection.style.display = canAccessAdmin ? 'block' : 'none';
   }
 }
 function updateNavLabels(){
