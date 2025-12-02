@@ -1072,6 +1072,8 @@ document.addEventListener('input', (e)=>{
 const VEHICLES = [];
 // Preserve defaults for fallback when Firestore returns empty (empty by design)
 const DEFAULT_VEHICLES = [];
+// Vehicle filter state
+let VEHICLE_FILTER = 'All';
 
 // Merge Firestore vehicles with defaults so missing entries don't disappear
 function mergeVehiclesWithDefaults(fireList){
@@ -1124,7 +1126,11 @@ function renderVehicles(){
   grid.innerHTML='';
   // Fallback: if realtime/Firestore provided no vehicles, restore defaults
   if(!VEHICLES.length){ DEFAULT_VEHICLES.forEach(v=>VEHICLES.push({ ...v })); }
-  VEHICLES.forEach(v=>{
+  
+  // Filter vehicles based on selected type
+  const filtered = VEHICLE_FILTER === 'All' ? VEHICLES : VEHICLES.filter(v => v.type === VEHICLE_FILTER);
+  
+  filtered.forEach(v=>{
     const isAvail = v.available !== false;
     const isPending = v.pending === true;
     const el=document.createElement('article'); el.className='card';
@@ -1172,7 +1178,7 @@ function renderVehicles(){
   // Toggle empty-state message visibility
   try{
     const emptyMsg = document.getElementById('vehicle-empty');
-    if(emptyMsg){ emptyMsg.style.display = VEHICLES.length ? 'none' : 'block'; }
+    if(emptyMsg){ emptyMsg.style.display = filtered.length ? 'none' : 'block'; }
   }catch{}
 }
 
@@ -1187,6 +1193,20 @@ try{
     }catch{}
   });
 }catch{}
+
+// Vehicle filter button handler
+document.addEventListener('click', (e)=>{
+  const filterBtn = e.target.closest('.filter-btn');
+  if(filterBtn){
+    const filterType = filterBtn.dataset.filter;
+    VEHICLE_FILTER = filterType;
+    // Update active state
+    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+    filterBtn.classList.add('active');
+    // Re-render vehicles with new filter
+    renderVehicles();
+  }
+});
 
 // ==== My Bookings (local per-user) ====
 let MY_BOOKINGS = [];

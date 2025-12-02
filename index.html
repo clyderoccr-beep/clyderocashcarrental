@@ -29,6 +29,14 @@
           border-color:var(--gold-highlight) !important;
           transform:translateY(-2px);
         }
+        
+        /* Vehicle filter active state */
+        .filter-btn.active{
+          background:linear-gradient(135deg, var(--gold-highlight), var(--gold)) !important;
+          color:#1a1a1a !important;
+          border-color:var(--gold-shadow) !important;
+          box-shadow:0 4px 16px rgba(255,216,107,.5), inset 0 2px 0 rgba(255,255,255,.4) !important;
+        }
     :root{
       /* 🎄 Luxury Christmas Theme - Glossy Ornament Palette */
       --christmas-red:#D6001C;
@@ -520,6 +528,13 @@
     <section id="vehicles" class="section">
       <div class="wrap">
         <h1>Vehicles</h1>
+        <div id="vehicle-filters" style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+          <button class="navbtn filter-btn active" data-filter="All" type="button">All</button>
+          <button class="navbtn filter-btn" data-filter="SUV" type="button">SUV</button>
+          <button class="navbtn filter-btn" data-filter="Sedan" type="button">Sedan</button>
+          <button class="navbtn filter-btn" data-filter="Coupe" type="button">Coupe</button>
+          <button class="navbtn filter-btn" data-filter="Other" type="button">Other</button>
+        </div>
         <div id="vehicle-empty" class="muted" style="margin-bottom:8px;display:none">No vehicles available right now. Please check back soon.</div>
         <div id="vehicle-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px"></div>
       </div>
