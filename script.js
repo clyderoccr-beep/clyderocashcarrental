@@ -70,6 +70,10 @@ try{
       try{
         if(user){ startUserDocRealtime(); } else { stopUserDocRealtime(); }
       }catch(_){ }
+      // Immediate optimistic render of account summary (avatar/cover) after auth resolves
+      try{ if(user){ renderAccountSummary(); } }catch(_){ }
+      // Secondary delayed render to catch race where Firestore utils initialize slightly later
+      try{ if(user){ setTimeout(()=>{ try{ renderAccountSummary(); }catch{} }, 600); } }catch(_){ }
       // Start/stop customer bookings realtime on auth changes
       try{ if(user){ startMyBookingsRealtime(); } else { stopMyBookingsRealtime(); } }catch(_){ }
     }); 
