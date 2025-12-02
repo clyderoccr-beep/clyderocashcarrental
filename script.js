@@ -2214,6 +2214,15 @@ document.addEventListener('click',(e)=>{
   // Member actions
   const mv = e.target.closest('[data-member-view]');
   if(mv){ const u=MEMBERS.find(x=>x.id===mv.dataset.memberView); if(u){ 
+    console.log('===== MEMBER VIEW DEBUG =====');
+    console.log('Member ID:', u.id);
+    console.log('Member email:', u.email);
+    console.log('Full member object:', u);
+    console.log('licensePhotoUrl:', u.licensePhotoUrl);
+    console.log('licensePhotoData length:', u.licensePhotoData ? u.licensePhotoData.length : 0);
+    console.log('photoUrl:', u.photoUrl);
+    console.log('============================');
+    
     const d = document.getElementById('memberDetails'); 
     const lines = [
       `Name: ${u.first||''} ${u.last||''}`,
@@ -2232,24 +2241,24 @@ document.addEventListener('click',(e)=>{
     if(img){ 
       // Try license photo first, then fall back to profile photo URL
       const photoUrl = u.licensePhotoUrl || u.licensePhotoData || u.photoUrl || '';
-      console.log('Member photo - licenseUrl:', u.licensePhotoUrl || 'NONE', 'licenseData:', u.licensePhotoData ? 'EXISTS' : 'NONE', 'profileUrl:', u.photoUrl || 'NONE');
+      console.log('Final photoUrl chosen:', photoUrl ? photoUrl.substring(0,100)+'...' : 'EMPTY');
       if(photoUrl){ 
         img.src = photoUrl; 
         img.style.display='block';
         img.referrerPolicy = 'no-referrer';
-        img.onerror = ()=>{ 
-          console.error('Failed to load member photo, trying fallback'); 
-          // Fallback chain: try profile photo if license failed
-          const fallback = (photoUrl === u.photoUrl) ? '' : (u.photoUrl || '');
-          if(fallback){ 
-            img.src = fallback; 
-          } else { 
-            img.src=''; img.style.display='none'; img.alt='No photo available'; 
-          }
+        img.crossOrigin = 'anonymous';
+        img.onerror = (e)=>{ 
+          console.error('Image load failed for:', photoUrl.substring(0,100));
+          console.error('Error event:', e);
+          // Show placeholder
+          img.src='data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23f0f0f0" width="200" height="200"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="14" fill="%23999"%3EPhoto unavailable%3C/text%3E%3C/svg%3E';
+          img.alt='Photo failed to load';
         };
+        img.onload = ()=>{ console.log('Image loaded successfully'); };
       } else { 
-        img.src=''; 
-        img.style.display='none'; 
+        console.warn('No photo URL found for member');
+        img.src='data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23f0f0f0" width="200" height="200"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="14" fill="%23999"%3ENo photo uploaded%3C/text%3E%3C/svg%3E';
+        img.style.display='block'; 
         img.alt='No photo uploaded'; 
       }
     } 
