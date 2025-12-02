@@ -1117,7 +1117,11 @@ function seedBooking(){
 }
 function seedPayments(){ const list=document.getElementById('payments-list'); if(!list) return; list.innerHTML=''; const demo=[{id:'bk1',veh:VEHICLES[0],amount:VEHICLES[0].price,method:'PayPal'},{id:'bk2',veh:VEHICLES[0],amount:VEHICLES[0].price,method:'Zelle'}]; demo.forEach(b=>{ const el=document.createElement('div'); el.className='card'; el.innerHTML=`<div class='body'><div style='font-weight:700'>${b.veh.name}</div><div class='muted'>Amount: $${b.amount}/week</div><div style='display:flex;gap:8px;margin-top:8px'><button class='navbtn'>Pay ${b.method}</button><button class='navbtn'>Details</button></div></div>`; list.appendChild(el); }); }
 function renderVehicles(){
-  const grid=document.getElementById('vehicle-grid'); if(!grid) return; grid.innerHTML='';
+  const grid=document.getElementById('vehicle-grid'); if(!grid) return; 
+  // Clear any existing per-card slideshow timers before re-render
+  try{ if(window.__vehTimers){ Object.values(window.__vehTimers).forEach(t=>{ try{ clearInterval(t); }catch{} }); } }catch{}
+  window.__vehTimers = {};
+  grid.innerHTML='';
   // Fallback: if realtime/Firestore provided no vehicles, restore defaults
   if(!VEHICLES.length){ DEFAULT_VEHICLES.forEach(v=>VEHICLES.push({ ...v })); }
   VEHICLES.forEach(v=>{
@@ -1132,7 +1136,7 @@ function renderVehicles(){
       : `<span class='badge unavailable' style='margin-left:8px'>Unavailable</span>`;
     const firstImg = (v.imgs&&v.imgs[0])||'';
     const imgHtml = firstImg 
-      ? `<img alt="Photo of ${v.name}" loading="lazy" src="${firstImg}" data-gallery="${v.id}" onerror="this.src='https://via.placeholder.com/400x300.png?text=No+Image';this.onerror=null;" style="width:100%;height:auto;min-height:200px;object-fit:cover;background:#f0f0f0;cursor:pointer">` 
+      ? `<img id="veh-img-${v.id}" alt="Photo of ${v.name}" loading="lazy" src="${firstImg}" data-gallery="${v.id}" onerror="this.src='https://via.placeholder.com/400x300.png?text=No+Image';this.onerror=null;" style="width:100%;height:auto;min-height:200px;object-fit:cover;background:#f0f0f0;cursor:pointer">` 
       : `<div style="width:100%;height:200px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;color:#999">No Image</div>`;
     el.innerHTML=`${imgHtml}\n<div class='body'>
       <div style='display:flex;align-items:center;gap:8px'>
@@ -1147,6 +1151,23 @@ function renderVehicles(){
       <div style='margin-top:8px'><button class='navbtn' data-gallery='${v.id}' aria-label='View photo gallery for ${v.name}'>View Photos</button></div>
     </div>`;
     grid.appendChild(el);
+
+    // Per-card slideshow: automatically cycle through vehicle images on the card
+    try{
+      const imgsArr = Array.isArray(v.imgs) ? v.imgs : [];
+      if(imgsArr.length > 1){
+        let idx = 0;
+        const imgEl = document.getElementById(`veh-img-${v.id}`);
+        if(imgEl){
+          // Advance every 5 seconds
+          const timer = setInterval(()=>{
+            idx = (idx + 1) % imgsArr.length;
+            imgEl.src = imgsArr[idx];
+          }, 5000);
+          window.__vehTimers[v.id] = timer;
+        }
+      }
+    }catch{}
   });
   // Toggle empty-state message visibility
   try{
