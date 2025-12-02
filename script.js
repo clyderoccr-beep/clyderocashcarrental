@@ -78,19 +78,10 @@ try{
   if(api.onAuthStateChanged && api.auth){ 
     api.onAuthStateChanged(api.auth, (user)=>{ 
       console.log('Auth state changed, user:', user ? user.email : 'null');
-      
-      // Check if we just logged out (within last 30 seconds)
-      const lastLogout = localStorage.getItem('lastLogoutTime');
-      const isRecentLogout = lastLogout && (Date.now() - parseInt(lastLogout, 10)) < 30000;
-      
-      // Check if user explicitly logged in (set by login form)
-      const hasExplicitLogin = sessionStorage.getItem('explicitLogin');
-      
-      if(user && user.email && !isRecentLogout && hasExplicitLogin) {
-        // User is signed in AND we have explicit login flag - this is a valid session
+      if(user && user.email){
+        // Trust Firebase session (we use SESSION persistence)
         sessionStorage.setItem('sessionEmail', user.email);
-        console.log('Valid login: Stored email in sessionStorage:', user.email);
-        // Clear any old logout timestamp since we're now logged in
+        sessionStorage.setItem('explicitLogin','true');
         localStorage.removeItem('lastLogoutTime');
         // Ensure Firestore users/{uid} exists via serverless (bypasses client rules)
         (async ()=>{
@@ -100,8 +91,9 @@ try{
           }catch(_){ }
         })();
       } else {
-        // User is signed out, clear sessionStorage immediately
+        // Signed out
         sessionStorage.removeItem('sessionEmail');
+        sessionStorage.removeItem('explicitLogin');
         console.log('User signed out, cleared sessionStorage');
       }
       // Update UI after email is stored/cleared
@@ -473,9 +465,7 @@ function isCurrentUserAdmin(){
   return userDoc && userDoc.isAdmin === true;
 }
 function updateAdminVisibility(){ 
-  // Only trust email/admin if we have explicit login
-  const hasExplicitLogin = sessionStorage.getItem('explicitLogin');
-  const email = hasExplicitLogin ? getSessionEmail() : '';
+  const email = getSessionEmail();
   const isOwner = email === OWNER_EMAIL;
   const isAdmin = isCurrentUserAdmin();
   const canAccessAdmin = isOwner || isAdmin;
@@ -491,10 +481,8 @@ function updateAdminVisibility(){
   }
 }
 function updateNavLabels(){
-  // CRITICAL: Only trust email if we have explicit login flag
-  const hasExplicitLogin = sessionStorage.getItem('explicitLogin');
-  const email = hasExplicitLogin ? getSessionEmail() : '';
-  console.log('updateNavLabels - explicitLogin:', hasExplicitLogin, 'email:', email);
+  const email = getSessionEmail();
+  console.log('updateNavLabels - email:', email);
   const loginBtn = document.querySelector('nav [data-nav="login"]');
     const logoutBtn = document.getElementById('accountLogout');
   const memberBtn = document.querySelector('nav [data-nav="membership"]');
