@@ -21,17 +21,21 @@ exports.handler = async (event) => {
     if(!secret || !provided || provided !== secret){
       return { statusCode: 401, headers, body: JSON.stringify({ error: 'unauthorized' }) };
     }
-    let bucketName = process.env.FIREBASE_STORAGE_BUCKET;
-    if(!bucketName){
-      return { statusCode: 500, headers, body: JSON.stringify({ error: 'missing_bucket' }) };
-    }
-    // Translate domain-style value to actual GCS bucket if needed
-    if(/\.firebasestorage\.app$/i.test(bucketName)){
-      bucketName = bucketName.replace(/\.firebasestorage\.app$/i, '.appspot.com');
-    }
-    // Use Firebase Admin's configured credentials to access Storage
     const admin = getAdmin();
-    const bucket = admin.storage().bucket(bucketName);
+    // Build candidate bucket names as in get-storage-cors
+    let bucketName = process.env.FIREBASE_STORAGE_BUCKET || '';
+    const candidates = [];
+    if(bucketName) candidates.push(bucketName);
+    if(bucketName && /\.firebasestorage\.app$/i.test(bucketName)){
+      candidates.push(bucketName.replace(/\.firebasestorage\.app$/i, '.appspot.com'));
+    }
+    try{ const def = admin.app().options && admin.app().options.storageBucket; if(def) candidates.push(def); }catch{}
+    candidates.push(''); // allow default
+    let bucket = null; let picked=''; let lastErr=null;
+    for(const c of [...new Set(candidates)]){
+      try{ const b = c ? admin.storage().bucket(c) : admin.storage().bucket(); const [m] = await b.getMetadata(); bucket=b; picked=b.name; break; }catch(e){ lastErr=e; }
+    }
+    if(!bucket){ return { statusCode: 500, headers, body: JSON.stringify({ error:'bucket_not_found', detail: lastErr && (lastErr.message||String(lastErr)) }) }; }
     const originsEnv = process.env.STORAGE_ALLOWED_ORIGINS || 'https://clyderoccr.com';
     const origins = originsEnv.split(',').map(o=>o.trim()).filter(Boolean);
     const corsConfig = [
@@ -45,7 +49,7 @@ exports.handler = async (event) => {
       }
     ];
     await bucket.setMetadata({ cors: corsConfig });
-    return { statusCode: 200, headers, body: JSON.stringify({ ok:true, applied: corsConfig }) };
+    return { statusCode: 200, headers, body: JSON.stringify({ ok:true, bucket: picked, applied: corsConfig }) };
   } catch (err){
     return { statusCode: 500, headers, body: JSON.stringify({ error: err.message||String(err), stack: (err && err.stack) || '' }) };
   }
