@@ -2230,13 +2230,23 @@ document.addEventListener('click',(e)=>{
     d.textContent = lines.join('\n'); 
     const img=document.getElementById('memberPhoto'); 
     if(img){ 
-      // Check both licensePhotoUrl (Storage) and licensePhotoData (base64 from updates)
-      const photoUrl = u.licensePhotoUrl || u.licensePhotoData || '';
-      console.log('Member photo - URL:', u.licensePhotoUrl || 'NONE', 'Data:', u.licensePhotoData ? 'EXISTS' : 'NONE');
+      // Try license photo first, then fall back to profile photo URL
+      const photoUrl = u.licensePhotoUrl || u.licensePhotoData || u.photoUrl || '';
+      console.log('Member photo - licenseUrl:', u.licensePhotoUrl || 'NONE', 'licenseData:', u.licensePhotoData ? 'EXISTS' : 'NONE', 'profileUrl:', u.photoUrl || 'NONE');
       if(photoUrl){ 
         img.src = photoUrl; 
         img.style.display='block';
-        img.onerror = ()=>{ console.error('Failed to load photo:', photoUrl.substring(0,50)+'...'); img.src=''; img.alt='Photo failed to load'; };
+        img.referrerPolicy = 'no-referrer';
+        img.onerror = ()=>{ 
+          console.error('Failed to load member photo, trying fallback'); 
+          // Fallback chain: try profile photo if license failed
+          const fallback = (photoUrl === u.photoUrl) ? '' : (u.photoUrl || '');
+          if(fallback){ 
+            img.src = fallback; 
+          } else { 
+            img.src=''; img.style.display='none'; img.alt='No photo available'; 
+          }
+        };
       } else { 
         img.src=''; 
         img.style.display='none'; 
