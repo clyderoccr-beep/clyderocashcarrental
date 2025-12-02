@@ -426,18 +426,28 @@ function clearSession(){
   updateAdminVisibility();
   try{ stopMyBookingsRealtime(); }catch{}
 }
+function isCurrentUserAdmin(){
+  const api = getAuthApi();
+  const auth = getAuthInstance();
+  const uid = auth && auth.currentUser && auth.currentUser.uid;
+  if(!uid) return false;
+  const userDoc = MEMBERS.find(x => x.id === uid);
+  return userDoc && userDoc.isAdmin === true;
+}
 function updateAdminVisibility(){ 
   const email = getSessionEmail();
   const isOwner = email === OWNER_EMAIL;
-  console.log('updateAdminVisibility - email:', email, 'isOwner:', isOwner);
+  const isAdmin = isCurrentUserAdmin();
+  const canAccessAdmin = isOwner || isAdmin;
+  console.log('updateAdminVisibility - email:', email, 'isOwner:', isOwner, 'isAdmin:', isAdmin);
   const tab = document.getElementById('adminTab');
   const admin = document.getElementById('admin');
   if(tab) {
-    tab.style.display = isOwner ? 'inline-block' : 'none';
+    tab.style.display = canAccessAdmin ? 'inline-block' : 'none';
     console.log('Admin tab display:', tab.style.display);
   }
   if(admin){
-    if(!isOwner){ admin.style.display = 'none'; }
+    if(!canAccessAdmin){ admin.style.display = 'none'; }
   }
 }
 function updateNavLabels(){
@@ -1818,10 +1828,13 @@ function setupRealtimeForRole(){
         // merge/update MEMBERS entry
         let m = MEMBERS.find(x=>x.id===uid); if(!m){ MEMBERS.push({ id:uid, ...data }); } else { Object.assign(m, data); }
         updateMembershipPanel();
+        updateAdminVisibility(); // Update admin panel visibility when user data changes
       }); }catch(e){ console.warn('Current user realtime failed', e.message); } }
 
   const isOwner = getSessionEmail()===OWNER_EMAIL;
-  if(isOwner){
+  const isAdmin = isCurrentUserAdmin();
+  const canAccessAdmin = isOwner || isAdmin;
+  if(canAccessAdmin){
     // Admin bookings realtime
     if(!_adminBookingsUnsub){ try{ _adminBookingsUnsub = utils.onSnapshot(utils.collection(db,'bookings'), snap=>{ ADMIN_BOOKINGS.length=0; snap.forEach(d=> ADMIN_BOOKINGS.push({ id:d.id, ...d.data() })); ADMIN_BOOKINGS.sort((a,b)=> (b.createdAt||0)-(a.createdAt||0)); renderAdminBookings(); }); }catch(e){ console.warn('Admin bookings realtime failed', e.message); } }
     // Inbox realtime
@@ -1999,20 +2012,23 @@ function renderMembers(){
     card.className='card';
     const status = u.status || 'active';
     const banned = status==='banned';
+    const isAdmin = u.isAdmin === true;
     const name = `${u.first||''} ${u.last||''}`.trim() || '(no name)';
     const since = u.createdTs ? new Date(u.createdTs).toLocaleDateString() : '';
     const waiver = u.cardRemovalOverride ? `<span class='badge' style='background:#2d6a4f22;border-color:#2d6a4f66;color:#2d6a4f;margin-left:6px'>Waiver Active</span>` : '';
+    const adminBadge = isAdmin ? `<span class='badge' style='background:var(--gold);color:#000;margin-left:6px;font-weight:700'>ADMIN</span>` : '';
     card.innerHTML = `<div class='body'>
       <div style='display:flex;gap:8px;align-items:center'>
         <div style='font-weight:700'>${name}</div>
         <span class='muted' style='margin-left:auto;font-size:12px'>${u.email||''}</span>
       </div>
-      <div class='muted' style='font-size:12px;margin-top:4px'>Member since ${since} • ${status} ${waiver}</div>
+      <div class='muted' style='font-size:12px;margin-top:4px'>Member since ${since} • ${status} ${waiver} ${adminBadge}</div>
       <div style='display:flex;gap:8px;margin-top:8px;flex-wrap:wrap'>
         <button class='navbtn' data-member-view='${u.id}'>View</button>
         <button class='navbtn' data-member-ban='${u.id}'>${banned?'Unban':'Ban'}</button>
         <button class='navbtn' data-member-delete='${u.id}' style='background:#c1121f;border-color:#c1121f'>Delete</button>
         <button class='navbtn' data-member-waiver='${u.id}' style='${u.cardRemovalOverride? 'background:#ffc107;border-color:#ffc107;color:#000':'background:#2d6a4f;border-color:#2d6a4f'}'>${u.cardRemovalOverride? 'Revoke Waiver':'Grant Waiver'}</button>
+        <button class='navbtn' data-member-admin='${u.id}' style='${isAdmin? 'background:#666;border-color:#666':'background:var(--gold);border-color:var(--gold);color:#000'}'>${isAdmin? 'Remove Admin':'Make Admin'}</button>
       </div>
     </div>`;
     wrap.appendChild(card);
@@ -2067,6 +2083,20 @@ async function deleteMember(userId){
       console.error('Failed to delete member:', err?.message||err); 
       return false;
     }
+  }
+}
+
+async function toggleAdminStatus(userId, isAdmin){
+  const db = getDB();
+  const { doc, updateDoc } = getUtils();
+  if(!db) return false;
+  try{ 
+    await updateDoc(doc(db,'users',userId), { isAdmin });
+    console.log(`Admin status for ${userId} set to ${isAdmin}`);
+    return true;
+  }catch(err){ 
+    console.error('Failed to update admin status:', err.message); 
+    return false;
   }
 }
 
@@ -2185,6 +2215,26 @@ document.addEventListener('click',(e)=>{
       }
     }); 
     return; 
+  }
+  const ma = e.target.closest('[data-member-admin]');
+  if(ma){
+    const id = ma.dataset.memberAdmin;
+    const u = MEMBERS.find(x => x.id === id);
+    if(u){
+      const newAdminStatus = !u.isAdmin;
+      const action = newAdminStatus ? 'grant admin privileges to' : 'remove admin privileges from';
+      if(!confirm(`Are you sure you want to ${action} ${u.first} ${u.last}?`)) return;
+      toggleAdminStatus(id, newAdminStatus).then((ok)=>{
+        if(ok){
+          u.isAdmin = newAdminStatus;
+          renderMembers();
+          showToast(newAdminStatus ? 'Admin privileges granted.' : 'Admin privileges removed.');
+        } else {
+          alert('Failed to update admin status. Check console for details.');
+        }
+      });
+    }
+    return;
   }
 });
 // Vehicle gallery logic
