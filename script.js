@@ -344,10 +344,15 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   document.getElementById('year').textContent = new Date().getFullYear(); 
   // If a prior logout requested a hard reset, enforce it immediately
   try{
-    if(sessionStorage.getItem('logoutPending') === '1'){
-      sessionStorage.removeItem('logoutPending');
-      try{ clearSession(); }catch{}
-      try{ updateNavLabels(); updateMembershipPanel(); updateAdminVisibility(); }catch{}
+    const lastLogout = localStorage.getItem('lastLogoutTime');
+    if(lastLogout){
+      const logoutTime = parseInt(lastLogout, 10);
+      const now = Date.now();
+      // If logout happened within last 30 seconds, force logged-out state
+      if(now - logoutTime < 30000){
+        try{ clearSession(); }catch{}
+        try{ updateNavLabels(); updateMembershipPanel(); updateAdminVisibility(); }catch{}
+      }
     }
   }catch{}
     try{ await loadFromFirestore(); }catch(e){ console.warn('Initial Firestore load failed:', e?.message||e); }
@@ -663,7 +668,7 @@ document.addEventListener('click',(e)=>{
   if(paymentsBtn) paymentsBtn.style.display = 'none';
   if(adminTab) adminTab.style.display = 'none';
   // Mark a pending logout to survive refreshes on some devices
-  try{ sessionStorage.setItem('logoutPending','1'); }catch{}
+  try{ localStorage.setItem('lastLogoutTime', Date.now().toString()); }catch{}
 
   // Close mobile menu if open
   try{
