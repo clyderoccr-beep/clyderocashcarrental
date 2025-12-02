@@ -473,7 +473,9 @@ function isCurrentUserAdmin(){
   return userDoc && userDoc.isAdmin === true;
 }
 function updateAdminVisibility(){ 
-  const email = getSessionEmail();
+  // Only trust email/admin if we have explicit login
+  const hasExplicitLogin = sessionStorage.getItem('explicitLogin');
+  const email = hasExplicitLogin ? getSessionEmail() : '';
   const isOwner = email === OWNER_EMAIL;
   const isAdmin = isCurrentUserAdmin();
   const canAccessAdmin = isOwner || isAdmin;
