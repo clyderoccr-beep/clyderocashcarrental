@@ -1629,6 +1629,8 @@ async function loadFromFirestore(){
   const db = getDB();
   const { doc, getDoc, collection, getDocs } = getUtils();
   if(!db) return;
+  const emailNow = getSessionEmail();
+  const isOwner = emailNow === OWNER_EMAIL;
   
   try {
     // Load About content
@@ -1646,17 +1648,25 @@ async function loadFromFirestore(){
       });
     }
 
-    // Load inbox messages
-    const inboxSnap = await getDocs(collection(db, 'messages'));
-    INBOX.length = 0;
-    inboxSnap.forEach(docSnap => { INBOX.push({ id: docSnap.id, ...docSnap.data() }); });
-    // Sort newest first by timestamp
-    INBOX.sort((a,b)=> (b.ts||0) - (a.ts||0));
+    // Load inbox messages (owner only)
+    if(isOwner){
+      try{
+        const inboxSnap = await getDocs(collection(db, 'messages'));
+        INBOX.length = 0;
+        inboxSnap.forEach(docSnap => { INBOX.push({ id: docSnap.id, ...docSnap.data() }); });
+        // Sort newest first by timestamp
+        INBOX.sort((a,b)=> (b.ts||0) - (a.ts||0));
+      }catch(e){ console.warn('Inbox load skipped/non-owner or failed:', e?.message||e); }
+    }
 
-    // Load members
-    const membersSnap = await getDocs(collection(db, 'users'));
-    MEMBERS.length = 0;
-    membersSnap.forEach(docSnap => { MEMBERS.push({ id: docSnap.id, ...docSnap.data() }); });
+    // Load members (owner only)
+    if(isOwner){
+      try{
+        const membersSnap = await getDocs(collection(db, 'users'));
+        MEMBERS.length = 0;
+        membersSnap.forEach(docSnap => { MEMBERS.push({ id: docSnap.id, ...docSnap.data() }); });
+      }catch(e){ console.warn('Members load skipped/non-owner or failed:', e?.message||e); }
+    }
   } catch(err){
     console.warn('Firestore load failed:', err.message);
   }
