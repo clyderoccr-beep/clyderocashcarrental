@@ -365,6 +365,19 @@ if(document.readyState === 'loading'){
 
 document.addEventListener('DOMContentLoaded', async ()=>{ 
   document.getElementById('year').textContent = new Date().getFullYear(); 
+  
+  // CRITICAL: Clear all session data on page load, will be restored by Firebase if user is actually logged in
+  // This prevents stale sessionStorage from showing "My Account" when logged out
+  try{
+    const auth = getAuthInstance();
+    // If Firebase doesn't have a currentUser immediately, clear everything
+    if(!auth || !auth.currentUser){
+      sessionStorage.removeItem('sessionEmail');
+      sessionStorage.removeItem('explicitLogin');
+      console.log('Cleared session data on page load - will restore if Firebase has valid user');
+    }
+  }catch{}
+  
   // If a prior logout requested a hard reset, enforce it immediately
   try{
     const lastLogout = localStorage.getItem('lastLogoutTime');
