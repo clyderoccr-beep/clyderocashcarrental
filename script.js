@@ -67,6 +67,9 @@ try{
       updateMembershipPanel(); 
       updateAdminVisibility(); 
       setupRealtimeForRole(); 
+      try{
+        if(user){ startUserDocRealtime(); } else { stopUserDocRealtime(); }
+      }catch(_){ }
       // Start/stop customer bookings realtime on auth changes
       try{ if(user){ startMyBookingsRealtime(); } else { stopMyBookingsRealtime(); } }catch(_){ }
     }); 
@@ -2567,6 +2570,25 @@ function renderAccountSummary(){
     }).catch(()=>{});
   }catch{}
 }
+
+// Realtime: keep membership avatar/cover in sync without manual refresh
+let _userDocUnsub = null;
+function startUserDocRealtime(){
+  try{
+    const auth = getAuthInstance(); const uid = auth && auth.currentUser && auth.currentUser.uid; if(!uid) return;
+    const db = getDB(); const { doc, onSnapshot } = getUtils()||{}; if(!db||!doc||!onSnapshot) return;
+    if(_userDocUnsub) return; // already listening
+    _userDocUnsub = onSnapshot(doc(db,'users', uid), (snap)=>{
+      try{
+        const data = snap.exists() ? (snap.data()||{}) : {};
+        if(data.coverUrl){ localStorage.setItem('profile_cover_url', data.coverUrl); }
+        if(data.photoUrl){ localStorage.setItem('profile_photo_url', data.photoUrl); }
+        renderAccountSummary();
+      }catch(_){ }
+    });
+  }catch(_){ }
+}
+function stopUserDocRealtime(){ try{ if(_userDocUnsub){ _userDocUnsub(); _userDocUnsub=null; } }catch(_){ }
 
 // Drag-and-drop support on avatar
 (()=>{
