@@ -550,7 +550,8 @@ function updateMembershipPanel(){
         `Member Since: ${member.createdTs? new Date(member.createdTs).toLocaleDateString() : ''}`
       ]; summary.textContent = lines.join('\n');
       const hasCard = !!member.cardOnFile && !!member.stripeDefaultPm;
-      if(pmStatus){ pmStatus.innerHTML = `<span style="font-weight:700">Payment Method:</span> <span class="badge" style="${hasCard?'background:#2d6a4f33;border-color:#2d6a4f66;color:#2d6a4f':'background:#6c757d22;border-color:#6c757d55;color:#6c757d'}">Card on file: ${hasCard?'Yes':'No'}</span>${member.cardRemovalOverride? '<span class="badge" style="margin-left:6px;background:#ffc10733;border-color:#ffc10766;color:#7a5e00">Waiver</span>':''}`; }
+      // Do not show card-on-file status to customers; keep internal only
+      if(pmStatus){ pmStatus.style.display='none'; pmStatus.textContent=''; }
       const rmBtn = document.getElementById('removeSavedCard'); if(rmBtn){ rmBtn.style.display = hasCard ? 'inline-block' : 'none'; }
       // Async debt check: disable removal if any overdue unpaid booking
       setTimeout(async ()=>{

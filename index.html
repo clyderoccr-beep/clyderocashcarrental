@@ -579,7 +579,8 @@
                     <input id="accountPhotoFile" type="file" accept="image/*" style="display:none">
                   </div>
                   <div id="accountSummary" style="white-space:pre-wrap;font-size:14px;color:#333;line-height:1.6"></div>
-                  <div id="paymentMethodStatus" style="margin-top:8px;font-size:12px;color:#111;padding:8px;background:#fff;border-radius:6px;border:1px solid #e0e0e0"></div>
+                  <!-- Hidden from customers; used only for internal/admin fraud tooling -->
+                  <div id="paymentMethodStatus" style="display:none;margin-top:8px;font-size:12px;color:#111;padding:8px;background:#fff;border-radius:6px;border:1px solid #e0e0e0"></div>
                   <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
                     <button class="navbtn" id="updateInfoBtn" type="button">Update Info</button>
                     <button class="navbtn" id="accountDelete" type="button" style="background:#c1121f;border-color:#c1121f">Delete Account</button>
