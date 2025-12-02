@@ -1,5 +1,37 @@
 'use strict';
 
+// 📱 Mobile Menu Toggle
+document.addEventListener('DOMContentLoaded', function() {
+  const menuToggle = document.getElementById('mobileMenuToggle');
+  const menuClose = document.getElementById('mobileMenuClose');
+  const nav = document.querySelector('header nav');
+  
+  if (menuToggle && nav) {
+    menuToggle.addEventListener('click', function() {
+      nav.classList.add('mobile-open');
+      if (menuClose) menuClose.style.display = 'block';
+    });
+  }
+  
+  if (menuClose && nav) {
+    menuClose.addEventListener('click', function() {
+      nav.classList.remove('mobile-open');
+      menuClose.style.display = 'none';
+    });
+  }
+  
+  // Close menu when clicking a nav button
+  const navButtons = document.querySelectorAll('header nav .navbtn');
+  navButtons.forEach(btn => {
+    btn.addEventListener('click', function() {
+      if (window.innerWidth <= 768 && nav) {
+        nav.classList.remove('mobile-open');
+        if (menuClose) menuClose.style.display = 'none';
+      }
+    });
+  });
+});
+
 // Enable Firebase AppCheck debug for local dev to reduce reCAPTCHA errors
 try{
   (function(){
