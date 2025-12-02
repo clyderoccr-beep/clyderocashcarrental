@@ -1132,7 +1132,7 @@ function renderVehicles(){
       : `<span class='badge unavailable' style='margin-left:8px'>Unavailable</span>`;
     const firstImg = (v.imgs&&v.imgs[0])||'';
     const imgHtml = firstImg 
-      ? `<img alt="Photo of ${v.name}" loading="lazy" src="${firstImg}" onerror="this.src='https://via.placeholder.com/400x300.png?text=No+Image';this.onerror=null;" style="width:100%;height:auto;min-height:200px;object-fit:cover;background:#f0f0f0">` 
+      ? `<img alt="Photo of ${v.name}" loading="lazy" src="${firstImg}" data-gallery="${v.id}" onerror="this.src='https://via.placeholder.com/400x300.png?text=No+Image';this.onerror=null;" style="width:100%;height:auto;min-height:200px;object-fit:cover;background:#f0f0f0;cursor:pointer">` 
       : `<div style="width:100%;height:200px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;color:#999">No Image</div>`;
     el.innerHTML=`${imgHtml}\n<div class='body'>
       <div style='display:flex;align-items:center;gap:8px'>
@@ -2354,6 +2354,9 @@ function closeVehicleGallery(){ __vgVehId=null; __vgIndex=0; const modal=documen
 function stepVehicleGallery(dir){ if(__vgVehId===null) return; const v=VEHICLES.find(x=>x.id===__vgVehId); if(!v || !v.imgs) return; __vgIndex = (__vgIndex + dir + v.imgs.length) % v.imgs.length; updateVehicleGallery(); }
 function updateVehicleGallery(){ const v=VEHICLES.find(x=>x.id===__vgVehId); if(!v || !v.imgs) return; const img=document.getElementById('vgImage'); const cap=document.getElementById('vgCaption'); if(img){ img.src = v.imgs[__vgIndex]; } if(cap){ cap.textContent = `Photo ${__vgIndex+1} of ${v.imgs.length}`; }
 }
+
+// Tap-to-advance: clicking on the gallery image moves to next photo
+document.getElementById('vgImage')?.addEventListener('click', ()=>{ stepVehicleGallery(1); });
 
 // Simple math captcha generator
 function initCaptcha(){
