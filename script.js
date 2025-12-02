@@ -706,6 +706,12 @@ document.addEventListener('click',(e)=>{
   if(!btn) return; 
   e.preventDefault(); 
   // Clear session first
+
+// Click logo to return to default page (vehicles)
+document.addEventListener('click',(e)=>{
+  const logo = e.target.closest('#siteLogo'); if(!logo) return;
+  try{ goto('vehicles'); }catch{}
+});
   sessionStorage.removeItem('sessionEmail');
   
   // Immediately force UI changes
