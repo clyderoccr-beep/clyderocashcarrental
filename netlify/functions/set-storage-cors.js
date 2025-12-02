@@ -44,7 +44,7 @@ exports.handler = async (event) => {
         maxAgeSeconds: 3600
       }
     ];
-    await bucket.setCors(corsConfig);
+    await bucket.setMetadata({ cors: corsConfig });
     return { statusCode: 200, headers, body: JSON.stringify({ ok:true, applied: corsConfig }) };
   } catch (err){
     return { statusCode: 500, headers, body: JSON.stringify({ error: err.message||String(err), stack: (err && err.stack) || '' }) };
