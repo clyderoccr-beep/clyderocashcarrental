@@ -2426,7 +2426,8 @@ async function handleAvatarFile(file){
         url = await blobToDataURL(processed);
       }
     }
-    // Save to Firestore user doc
+    // Ensure user doc exists, then save to Firestore
+    await ensureUserDocExists(uid, email);
     const db = getDB(); const { doc, setDoc } = getUtils()||{};
     const uid2 = uid;
     if(!db || !doc || !setDoc || !uid2){ alert('Database not available'); return; }
@@ -2480,7 +2481,8 @@ async function handleCoverFile(file){
         url = await blobToDataURL(processed);
       }
     }
-    // Save to Firestore user doc
+    // Ensure user doc exists, then save to Firestore
+    await ensureUserDocExists(uid, email);
     const db = getDB(); const { doc, setDoc } = getUtils()||{};
     const uid2 = uid;
     if(!db || !doc || !setDoc || !uid2){ alert('Database not available'); return; }
@@ -2589,6 +2591,19 @@ function startUserDocRealtime(){
   }catch(_){ }
 }
 function stopUserDocRealtime(){ try{ if(_userDocUnsub){ _userDocUnsub(); _userDocUnsub=null; } }catch(_){ }
+}
+
+// Ensure the Firestore user document exists with email (for rules), then merge extra fields
+async function ensureUserDocExists(uid, email){
+  try{
+    const db = getDB(); const { doc, getDoc, setDoc } = getUtils()||{}; if(!db||!doc||!getDoc||!setDoc) return false;
+    const ref = doc(db,'users', uid);
+    const snap = await getDoc(ref).catch(()=>null);
+    if(!snap || !snap.exists()){
+      await setDoc(ref, { email: email||getSessionEmail()||'' }, { merge: true });
+    }
+    return true;
+  }catch(_){ return false; }
 }
 
 // Drag-and-drop support on avatar
