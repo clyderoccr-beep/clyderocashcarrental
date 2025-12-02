@@ -1492,7 +1492,7 @@
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
     import { getFirestore, doc, getDoc, setDoc, collection, getDocs, updateDoc, deleteDoc, addDoc, onSnapshot, query, where, limit } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
     import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
-    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, signOut, onAuthStateChanged, setPersistence, browserSessionPersistence } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
     import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js';
     
     const firebaseConfig = {
@@ -1511,9 +1511,9 @@
     const auth = getAuth(app);
     const functions = getFunctions(app);
     
-    // Set auth persistence to LOCAL (keeps user logged in across page refreshes)
-    setPersistence(auth, browserLocalPersistence).then(() => {
-      console.log('Auth persistence set to LOCAL');
+    // Set auth persistence to SESSION (only persists for current tab, cleared when tab closes)
+    setPersistence(auth, browserSessionPersistence).then(() => {
+      console.log('Auth persistence set to SESSION');
     }).catch((error) => {
       console.error('Error setting auth persistence:', error);
     });
