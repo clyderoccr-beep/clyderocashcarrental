@@ -677,6 +677,9 @@ document.addEventListener('click',(e)=>{
   // Redirect immediately
   showToast('Logged out'); 
   try{ updateNavLabels(); }catch{}
+  // Extra safety: re-check after auth state settles
+  try{ setTimeout(()=>{ try{ updateNavLabels(); }catch{} }, 250); }catch{}
+  try{ setTimeout(()=>{ try{ updateNavLabels(); }catch{} }, 800); }catch{}
   goto('vehicles');
 });
 
