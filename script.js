@@ -2428,6 +2428,7 @@ async function handleAvatarFile(file){
     const uid2 = uid;
     if(!db || !doc || !setDoc || !uid2){ alert('Database not available'); return; }
     await setDoc(doc(db,'users', uid2), { photoUrl: url, photoUpdatedAt: new Date().toISOString(), email }, { merge:true });
+    try{ localStorage.setItem('profile_photo_url', url); }catch{}
     showToast('Profile photo updated');
     renderAccountSummary();
   }catch(err){
@@ -2481,6 +2482,7 @@ async function handleCoverFile(file){
     const uid2 = uid;
     if(!db || !doc || !setDoc || !uid2){ alert('Database not available'); return; }
     await setDoc(doc(db,'users', uid2), { coverUrl: url, coverUpdatedAt: new Date().toISOString(), email }, { merge:true });
+    try{ localStorage.setItem('profile_cover_url', url); }catch{}
     // Update UI
     const cover = document.getElementById('accountCover'); if(cover){ cover.style.backgroundImage = `url('${url}')`; }
     showToast('Cover photo updated');
@@ -2525,6 +2527,13 @@ function renderAccountSummary(){
   try{
     const el = document.getElementById('accountSummary'); if(!el) return;
     const email = getSessionEmail(); if(!email){ el.textContent = 'Log in to view.'; return; }
+    // Optimistic render from localStorage while Firestore loads
+    try{
+      const coverCached = localStorage.getItem('profile_cover_url')||'';
+      const photoCached = localStorage.getItem('profile_photo_url')||'';
+      const coverEl = document.getElementById('accountCover'); if(coverEl && coverCached){ coverEl.style.backgroundImage = `url('${coverCached}')`; }
+      const avatarEl = document.getElementById('accountAvatar'); if(avatarEl && photoCached){ avatarEl.innerHTML = `<img src='${photoCached}' alt='avatar' style='width:100%;height:100%;object-fit:cover'>`; }
+    }catch{}
     const db = getDB(); const { doc, getDoc } = getUtils()||{};
     const uid = (getAuthInstance() && getAuthInstance().currentUser && getAuthInstance().currentUser.uid) || null;
     if(!db || !doc || !getDoc || !uid) return;
@@ -2548,6 +2557,10 @@ function renderAccountSummary(){
           avatarEl.textContent = initials || '👤';
         }
       }
+      try{
+        if(data.coverUrl) localStorage.setItem('profile_cover_url', data.coverUrl);
+        if(data.photoUrl) localStorage.setItem('profile_photo_url', data.photoUrl);
+      }catch{}
       const license = data.licenseNumber ? `\nLicense #: ${data.licenseNumber}` : '';
       const status = data.status||'active';
       el.textContent = `Email: ${email}\nName: ${name}\nCountry: ${data.country||'United States'}${license}\nStatus: ${status}\nMember Since: ${data.createdAt? new Date(data.createdAt).toLocaleDateString():''}`;
