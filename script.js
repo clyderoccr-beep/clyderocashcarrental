@@ -1159,11 +1159,11 @@ function renderVehicles(){
         let idx = 0;
         const imgEl = document.getElementById(`veh-img-${v.id}`);
         if(imgEl){
-          // Advance every 5 seconds
+          // Advance every 2 seconds
           const timer = setInterval(()=>{
             idx = (idx + 1) % imgsArr.length;
             imgEl.src = imgsArr[idx];
-          }, 5000);
+          }, 2000);
           window.__vehTimers[v.id] = timer;
         }
       }
