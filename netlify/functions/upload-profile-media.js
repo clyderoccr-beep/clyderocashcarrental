@@ -42,18 +42,42 @@ exports.handler = async (event) => {
     const buffer = Buffer.from(base64, 'base64');
 
     const projectId = (admin.app().options && admin.app().options.projectId) || process.env.FIREBASE_PROJECT_ID;
-    const bucketName = process.env.FIREBASE_STORAGE_BUCKET || (projectId ? `${projectId}.appspot.com` : undefined);
-    const bucket = admin.storage().bucket(bucketName);
+    // Prefer configured bucket, otherwise try appspot, then firebasestorage.app as fallback
+    let bucketName = (admin.app().options && admin.app().options.storageBucket) || process.env.FIREBASE_STORAGE_BUCKET || (projectId ? `${projectId}.appspot.com` : undefined);
+    let bucket = admin.storage().bucket(bucketName);
     const ts = Date.now();
     const dir = kind === 'cover' ? 'profile_covers' : 'profile_photos';
     const path = `${dir}/${uid}/${ts}.jpg`;
     const { randomUUID } = require('crypto');
     const token = randomUUID();
     const file = bucket.file(path);
-    await file.save(buffer, {
-      contentType,
-      metadata: { metadata: { firebaseStorageDownloadTokens: token } }
-    });
+    try{
+      await file.save(buffer, {
+        contentType,
+        metadata: { metadata: { firebaseStorageDownloadTokens: token } }
+      });
+    }catch(primaryErr){
+      // If default bucket failed, try alternate domain variant once
+      if(projectId){
+        const alt = bucketName.endsWith('.appspot.com')
+          ? `${projectId}.firebasestorage.app`
+          : `${projectId}.appspot.com`;
+        try{
+          const altBucket = admin.storage().bucket(alt);
+          const altFile = altBucket.file(path);
+          await altFile.save(buffer, {
+            contentType,
+            metadata: { metadata: { firebaseStorageDownloadTokens: token } }
+          });
+          bucket = altBucket;
+        }catch(altErr){
+          console.error('Both bucket uploads failed', { primary: primaryErr && (primaryErr.message||String(primaryErr)), alt: altErr && (altErr.message||String(altErr)) });
+          throw primaryErr;
+        }
+      }else{
+        throw primaryErr;
+      }
+    }
 
     const url = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(path)}?alt=media&token=${token}`;
     return { statusCode: 200, headers: baseHeaders, body: JSON.stringify({ url, path }) };

@@ -2435,7 +2435,16 @@ async function handleAvatarFile(file){
     const db = getDB(); const { doc, setDoc } = getUtils()||{};
     const uid2 = uid;
     if(!db || !doc || !setDoc || !uid2){ alert('Database not available'); return; }
+    console.log('Saving avatar URL to Firestore:', url);
     await setDoc(doc(db,'users', uid2), { photoUrl: url, photoUpdatedAt: new Date().toISOString(), email }, { merge:true });
+    try{
+      // Verify write persisted
+      const { getDoc } = getUtils()||{};
+      if(getDoc){
+        const snap = await getDoc(doc(db,'users', uid2));
+        console.log('Avatar saved, Firestore now has photoUrl:', (snap.exists()&&snap.data()&&snap.data().photoUrl)||null);
+      }
+    }catch(_){ }
     try{ localStorage.setItem('profile_photo_url', url); }catch{}
     showToast('Profile photo updated');
     renderAccountSummary();
@@ -2490,7 +2499,16 @@ async function handleCoverFile(file){
     const db = getDB(); const { doc, setDoc } = getUtils()||{};
     const uid2 = uid;
     if(!db || !doc || !setDoc || !uid2){ alert('Database not available'); return; }
+    console.log('Saving cover URL to Firestore:', url);
     await setDoc(doc(db,'users', uid2), { coverUrl: url, coverUpdatedAt: new Date().toISOString(), email }, { merge:true });
+    try{
+      // Verify write persisted
+      const { getDoc } = getUtils()||{};
+      if(getDoc){
+        const snap = await getDoc(doc(db,'users', uid2));
+        console.log('Cover saved, Firestore now has coverUrl:', (snap.exists()&&snap.data()&&snap.data().coverUrl)||null);
+      }
+    }catch(_){ }
     try{ localStorage.setItem('profile_cover_url', url); }catch{}
     // Update UI
     const cover = document.getElementById('accountCover'); if(cover){ cover.style.backgroundImage = `url('${url}')`; }
