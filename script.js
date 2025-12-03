@@ -1771,82 +1771,87 @@ document.getElementById('signup-form')?.addEventListener('submit', (e)=>{
   // Create Auth account then proceed
   const api=getAuthApi(); const auth=getAuthInstance();
   if(api.createUserWithEmailAndPassword && auth){
-    api.createUserWithEmailAndPassword(auth,email,password).then((userCredential)=>{
+    api.createUserWithEmailAndPassword(auth,email,password).then(async (userCredential)=>{
       // CRITICAL: Capture photo data BEFORE clearing globals
       const capturedPhotoFile = LICENSE_PHOTO_FILE;
       const capturedPhotoData = LICENSE_PHOTO_DATA;
       console.log('📸 CAPTURED before clearing - File:', capturedPhotoFile, 'Data length:', capturedPhotoData ? capturedPhotoData.length : 0);
       
-      // Immediately redirect user to login before any slow operations
+      const uid = userCredential.user.uid;
+      console.log('User created with UID:', uid);
+      console.log('📸 SIGNUP DEBUG: Starting profile save');
+      console.log('📸 capturedPhotoFile:', capturedPhotoFile);
+      console.log('📸 capturedPhotoData length:', capturedPhotoData ? capturedPhotoData.length : 0);
+      
+      const db=getDB(); const { doc, setDoc } = getUtils();
+      const storage = getStorage(); const { storageRef, uploadBytes, getDownloadURL } = getStorageUtils();
+      const createdTs = Date.now();
+      const basePayload={
+        email, first, last, address, state, country,
+        licenseNumber, licenseCountry, licenseIssueDate, licenseExpireDate,
+        dob,
+        createdTs, status:'active'
+      };
+      let photoUrl = '';
+      let photoData = '';
+      
+      // Try to upload capturedPhotoFile, else capturedPhotoData (base64)
+      if (capturedPhotoData) {
+        photoData = capturedPhotoData;
+        console.log('📸 photoData set from capturedPhotoData, length:', photoData.length);
+      } else {
+        console.log('📸 WARNING: capturedPhotoData is empty, no base64 to save');
+      }
+      
+      if (storage && (capturedPhotoFile || capturedPhotoData)) {
+        try {
+          console.log('📸 Starting Storage upload...');
+          const safeEmail = (email || 'unknown').replace(/[^a-zA-Z0-9._-]/g, '_');
+          const path = `license_photos/${safeEmail}_${createdTs}.jpg`;
+          const ref = storageRef(storage, path);
+          let fileToUpload = capturedPhotoFile;
+          if (!fileToUpload && capturedPhotoData) {
+            console.log('📸 Converting base64 to Blob for upload...');
+            // Convert base64 to Blob
+            const arr = capturedPhotoData.split(','), mime = arr[0].match(/:(.*?);/)[1], bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+            for (let i = 0; i < n; i++) u8arr[i] = bstr.charCodeAt(i);
+            fileToUpload = new Blob([u8arr], { type: mime });
+            console.log('📸 Blob created, size:', fileToUpload.size);
+          } else {
+            console.log('📸 Using capturedPhotoFile directly, size:', fileToUpload?.size);
+          }
+          await uploadBytes(ref, fileToUpload);
+          photoUrl = await getDownloadURL(ref);
+          console.log('📸 License photo uploaded successfully:', photoUrl);
+        } catch (upErr) { 
+          console.warn('📸 Photo upload failed:', upErr?.message || upErr); 
+        }
+      } else {
+        console.log('📸 Skipping Storage upload - no file or data, or storage not available');
+      }
+      
+      try {
+        if (db && uid && setDoc && doc) {
+          const profileData = { ...basePayload, licensePhotoUrl: photoUrl, licensePhotoData: photoData };
+          console.log('📸 Saving to Firestore:');
+          console.log('  - licensePhotoUrl:', photoUrl ? photoUrl.substring(0,100) : 'EMPTY');
+          console.log('  - licensePhotoData length:', photoData ? photoData.length : 0);
+          await setDoc(doc(db, 'users', uid), profileData);
+          console.log('📸 User profile saved successfully');
+        } else {
+          console.error('📸 Cannot save to Firestore - missing:', { db: !!db, uid, setDoc: !!setDoc, doc: !!doc });
+        }
+      } catch (saveErr) { 
+        console.error('📸 Profile save failed:', saveErr?.message || saveErr); 
+      }
+      
+      // Now that profile is saved, redirect user to login
       try{ e.target.reset(); }catch{}
       const prev = document.getElementById('photoPreview'); if(prev) prev.innerHTML='';
       LICENSE_PHOTO_DATA = '';
       LICENSE_PHOTO_FILE = null;
       showToast('Account created. Please sign in.');
       goto('login');
-
-      // Run profile save + optional photo upload in the background (non-blocking)
-      (async ()=>{
-        const uid = userCredential.user.uid;
-        console.log('User created with UID:', uid);
-        console.log('📸 SIGNUP DEBUG: Starting background profile save');
-        console.log('📸 capturedPhotoFile:', capturedPhotoFile);
-        console.log('📸 capturedPhotoData length:', capturedPhotoData ? capturedPhotoData.length : 0);
-        const db=getDB(); const { doc, setDoc } = getUtils();
-        const storage = getStorage(); const { storageRef, uploadBytes, getDownloadURL } = getStorageUtils();
-        const createdTs = Date.now();
-        const basePayload={
-          email, first, last, address, state, country,
-          licenseNumber, licenseCountry, licenseIssueDate, licenseExpireDate,
-          dob,
-          createdTs, status:'active'
-        };
-        let photoUrl = '';
-        let photoData = '';
-        // Try to upload capturedPhotoFile, else capturedPhotoData (base64)
-        if (capturedPhotoData) {
-          photoData = capturedPhotoData;
-          console.log('📸 photoData set from capturedPhotoData, length:', photoData.length);
-        } else {
-          console.log('📸 WARNING: capturedPhotoData is empty, no base64 to save');
-        }
-        if (storage && (capturedPhotoFile || capturedPhotoData)) {
-          try {
-            console.log('📸 Starting Storage upload...');
-            const safeEmail = (email || 'unknown').replace(/[^a-zA-Z0-9._-]/g, '_');
-            const path = `license_photos/${safeEmail}_${createdTs}.jpg`;
-            const ref = storageRef(storage, path);
-            let fileToUpload = capturedPhotoFile;
-            if (!fileToUpload && capturedPhotoData) {
-              console.log('📸 Converting base64 to Blob for upload...');
-              // Convert base64 to Blob
-              const arr = capturedPhotoData.split(','), mime = arr[0].match(/:(.*?);/)[1], bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
-              for (let i = 0; i < n; i++) u8arr[i] = bstr.charCodeAt(i);
-              fileToUpload = new Blob([u8arr], { type: mime });
-              console.log('📸 Blob created, size:', fileToUpload.size);
-            } else {
-              console.log('📸 Using capturedPhotoFile directly, size:', fileToUpload?.size);
-            }
-            await uploadBytes(ref, fileToUpload);
-            photoUrl = await getDownloadURL(ref);
-            console.log('📸 License photo uploaded successfully:', photoUrl);
-          } catch (upErr) { console.warn('📸 Photo upload failed:', upErr?.message || upErr); }
-        } else {
-          console.log('📸 Skipping Storage upload - no file or data, or storage not available');
-        }
-        try {
-          if (db && uid && setDoc && doc) {
-            const profileData = { ...basePayload, licensePhotoUrl: photoUrl, licensePhotoData: photoData };
-            console.log('📸 Saving to Firestore:');
-            console.log('  - licensePhotoUrl:', photoUrl ? photoUrl.substring(0,100) : 'EMPTY');
-            console.log('  - licensePhotoData length:', photoData ? photoData.length : 0);
-            await setDoc(doc(db, 'users', uid), profileData);
-            console.log('📸 User profile saved successfully (background)');
-          } else {
-            console.error('📸 Cannot save to Firestore - missing:', { db: !!db, uid, setDoc: !!setDoc, doc: !!doc });
-          }
-        } catch (saveErr) { console.error('📸 Background profile save failed:', saveErr?.message || saveErr); }
-      })();
     }).catch(err=>{ alert(cleanErrorMessage(err)); return; });
   } else {
     // Fallback: create local-only indicator, then send to login
