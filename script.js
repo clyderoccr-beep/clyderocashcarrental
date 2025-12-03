@@ -526,6 +526,63 @@ function showToast(msg){
   showToast.__t = setTimeout(()=>{ el.style.display='none'; }, 2500);
 }
 
+// Check and update delete account button visibility based on rentals and debt
+async function updateDeleteButtonVisibility(){
+  const email = getSessionEmail();
+  if(!email) return;
+  
+  const member = (typeof MEMBERS!=='undefined')? MEMBERS.find(m=>m.email===email):null;
+  const delBtn = document.getElementById('accountDelete');
+  const rmBtn = document.getElementById('removeSavedCard');
+  
+  if(!member){
+    // No member profile: show delete button
+    if(delBtn){ delBtn.style.display = 'inline-block'; }
+    return;
+  }
+  
+  const hasCard = !!member.cardOnFile && !!member.stripeDefaultPm;
+  
+  try{
+    const db=getDB(); const u=getUtils()||{};
+    if(!(db&&u.collection&&u.where&&u.getDocs&&u.query)) return;
+    
+    const q = await u.getDocs(u.query(u.collection(db,'bookings'), u.where('userEmail','==',member.email)));
+    let owes=false, hasActiveRentals=false;
+    const now=Date.now();
+    
+    q.forEach(docSnap=>{
+      const b=docSnap.data();
+      const ret=b.returnDate? new Date(b.returnDate).getTime():0;
+      const overdue = ret && now>ret;
+      const unpaidLate = overdue && !b.lateFeePaid;
+      const activeStatus = ['active','extended','pending','rented','accepted'].includes(b.status||'');
+      if(activeStatus){
+        hasActiveRentals = true;
+        if(unpaidLate || (overdue && !b.paidAt)) owes=true;
+      }
+    });
+    
+    // Disable card removal if owes debt
+    if(hasCard && owes && rmBtn){
+      rmBtn.disabled=true;
+      rmBtn.title='Cannot remove saved card while an overdue or unpaid booking exists.';
+      rmBtn.textContent='Remove Saved Card (Locked)';
+    }
+    
+    // Hide delete account button if has active rentals or owes debt
+    if(delBtn){
+      if(hasActiveRentals || owes){
+        delBtn.style.display = 'none';
+      } else {
+        delBtn.style.display = 'inline-block';
+      }
+    }
+  }catch(e){
+    console.warn('Debt/rental check failed', e.message);
+  }
+}
+
 function updateMembershipPanel(){
   const email = getSessionEmail();
   const panel = document.getElementById('accountPanel');
@@ -565,44 +622,12 @@ function updateMembershipPanel(){
       // Do not show card-on-file status to customers; keep internal only
       if(pmStatus){ pmStatus.style.display='none'; pmStatus.textContent=''; }
       const rmBtn = document.getElementById('removeSavedCard'); if(rmBtn){ rmBtn.style.display = hasCard ? 'inline-block' : 'none'; }
-      const delBtn = document.getElementById('accountDelete');
-      // Async debt/rental check: disable card removal if debt exists, hide delete button if debt or active rentals
-      setTimeout(async ()=>{
-        try{
-          const db=getDB(); const u=getUtils()||{}; if(!(db&&u.collection&&u.where&&u.getDocs&&u.query)) return;
-          const q = await u.getDocs(u.query(u.collection(db,'bookings'), u.where('userEmail','==',member.email)));
-          let owes=false, hasActiveRentals=false; const now=Date.now();
-          q.forEach(docSnap=>{
-            const b=docSnap.data();
-            const ret=b.returnDate? new Date(b.returnDate).getTime():0;
-            const overdue = ret && now>ret;
-            const unpaidLate = overdue && !b.lateFeePaid;
-            const activeStatus = ['active','extended','pending','rented','accepted'].includes(b.status||'');
-            if(activeStatus){
-              hasActiveRentals = true;
-              if(unpaidLate || (overdue && !b.paidAt)) owes=true;
-            }
-          });
-          // Disable card removal if owes debt
-          if(hasCard && owes && rmBtn){
-            rmBtn.disabled=true; rmBtn.title='Cannot remove saved card while an overdue or unpaid booking exists.';
-            rmBtn.textContent='Remove Saved Card (Locked)';
-          }
-          // Hide delete account button if has active rentals or owes debt
-          if(delBtn){
-            if(hasActiveRentals || owes){
-              delBtn.style.display = 'none';
-            } else {
-              delBtn.style.display = 'inline-block';
-            }
-          }
-        }catch(e){ console.warn('Debt/rental check failed', e.message); }
-      },10);
+      // Check delete button visibility immediately
+      updateDeleteButtonVisibility();
     } else if(summary){ 
       summary.textContent = `Logged in as ${email}`;
-      // No member profile: show delete button (allow account deletion)
-      const delBtn = document.getElementById('accountDelete');
-      if(delBtn){ delBtn.style.display = 'inline-block'; }
+      // Check delete button visibility for users without member profile
+      updateDeleteButtonVisibility();
     }
     if(typeof renderAccountBookings==='function'){ renderAccountBookings(); }
   } else { 
@@ -1356,10 +1381,14 @@ async function refreshCustomerBookingsFromFirestore(email){
 
     saveBookingsForEmail(email);
     renderAccountBookings();
+    // Update delete button visibility after refresh
+    updateDeleteButtonVisibility();
   }catch(err){
     console.warn('Forced Firestore refresh failed:', err?.message||err);
     loadBookingsForEmail(email);
     renderAccountBookings();
+    // Update delete button visibility even on error
+    updateDeleteButtonVisibility();
   }
 }
 
@@ -1423,6 +1452,8 @@ function renderAccountBookings(){
     wrap.appendChild(card);
   });
   startCountdowns();
+  // Update delete button visibility after rendering bookings
+  updateDeleteButtonVisibility();
 }
 
 // Countdown timer updater
