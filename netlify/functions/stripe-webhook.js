@@ -12,7 +12,7 @@
  *
  * Add endpoint in Stripe Dashboard: https://dashboard.stripe.com/webhooks
  *   URL: https://clyderoccr.com/.netlify/functions/stripe-webhook
- *   Events: checkout.session.completed (and others if needed)
+ *   Events: checkout.session.completed, payment_intent.succeeded
  *
  * TODO: After verification of session:
  *   - Look up bookingId = session.metadata.bookingId
@@ -90,7 +90,7 @@ exports.handler = async (event) => {
                 const ref = q.docs[0]?.ref; if(ref){ await ref.update({ status:'paid', lateFeePaid:true, lateFeeCents, paidAt: new Date().toISOString() }); }
               }
             }
-            // Also store saved card details for future late-fee charges
+            // Also store saved card details from the payment for future late-fee charges
             try{
               const email = session.customer_details?.email || session.metadata?.userEmail || '';
               if(email && session.payment_intent){
@@ -146,6 +146,33 @@ exports.handler = async (event) => {
           }catch(e){ console.warn('Firestore booking update failed in webhook', e.message); }
         }
         break;
+      }
+      break;
+      case 'payment_intent.succeeded': {
+        // Redundant safety: when PaymentIntent succeeds outside Checkout, still persist IDs
+        try{
+          const pi = evt.data.object;
+          const bookingId = pi.metadata?.bookingId;
+          const email = pi.metadata?.userEmail || '';
+          const customer = pi.customer;
+          const pm = pi.payment_method;
+          if(customer && pm){
+            const { getAdmin } = require('./_firebaseAdmin');
+            const admin = getAdmin();
+            const db = admin.firestore();
+            if(email){
+              const uq = await db.collection('users').where('email','==',email).limit(1).get();
+              if(!uq.empty){
+                await uq.docs[0].ref.update({
+                  stripeCustomerId: String(customer),
+                  stripeDefaultPm: String(pm),
+                  cardOnFile: true,
+                  cardSavedAt: new Date().toISOString()
+                });
+              }
+            }
+          }
+        }catch(e){ console.warn('payment_intent.succeeded persistence failed', e.message); }
       }
       default:
         console.log('Unhandled event type:', evt.type);

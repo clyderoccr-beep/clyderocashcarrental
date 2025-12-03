@@ -39,12 +39,27 @@ exports.handler = async (event) => {
       return { statusCode: 400, body: 'Invalid amount (must be integer cents >= 50).' };
     }
 
-    // Create a Checkout Session (also save card for future via setup_future_usage)
+    // Ensure a Customer exists so the card can be saved on it
+    let customerId = null;
+    if (email) {
+      const existing = await stripe.customers.list({ email, limit: 1 });
+      customerId = existing.data[0]?.id || (await stripe.customers.create({ email })).id;
+    }
+
+    // Create a Checkout Session and save card for future off-session charges
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
-      payment_method_types: ['card'], // Restrict to card; Apple Pay appears automatically if eligible
-      customer_email: email || undefined,
-      payment_intent_data: { setup_future_usage: 'off_session', metadata: { bookingId, userEmail: email||'' } },
+      payment_method_types: ['card'], // Restrict to card (Apple Pay still shows when eligible)
+      customer: customerId || undefined,
+      customer_email: customerId ? undefined : (email || undefined),
+      // Save card on the PaymentIntent for future off-session usage
+      payment_intent_data: {
+        setup_future_usage: 'off_session',
+        customer: customerId || undefined,
+        metadata: { bookingId, userEmail: email||'' }
+      },
+      // Prevent Link saved-wallet option from rendering in Checkout (best-effort)
+      payment_method_options: { card: { allow_redisplay_filters: ['never'] } },
       line_items: [
         {
           price_data: {
