@@ -1772,6 +1772,11 @@ document.getElementById('signup-form')?.addEventListener('submit', (e)=>{
   const api=getAuthApi(); const auth=getAuthInstance();
   if(api.createUserWithEmailAndPassword && auth){
     api.createUserWithEmailAndPassword(auth,email,password).then((userCredential)=>{
+      // CRITICAL: Capture photo data BEFORE clearing globals
+      const capturedPhotoFile = LICENSE_PHOTO_FILE;
+      const capturedPhotoData = LICENSE_PHOTO_DATA;
+      console.log('📸 CAPTURED before clearing - File:', capturedPhotoFile, 'Data length:', capturedPhotoData ? capturedPhotoData.length : 0);
+      
       // Immediately redirect user to login before any slow operations
       try{ e.target.reset(); }catch{}
       const prev = document.getElementById('photoPreview'); if(prev) prev.innerHTML='';
@@ -1785,8 +1790,8 @@ document.getElementById('signup-form')?.addEventListener('submit', (e)=>{
         const uid = userCredential.user.uid;
         console.log('User created with UID:', uid);
         console.log('📸 SIGNUP DEBUG: Starting background profile save');
-        console.log('📸 LICENSE_PHOTO_FILE:', LICENSE_PHOTO_FILE);
-        console.log('📸 LICENSE_PHOTO_DATA length:', LICENSE_PHOTO_DATA ? LICENSE_PHOTO_DATA.length : 0);
+        console.log('📸 capturedPhotoFile:', capturedPhotoFile);
+        console.log('📸 capturedPhotoData length:', capturedPhotoData ? capturedPhotoData.length : 0);
         const db=getDB(); const { doc, setDoc } = getUtils();
         const storage = getStorage(); const { storageRef, uploadBytes, getDownloadURL } = getStorageUtils();
         const createdTs = Date.now();
@@ -1798,29 +1803,29 @@ document.getElementById('signup-form')?.addEventListener('submit', (e)=>{
         };
         let photoUrl = '';
         let photoData = '';
-        // Try to upload LICENSE_PHOTO_FILE, else LICENSE_PHOTO_DATA (base64)
-        if (LICENSE_PHOTO_DATA) {
-          photoData = LICENSE_PHOTO_DATA;
-          console.log('📸 photoData set from LICENSE_PHOTO_DATA, length:', photoData.length);
+        // Try to upload capturedPhotoFile, else capturedPhotoData (base64)
+        if (capturedPhotoData) {
+          photoData = capturedPhotoData;
+          console.log('📸 photoData set from capturedPhotoData, length:', photoData.length);
         } else {
-          console.log('📸 WARNING: LICENSE_PHOTO_DATA is empty, no base64 to save');
+          console.log('📸 WARNING: capturedPhotoData is empty, no base64 to save');
         }
-        if (storage && (LICENSE_PHOTO_FILE || LICENSE_PHOTO_DATA)) {
+        if (storage && (capturedPhotoFile || capturedPhotoData)) {
           try {
             console.log('📸 Starting Storage upload...');
             const safeEmail = (email || 'unknown').replace(/[^a-zA-Z0-9._-]/g, '_');
             const path = `license_photos/${safeEmail}_${createdTs}.jpg`;
             const ref = storageRef(storage, path);
-            let fileToUpload = LICENSE_PHOTO_FILE;
-            if (!fileToUpload && LICENSE_PHOTO_DATA) {
+            let fileToUpload = capturedPhotoFile;
+            if (!fileToUpload && capturedPhotoData) {
               console.log('📸 Converting base64 to Blob for upload...');
               // Convert base64 to Blob
-              const arr = LICENSE_PHOTO_DATA.split(','), mime = arr[0].match(/:(.*?);/)[1], bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+              const arr = capturedPhotoData.split(','), mime = arr[0].match(/:(.*?);/)[1], bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
               for (let i = 0; i < n; i++) u8arr[i] = bstr.charCodeAt(i);
               fileToUpload = new Blob([u8arr], { type: mime });
               console.log('📸 Blob created, size:', fileToUpload.size);
             } else {
-              console.log('📸 Using LICENSE_PHOTO_FILE directly, size:', fileToUpload?.size);
+              console.log('📸 Using capturedPhotoFile directly, size:', fileToUpload?.size);
             }
             await uploadBytes(ref, fileToUpload);
             photoUrl = await getDownloadURL(ref);
