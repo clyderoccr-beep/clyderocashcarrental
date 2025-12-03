@@ -3361,6 +3361,23 @@ function getActiveBooking(){
   return null;
 }
 
+// Fee helpers: provide defaults if not defined elsewhere
+function calculateStripeFee(amount){
+  // Stripe typical fee ~2.9% + $0.30 in US; adjust as needed
+  const amt = Number(amount||0);
+  const fee = +(amt*0.029 + 0.30).toFixed(2);
+  const total = +(amt + fee).toFixed(2);
+  return { fee, total };
+}
+
+function calculatePayPalFee(amount){
+  // PayPal typical fee ~3.49% + $0.49 in US; adjust as needed
+  const amt = Number(amount||0);
+  const fee = +(amt*0.0349 + 0.49).toFixed(2);
+  const total = +(amt + fee).toFixed(2);
+  return { fee, total };
+}
+
 function getBookingAndAmount(){
   const bookingId = document.getElementById('paymentBookingId')?.value.trim();
   const amountStr = document.getElementById('paymentAmount')?.value.trim();
@@ -3400,7 +3417,7 @@ function initStripeCheckoutButton(){
   btn.dataset.bound = '1';
   btn.addEventListener('click', async ()=>{
     if(!document.getElementById('paymentTermsAgree')?.checked){ showToast('Please agree to terms first.'); return; }
-    await recordTermsAcceptanceSafe();
+    try{ await recordTermsAcceptanceSafe(); }catch(e){ console.warn('Failed to persist terms acceptance', e?.message||e); }
     const { bookingId, amountFloat } = getBookingAndAmount();
     const msgEl = document.getElementById('payment-message');
     if(!bookingId || !amountFloat || amountFloat <= 0){
