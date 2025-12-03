@@ -3321,9 +3321,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   function updatePayButtonsDisabled(){
     const agreed = termsChk && termsChk.checked;
     const stripeBtn = document.getElementById('stripeCheckoutBtn');
-    const appleBtn = document.getElementById('applePayBtn');
     if(stripeBtn) stripeBtn.disabled = !agreed;
-    if(appleBtn) appleBtn.disabled = !agreed;
     if(statusMsg) statusMsg.style.display = agreed? 'none':'block';
     // Render PayPal buttons only after agree
     if(agreed){
@@ -3363,64 +3361,29 @@ function getBookingAndAmount(){
   return { bookingId, amountCents, amountFloat };
 }
 
-function getActiveBooking(){
-  try{
-    const { bookingId } = getBookingAndAmount();
-    if(!bookingId) return null;
-    const baseId = bookingId.replace('_extend1w','');
-    const email=getSessionEmail(); if(!email) return null;
-    loadBookingsForEmail(email);
-    const bk = MY_BOOKINGS.find(b=>b.id===baseId||b.fireId===baseId);
-    return bk || null;
-  }catch(e){ console.warn('getActiveBooking error', e); return null; }
-}
-
-function calculateStripeFee(amount){
-  // Stripe: 2.9% + $0.30
-  const total = amount * 1.029 + 0.30;
-  const fee = total - amount;
-  return { fee, total };
-}
-
-function calculatePayPalFee(amount){
-  // PayPal: 3.49% + $0.49
-  const total = amount * 1.0349 + 0.49;
-  const fee = total - amount;
-  return { fee, total };
-}
-
+// Update the live fee breakdown (base + late fee + provider fees)
 function updateFeeBreakdown(){
   const amountStr = document.getElementById('paymentAmount')?.value.trim();
   const amount = parseFloat(amountStr||'0');
-  const breakdown = document.getElementById('feeBreakdown');
-  if(!breakdown) return;
-  if(!amount || amount <= 0){ breakdown.style.display='none'; return; }
-  breakdown.style.display='block';
-  // Late fee based on booking due time
-  const bk = getActiveBooking();
-  let lateFee = 0;
+  // Compute late fee based on overdue hours, capped at $200
+  let lateFee = 0; const bk = getActiveBooking();
   try{
     const due = bk?.returnDate ? new Date(bk.returnDate) : null;
     if(due){
       const now = new Date();
-      const diffMs = now - due;
-      if(diffMs > 0){
-        const hours = Math.ceil(diffMs / (1000*60*60));
-        lateFee = Math.min(hours * 15, 200); // $15/hour, capped at $200
-      }
+      const ms = now - due;
+      if(ms>0){ const hours = Math.ceil(ms/(1000*60*60)); lateFee = Math.min(hours*15, 200); }
     }
   }catch{}
   const basePlusLate = amount + lateFee;
-  const stripe = calculateStripeFee(amount);
-  const paypal = calculatePayPalFee(amount);
   const stripeOnLate = calculateStripeFee(basePlusLate);
   const paypalOnLate = calculatePayPalFee(basePlusLate);
-  const lf = document.getElementById('lateFee'); if(lf) lf.textContent = '$' + (lateFee.toFixed(2));
-  const bl = document.getElementById('basePlusLate'); if(bl) bl.textContent = '$' + (basePlusLate.toFixed(2));
-  document.getElementById('stripeFee').textContent = '$' + stripeOnLate.fee.toFixed(2);
-  document.getElementById('stripeTotal').textContent = '$' + stripeOnLate.total.toFixed(2);
-  document.getElementById('paypalFee').textContent = '$' + paypalOnLate.fee.toFixed(2);
-  document.getElementById('paypalTotal').textContent = '$' + paypalOnLate.total.toFixed(2);
+  const lf = document.getElementById('lateFee'); if(lf) lf.textContent = '$' + lateFee.toFixed(2);
+  const bl = document.getElementById('basePlusLate'); if(bl) bl.textContent = '$' + basePlusLate.toFixed(2);
+  const sFee = document.getElementById('stripeFee'); if(sFee) sFee.textContent = '$' + stripeOnLate.fee.toFixed(2);
+  const sTot = document.getElementById('stripeTotal'); if(sTot) sTot.textContent = '$' + stripeOnLate.total.toFixed(2);
+  const pFee = document.getElementById('paypalFee'); if(pFee) pFee.textContent = '$' + paypalOnLate.fee.toFixed(2);
+  const pTot = document.getElementById('paypalTotal'); if(pTot) pTot.textContent = '$' + paypalOnLate.total.toFixed(2);
 }
 
 function initStripeCheckoutButton(){
@@ -3466,46 +3429,7 @@ function initStripeCheckoutButton(){
   });
 }
 
-function initApplePayButton(){
-  const btn = document.getElementById('applePayBtn');
-  if(!btn || btn.dataset.bound) return;
-  btn.dataset.bound = '1';
-  btn.addEventListener('click', async ()=>{
-    if(!document.getElementById('paymentTermsAgree')?.checked){ showToast('Agree to terms first.'); return; }
-    await recordTermsAcceptanceSafe();
-    const { bookingId, amountFloat } = getBookingAndAmount();
-    const msgEl = document.getElementById('payment-message');
-    const aMsg = document.getElementById('apple-status');
-    const appleSupported = typeof window.ApplePaySession !== 'undefined' && ApplePaySession.canMakePayments && ApplePaySession.canMakePayments();
-    if(!appleSupported){ if(aMsg){ aMsg.style.display='block'; aMsg.textContent='Apple Pay not available on this device. We\'ll open secure checkout where you can still use your card.'; } }
-    if(!bookingId || !amountFloat || amountFloat <= 0){
-      if(msgEl){ msgEl.style.display='block'; msgEl.style.color='#c1121f'; msgEl.textContent='Missing or invalid booking amount.'; }
-      return;
-    }
-    // Add automatic late fee if overdue
-    let lateFee = 0; const bk = getActiveBooking();
-    try{ const due = bk?.returnDate ? new Date(bk.returnDate) : null; if(due){ const now=new Date(); const ms=now-due; if(ms>0){ const hours=Math.ceil(ms/(1000*60*60)); lateFee = Math.min(hours*15,200); } } }catch{}
-    const basePlusLate = amountFloat + lateFee;
-    const stripe = calculateStripeFee(basePlusLate);
-    const stripeTotalCents = Math.round(stripe.total * 100);
-    btn.disabled = true; const prev=btn.textContent; btn.textContent='Checking…';
-    try{
-      // Use the same Checkout session. On Apple devices, Apple Pay shows as an option on Checkout.
-      const endpoint = '/.netlify/functions/create-checkout-session';
-      const res = await fetch(endpoint, {
-        method:'POST', headers:{ 'Content-Type':'application/json' },
-        body: JSON.stringify({ bookingId, amount: stripeTotalCents, email: getSessionEmail()||'' })
-      });
-      if(!res.ok){ const txt=await res.text().catch(()=>res.statusText); throw new Error(`Checkout create failed (${res.status}): ${txt}`); }
-      const data = await res.json(); if(!data.url) throw new Error('No session URL returned');
-      window.location.href = data.url;
-    }catch(err){
-      console.error('Apple Pay flow (Checkout) error', err);
-      if(msgEl){ msgEl.style.display='block'; msgEl.style.color='#c1121f'; msgEl.textContent = err.message || 'Failed to start Apple Pay checkout.'; }
-      btn.disabled = false; btn.textContent = prev;
-    }
-  });
-}
+// Apple Pay flow removed; Stripe Checkout will display Apple Pay when eligible
 
 function initPayPalHostedButton(){
   const wrap = document.getElementById('paypal-button-container');
