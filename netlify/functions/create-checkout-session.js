@@ -55,7 +55,7 @@ exports.handler = async (event) => {
       // Save card on the PaymentIntent for future off-session usage
       payment_intent_data: {
         setup_future_usage: 'off_session',
-        customer: customerId || undefined,
+        // Do not set customer inside payment_intent_data for Checkout; use top-level `customer`.
         metadata: { bookingId, userEmail: email||'' }
       },
       // Prevent Link saved-wallet option from rendering in Checkout (best-effort)
