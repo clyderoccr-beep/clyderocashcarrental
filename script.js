@@ -12,6 +12,255 @@ document.addEventListener('DOMContentLoaded', function() {
       if (menuClose) menuClose.style.display = 'block';
     });
   }
+  // ===== MIGRATE EXISTING CUSTOMER FORM =====
+  // Populate vehicle dropdown when admin tab is opened
+  document.addEventListener('click',(e)=>{ 
+    const tab=e.target.closest('#adminTab'); 
+    if(!tab) return; 
+    setTimeout(()=>{ 
+      const sel=document.getElementById('migrateVehicle'); 
+      if(sel && sel.options.length<=1){ 
+        VEHICLES.forEach(v=>{ 
+          const opt=document.createElement('option'); 
+          opt.value=v.id; 
+          opt.textContent=`${v.name} - ${v.make} ${v.model}`; 
+          sel.appendChild(opt); 
+        }); 
+      } 
+    },100); 
+  });
+
+  // Clear form button
+  document.addEventListener('click',(e)=>{
+    if(e.target?.id!=='migrateClear') return;
+    const form = document.getElementById('migrateCustomerForm');
+    if(form){ form.reset(); }
+    const result = document.getElementById('migrateResult');
+    if(result){ result.style.display='none'; }
+  });
+
+  // Migrate customer form submission
+  document.addEventListener('submit', async (e)=>{
+    const form = e.target.closest('#migrateCustomerForm');
+    if(!form) return;
+    e.preventDefault();
+  
+    const resultDiv = document.getElementById('migrateResult');
+    const firstName = document.getElementById('migrateFirstName')?.value.trim();
+    const lastName = document.getElementById('migrateLastName')?.value.trim();
+    const email = document.getElementById('migrateEmail')?.value.trim().toLowerCase();
+    const phone = document.getElementById('migratePhone')?.value.trim();
+    const license = document.getElementById('migrateLicense')?.value.trim();
+    const vehicleId = document.getElementById('migrateVehicle')?.value;
+    const pickupDate = document.getElementById('migratePickupDate')?.value;
+    const returnDate = document.getElementById('migrateReturnDate')?.value;
+    const payment = parseFloat(document.getElementById('migratePayment')?.value||'0');
+    const notes = document.getElementById('migrateNotes')?.value.trim();
+    const confirmed = document.getElementById('migrateConfirm')?.checked;
+  
+    if(!firstName || !lastName || !email || !vehicleId || !pickupDate || !returnDate || !confirmed){
+      if(resultDiv){
+        resultDiv.style.display='block';
+        resultDiv.style.background='#f8d7da';
+        resultDiv.style.border='1px solid #f5c2c7';
+        resultDiv.style.color='#842029';
+        resultDiv.innerHTML='<strong>Error:</strong> Please fill all required fields and confirm the checkbox.';
+      }
+      return;
+    }
+  
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if(!emailRegex.test(email)){
+      if(resultDiv){
+        resultDiv.style.display='block';
+        resultDiv.style.background='#f8d7da';
+        resultDiv.style.border='1px solid #f5c2c7';
+        resultDiv.style.color='#842029';
+        resultDiv.innerHTML='<strong>Error:</strong> Invalid email address format.';
+      }
+      return;
+    }
+  
+    try{
+      // Show processing state
+      if(resultDiv){
+        resultDiv.style.display='block';
+        resultDiv.style.background='#cff4fc';
+        resultDiv.style.border='1px solid #9eeaf9';
+        resultDiv.style.color='#055160';
+        resultDiv.innerHTML='<strong>Processing...</strong> Creating customer account and rental record...';
+      }
+    
+      const db = getDB();
+      const { collection, addDoc, doc, setDoc, serverTimestamp, query, where, getDocs } = getUtils()||{};
+      if(!db) throw new Error('Firebase not initialized');
+    
+      const vehicle = VEHICLES.find(v=>v.id===vehicleId);
+      const vehicleName = vehicle ? `${vehicle.name} - ${vehicle.make} ${vehicle.model}` : vehicleId;
+    
+      // Check if customer email already exists
+      const existingQ = query(collection(db,'users'), where('email','==',email));
+      const existingSnap = await getDocs(existingQ);
+    
+      let userId = null;
+      let customerExists = false;
+    
+      if(!existingSnap.empty){
+        // Customer already has account
+        customerExists = true;
+        userId = existingSnap.docs[0].id;
+      } else {
+        // Create new user document (they'll complete signup later)
+        const userDoc = await addDoc(collection(db,'users'), {
+          email: email,
+          firstName: firstName,
+          lastName: lastName,
+          phone: phone||'',
+          licenseNumber: license||'',
+          status: 'pending_signup',
+          isMigrated: true,
+          migratedAt: serverTimestamp(),
+          migratedBy: getSessionEmail(),
+          createdTs: new Date(pickupDate).getTime(), // Backdate to rental start
+          notes: notes||''
+        });
+        userId = userDoc.id;
+      }
+    
+      // Create booking record with backdate
+      const bookingDoc = await addDoc(collection(db,'bookings'), {
+        userEmail: email,
+        vehicleId: vehicleId,
+        vehicleName: vehicleName,
+        pickupDate: pickupDate,
+        returnDate: returnDate,
+        status: 'rented',
+        createdAt: new Date(pickupDate).getTime(),
+        rentedAt: new Date(pickupDate).getTime(),
+        isMigrated: true,
+        migratedAt: serverTimestamp(),
+        migratedBy: getSessionEmail(),
+        paymentReceived: payment > 0 ? payment : null,
+        paidAt: payment > 0 ? new Date(pickupDate).getTime() : null,
+        notes: notes||'',
+        termsAccepted: false, // Customer must accept when they sign up
+        termsAcceptedAt: null
+      });
+    
+      // Create audit log entry
+      await addDoc(collection(db,'audit_logs'), {
+        type: 'customer_migration',
+        userId: userId,
+        bookingId: bookingDoc.id,
+        performedBy: getSessionEmail(),
+        performedAt: serverTimestamp(),
+        details: {
+          customerEmail: email,
+          customerName: `${firstName} ${lastName}`,
+          vehicleId: vehicleId,
+          vehicleName: vehicleName,
+          pickupDate: pickupDate,
+          returnDate: returnDate,
+          paymentReceived: payment,
+          notes: notes,
+          customerExisted: customerExists
+        }
+      });
+    
+      // Send notification email via Netlify function
+      const emailSubject = `Welcome to Clydero Cash Car Rental - Action Required`;
+      const emailBody = `Dear ${firstName} ${lastName},
+
+  Thank you for renting from Clydero Cash Car Rental!
+
+  RENTAL DETAILS:
+  • Vehicle: ${vehicleName}
+  • Pickup Date: ${pickupDate}
+  • Return Date: ${returnDate}
+  ${payment > 0 ? `• Payment Received: $${payment.toFixed(2)}` : ''}
+
+  IMPORTANT - ACTION REQUIRED:
+  To complete your profile and ensure full legal protection for both parties, please:
+
+  1. Visit our website: https://clyderocashcarrental.netlify.app
+  2. Sign up using this email address (${email})
+  3. Review and accept our Terms of Service
+  4. Review and accept our Privacy Policy
+  5. Upload your driver's license photo
+
+  WHY THIS IS IMPORTANT:
+  • Provides legal documentation of our rental agreement
+  • Protects both you and our business
+  • Gives you access to your rental dashboard
+  • Required for all future rentals
+
+  NEED HELP?
+  Contact us at clyderoccr@gmail.com
+
+  Best regards,
+  Clydero Cash Car Rental Team
+
+  ---
+  This is an automated message. Please do not reply to this email.`;
+
+      try{
+        await addDoc(collection(db,'mail'), {
+          to: email,
+          from: 'clyderoccr@gmail.com',
+          replyTo: 'clyderoccr@gmail.com',
+          subject: emailSubject,
+          text: emailBody,
+          createdAt: serverTimestamp()
+        });
+      }catch(mailErr){
+        console.warn('Email notification failed:', mailErr);
+        // Continue even if email fails
+      }
+    
+      // Success
+      if(resultDiv){
+        resultDiv.style.display='block';
+        resultDiv.style.background='#d1e7dd';
+        resultDiv.style.border='1px solid #a3cfbb';
+        resultDiv.style.color='#0f5132';
+        resultDiv.innerHTML=`
+          <strong>✅ Customer Migrated Successfully!</strong>
+          <div style="margin-top:8px;font-size:13px">
+            <strong>Customer:</strong> ${firstName} ${lastName} (${email})<br>
+            <strong>Vehicle:</strong> ${vehicleName}<br>
+            <strong>Status:</strong> ${customerExists ? 'Added to existing account' : 'New account created'}<br>
+            <strong>Rental:</strong> ${pickupDate} → ${returnDate}<br>
+            ${payment > 0 ? `<strong>Payment:</strong> $${payment.toFixed(2)}<br>` : ''}
+          </div>
+          <div style="margin-top:12px;padding:8px;background:#fff;border:1px solid #a3cfbb;border-radius:4px;font-size:12px">
+            <strong>📧 NEXT STEPS:</strong><br>
+            1. Confirmation email sent to ${email}<br>
+            2. Customer must sign up and accept terms<br>
+            3. Check their profile for terms acceptance status<br>
+            4. Remind them to complete signup ASAP for legal protection
+          </div>
+        `;
+      }
+    
+      // Clear form
+      form.reset();
+    
+      // Refresh admin views
+      loadAdminBookings().then(renderAdminBookings);
+    
+    }catch(err){
+      console.error('Migration failed:', err);
+      if(resultDiv){
+        resultDiv.style.display='block';
+        resultDiv.style.background='#f8d7da';
+        resultDiv.style.border='1px solid #f5c2c7';
+        resultDiv.style.color='#842029';
+        resultDiv.innerHTML=`<strong>Error:</strong> ${err.message||'Unknown error occurred'}`;
+      }
+    }
+  });
+
   
   if (menuClose && nav) {
     menuClose.addEventListener('click', function() {

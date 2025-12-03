@@ -1421,6 +1421,101 @@
               <button class="navbtn" id="adminBookingsRefresh" type="button">Refresh Bookings</button>
             </div>
             <div id="adminBookings" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px"></div>
+                  <!-- Migrate Existing Customer Section -->
+                  <details class="card" style="max-width:1000px;margin-top:16px">
+                    <summary style="cursor:pointer;font-size:18px;font-weight:700;padding:16px;margin:-16px;margin-bottom:16px;background:rgba(25,135,84,0.1);border-radius:8px;user-select:none">📝 Migrate Existing Customer</summary>
+                    <div class="body">
+                      <p style="color:var(--muted);margin-top:0">Add customers who rented before the website was built. This will create their account, assign their rental, and send them a confirmation email with terms/policy for legal documentation.</p>
+            
+                      <div style="background:#fff3cd;border:1px solid #ffc107;padding:12px;border-radius:6px;margin-bottom:16px">
+                        <strong style="color:#856404">⚠️ Legal Documentation Process:</strong>
+                        <ol style="margin:8px 0;padding-left:20px;color:#856404;font-size:13px">
+                          <li>Customer info is saved with timestamp</li>
+                          <li>Rental is backdated to actual rental date</li>
+                          <li>Email sent to customer with terms & policy links</li>
+                          <li>Customer must sign up and accept terms to complete profile</li>
+                          <li>All actions are logged for legal audit trail</li>
+                        </ol>
+                      </div>
+
+                      <form id="migrateCustomerForm" style="display:grid;gap:12px">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                          <div>
+                            <label style="display:block;margin-bottom:4px;font-weight:600">First Name *</label>
+                            <input type="text" id="migrateFirstName" required style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px">
+                          </div>
+                          <div>
+                            <label style="display:block;margin-bottom:4px;font-weight:600">Last Name *</label>
+                            <input type="text" id="migrateLastName" required style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px">
+                          </div>
+                        </div>
+
+                        <div>
+                          <label style="display:block;margin-bottom:4px;font-weight:600">Email Address *</label>
+                          <input type="email" id="migrateEmail" required style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px" placeholder="customer@example.com">
+                          <div class="muted" style="font-size:11px;margin-top:2px">Confirmation email will be sent to this address</div>
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                          <div>
+                            <label style="display:block;margin-bottom:4px;font-weight:600">Phone Number</label>
+                            <input type="tel" id="migratePhone" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px">
+                          </div>
+                          <div>
+                            <label style="display:block;margin-bottom:4px;font-weight:600">License Number</label>
+                            <input type="text" id="migrateLicense" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px">
+                          </div>
+                        </div>
+
+                        <div>
+                          <label style="display:block;margin-bottom:4px;font-weight:600">Vehicle *</label>
+                          <select id="migrateVehicle" required style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px">
+                            <option value="">-- Select Vehicle --</option>
+                          </select>
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                          <div>
+                            <label style="display:block;margin-bottom:4px;font-weight:600">Rental Start Date *</label>
+                            <input type="date" id="migratePickupDate" required style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px">
+                            <div class="muted" style="font-size:11px;margin-top:2px">Actual date they picked up the vehicle</div>
+                          </div>
+                          <div>
+                            <label style="display:block;margin-bottom:4px;font-weight:600">Return Date *</label>
+                            <input type="date" id="migrateReturnDate" required style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px">
+                            <div class="muted" style="font-size:11px;margin-top:2px">Expected return date</div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label style="display:block;margin-bottom:4px;font-weight:600">Payment Amount Received</label>
+                          <input type="number" id="migratePayment" step="0.01" min="0" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px" placeholder="0.00">
+                          <div class="muted" style="font-size:11px;margin-top:2px">Amount already paid (optional)</div>
+                        </div>
+
+                        <div>
+                          <label style="display:block;margin-bottom:4px;font-weight:600">Notes (Internal Only)</label>
+                          <textarea id="migrateNotes" rows="3" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px" placeholder="Any additional info about this customer or rental..."></textarea>
+                        </div>
+
+                        <div style="background:#d1ecf1;border:1px solid #bee5eb;padding:12px;border-radius:6px">
+                          <label style="display:flex;align-items:start;gap:8px;cursor:pointer">
+                            <input type="checkbox" id="migrateConfirm" required style="margin-top:2px">
+                            <span style="font-size:13px;color:#0c5460">
+                              <strong>I confirm:</strong> This customer has physically received the vehicle and I will send them the terms/policy acceptance email immediately. I understand they must complete signup and accept terms for full legal protection.
+                            </span>
+                          </label>
+                        </div>
+
+                        <div style="display:flex;gap:8px">
+                          <button type="submit" class="navbtn" style="background:#198754;border-color:#198754">Migrate Customer & Send Email</button>
+                          <button type="button" id="migrateClear" class="navbtn" style="background:#6c757d;border-color:#6c757d">Clear Form</button>
+                        </div>
+                      </form>
+
+                      <div id="migrateResult" style="display:none;margin-top:16px;padding:12px;border-radius:6px"></div>
+                    </div>
+                  </details>
           </div>
         </details>
         <!-- Member Details Modal -->
