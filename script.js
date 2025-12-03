@@ -205,14 +205,22 @@ document.addEventListener('DOMContentLoaded', function() {
   This is an automated message. Please do not reply to this email.`;
 
       try{
-        await addDoc(collection(db,'mail'), {
-          to: email,
-          from: 'clyderoccr@gmail.com',
-          replyTo: 'clyderoccr@gmail.com',
-          subject: emailSubject,
-          text: emailBody,
-          createdAt: serverTimestamp()
+        const resp = await fetch('/.netlify/functions/notify-event', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: email,
+            type: 'migration-invite',
+            userEmail: email,
+            details: {
+              name: `${firstName} ${lastName}`,
+              vehicleName,
+              pickupDate,
+              returnDate
+            }
+          })
         });
+        if(!resp.ok){ console.warn('Migration email send failed:', await resp.text().catch(()=>resp.statusText)); }
       }catch(mailErr){
         console.warn('Email notification failed:', mailErr);
         // Continue even if email fails
@@ -2583,6 +2591,7 @@ function renderMembers(){
         <button class='navbtn' data-member-delete='${u.id}' style='background:#c1121f;border-color:#c1121f'>Delete</button>
         <button class='navbtn' data-member-waiver='${u.id}' style='${u.cardRemovalOverride? 'background:#ffc107;border-color:#ffc107;color:#000':'background:#2d6a4f;border-color:#2d6a4f'}'>${u.cardRemovalOverride? 'Revoke Waiver':'Grant Waiver'}</button>
         <button class='navbtn' data-member-admin='${u.id}' style='${isAdmin? 'background:#666;border-color:#666':'background:var(--gold);border-color:var(--gold);color:#000'}'>${isAdmin? 'Remove Admin':'Make Admin'}</button>
+        <button class='navbtn' data-member-resend='${u.id}'>Resend Invite</button>
       </div>
     </div>`;
     wrap.appendChild(card);
@@ -2660,6 +2669,25 @@ function updateAdminBadge(){
   const unread = INBOX.filter(m=>!m.read).length;
   if(unread>0){ badge.textContent = String(unread); badge.style.display='inline-block'; }
   else { badge.style.display='none'; }
+}
+
+// Resend migration invite using SMTP notify function; include latest booking if available
+async function resendMigrationInvite(user){
+  try{
+    const db=getDB(); const u=getUtils()||{};
+    let vehicleName=''; let pickupDate=''; let returnDate='';
+    if(db && u.collection && u.where && u.getDocs && user.email){
+      const q = await u.getDocs(u.query(u.collection(db,'bookings'), u.where('userEmail','==',user.email)));
+      let latest=null; q.forEach(d=>{ const b=d.data(); if(!latest || (b.createdAt||0) > (latest.createdAt||0)) latest=b; });
+      if(latest){ vehicleName = latest.vehicleName || latest.vehicleId || ''; pickupDate = latest.pickupDate||''; returnDate = latest.returnDate||''; }
+    }
+    const fullName = `${user.first||user.firstName||''} ${user.last||user.lastName||''}`.trim() || user.email;
+    const resp = await fetch('/.netlify/functions/notify-event', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ to: user.email, type:'migration-invite', userEmail: user.email, details:{ name: fullName, vehicleName, pickupDate, returnDate } })
+    });
+    return resp.ok;
+  }catch(e){ console.warn('Resend invite failed', e.message); return false; }
 }
 
 function renderAbout(){ const title=document.querySelector('#about h2'); const para=document.querySelector('#about p'); if(title) title.textContent = ABOUT_CONTENT.title; if(para) para.textContent = ABOUT_CONTENT.content; }
@@ -2832,6 +2860,17 @@ document.addEventListener('click',(e)=>{
         }
       });
     }
+    return;
+  }
+  const mri = e.target.closest('[data-member-resend]');
+  if(mri){
+    const id = mri.dataset.memberResend;
+    const u = MEMBERS.find(x=>x.id===id);
+    if(!u || !u.email){ showToast('No email on file.'); return; }
+    mri.disabled = true; const prev = mri.textContent; mri.textContent = 'Sending…';
+    resendMigrationInvite(u).then((ok)=>{
+      showToast(ok? 'Invite sent' : 'Invite failed');
+    }).finally(()=>{ mri.disabled=false; mri.textContent=prev; });
     return;
   }
 });
