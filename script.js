@@ -3276,7 +3276,6 @@ function ensurePayPalSdkLoaded(){
 
 function initHostedPayments(){
   try{ initStripeCheckoutButton(); }catch(e){ console.warn('Stripe init failed', e); }
-  try{ initApplePayButton(); }catch(e){ console.warn('Apple Pay init failed', e); }
   ensurePayPalSdkLoaded()
     .then(()=>{ try{ initPayPalHostedButton(); }catch(e){ console.warn('PayPal init failed', e); } })
     .catch((e)=>{ console.warn('PayPal SDK load failed', e?.message||e); const wrap=document.getElementById('paypal-button-container'); if(wrap){ wrap.innerHTML='<small style="color:#666">PayPal unavailable (SDK failed to load).</small>'; } });
@@ -3351,6 +3350,15 @@ function startAnchoredCountdown(dueAt){
     render();
     countdownInterval = setInterval(render, 1000);
   }catch(e){ console.warn('countdown error', e); }
+}
+
+// Fallback helper: getActiveBooking may be defined elsewhere; provide a safe default
+function getActiveBooking(){
+  try{
+    if(typeof window.getCurrentBooking === 'function'){ return window.getCurrentBooking(); }
+    if(window.ACTIVE_BOOKING){ return window.ACTIVE_BOOKING; }
+  }catch{}
+  return null;
 }
 
 function getBookingAndAmount(){
