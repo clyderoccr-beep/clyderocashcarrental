@@ -1194,17 +1194,27 @@ try{
   });
 }catch{}
 
-// Vehicle filter button handler
+// Vehicle filter dropdown handler
 document.addEventListener('click', (e)=>{
-  const filterBtn = e.target.closest('.filter-btn');
-  if(filterBtn){
-    const filterType = filterBtn.dataset.filter;
+  const filterToggle = e.target.closest('#filterToggle');
+  const filterOption = e.target.closest('.filter-option');
+  const filterMenu = document.getElementById('filterMenu');
+  
+  if(filterToggle){
+    e.stopPropagation();
+    filterMenu.style.display = filterMenu.style.display === 'none' ? 'block' : 'none';
+  } else if(filterOption){
+    const filterType = filterOption.dataset.filter;
     VEHICLE_FILTER = filterType;
-    // Update active state
-    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-    filterBtn.classList.add('active');
-    // Re-render vehicles with new filter
+    document.querySelectorAll('.filter-option').forEach(btn => btn.classList.remove('active'));
+    filterOption.classList.add('active');
+    document.getElementById('filterLabel').textContent = `(${filterType})`;
+    filterMenu.style.display = 'none';
     renderVehicles();
+  } else {
+    if(filterMenu && filterMenu.style.display === 'block'){
+      filterMenu.style.display = 'none';
+    }
   }
 });
 
