@@ -1819,24 +1819,31 @@ document.getElementById('signup-form')?.addEventListener('submit', (e)=>{
       
       // Try to upload capturedPhotoFile, else capturedPhotoData (base64)
       // NOTE: We compress and only save Storage URL, not base64 (Firestore 1MB field limit)
-      if (storage && (capturedPhotoFile || capturedPhotoData)) {
+      console.log('📸 Storage check - storage:', !!storage, 'capturedPhotoFile:', !!capturedPhotoFile, 'capturedPhotoData:', !!capturedPhotoData);
+      console.log('📸 Storage utils - storageRef:', !!storageRef, 'uploadBytes:', !!uploadBytes, 'getDownloadURL:', !!getDownloadURL);
+      
+      if (storage && storageRef && uploadBytes && getDownloadURL && (capturedPhotoFile || capturedPhotoData)) {
         try {
           console.log('📸 Starting Storage upload...');
           if(submitBtn) submitBtn.textContent = 'Uploading photo...';
           const safeEmail = (email || 'unknown').replace(/[^a-zA-Z0-9._-]/g, '_');
           const path = `license_photos/${safeEmail}_${createdTs}.jpg`;
+          console.log('📸 Upload path:', path);
           const ref = storageRef(storage, path);
+          console.log('📸 Storage ref created:', !!ref);
           let fileToUpload = capturedPhotoFile;
           
           // Compress image before upload to reduce size
           if (capturedPhotoFile || capturedPhotoData) {
             console.log('📸 Compressing photo before upload...');
             const sourceFile = capturedPhotoFile || await (async () => {
+              console.log('📸 Converting base64 to Blob...');
               // Convert base64 to Blob
               const arr = capturedPhotoData.split(','), mime = arr[0].match(/:(.*?);/)[1], bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
               for (let i = 0; i < n; i++) u8arr[i] = bstr.charCodeAt(i);
               return new Blob([u8arr], { type: mime });
             })();
+            console.log('📸 Source file for compression:', !!sourceFile, 'size:', sourceFile?.size);
             
             // Compress to max 800x800 at 0.7 quality
             fileToUpload = await new Promise((resolve, reject) => {
@@ -1871,14 +1878,25 @@ document.getElementById('signup-form')?.addEventListener('submit', (e)=>{
             console.log('📸 Compressed size:', fileToUpload.size);
           }
           
+          console.log('📸 About to upload, fileToUpload:', !!fileToUpload, 'size:', fileToUpload?.size);
           await uploadBytes(ref, fileToUpload);
+          console.log('📸 Upload complete, getting download URL...');
           photoUrl = await getDownloadURL(ref);
           console.log('📸 License photo uploaded successfully:', photoUrl);
         } catch (upErr) { 
-          console.warn('📸 Photo upload failed:', upErr?.message || upErr); 
+          console.error('📸 Photo upload FAILED:', upErr);
+          console.error('📸 Error details:', upErr?.message, upErr?.code, upErr?.stack); 
+          // Show error to user
+          if(submitBtn) submitBtn.textContent = 'Photo upload failed, continuing...';
         }
       } else {
-        console.log('📸 Skipping Storage upload - no file or data, or storage not available');
+        console.log('📸 Skipping Storage upload - missing requirements:');
+        console.log('  - storage:', !!storage);
+        console.log('  - storageRef:', !!storageRef);
+        console.log('  - uploadBytes:', !!uploadBytes);
+        console.log('  - getDownloadURL:', !!getDownloadURL);
+        console.log('  - capturedPhotoFile:', !!capturedPhotoFile);
+        console.log('  - capturedPhotoData:', !!capturedPhotoData);
       }
       
       try {
