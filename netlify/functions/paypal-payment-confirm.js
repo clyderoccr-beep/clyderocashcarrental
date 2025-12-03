@@ -39,8 +39,11 @@ exports.handler = async (event) => {
       return { statusCode: 500, body: 'PayPal env vars missing.' };
     }
 
+    // Choose API base by environment
+    const base = (process.env.PAYPAL_ENV === 'live') ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com';
+
     // OAuth token
-    const tokenRes = await fetch('https://api-m.sandbox.paypal.com/v1/oauth2/token', {
+    const tokenRes = await fetch(base + '/v1/oauth2/token', {
       method: 'POST',
       headers: {
         'Authorization': 'Basic ' + Buffer.from(clientId + ':' + clientSecret).toString('base64'),
@@ -55,7 +58,7 @@ exports.handler = async (event) => {
     const accessToken = tokenJson.access_token;
 
     // Fetch order details
-    const orderRes = await fetch(`https://api-m.sandbox.paypal.com/v2/checkout/orders/${orderId}`, { headers: { 'Authorization': 'Bearer ' + accessToken } });
+    const orderRes = await fetch(`${base}/v2/checkout/orders/${orderId}`, { headers: { 'Authorization': 'Bearer ' + accessToken } });
     const orderJson = await orderRes.json();
     if (!orderRes.ok) {
       throw new Error('PayPal order fetch failed ' + orderRes.status + ': ' + JSON.stringify(orderJson));

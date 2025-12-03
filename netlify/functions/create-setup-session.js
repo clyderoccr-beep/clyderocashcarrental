@@ -24,8 +24,8 @@ exports.handler = async (event) => {
       payment_method_types: ['card'],
       customer_email: email,
       metadata: { origin: 'save_card', userEmail: email },
-      success_url: 'https://clyderoccr.com/#payments?saved=1',
-      cancel_url: 'https://clyderoccr.com/#payments?saveCanceled=1'
+      success_url: `${(process.env.URL||'https://clyderocashcarrental.netlify.app')}/#payments?saved=1`,
+      cancel_url: `${(process.env.URL||'https://clyderocashcarrental.netlify.app')}/#payments?saveCanceled=1`
     });
     return { statusCode: 200, headers:{'Content-Type':'application/json'}, body: JSON.stringify({ url: session.url }) };
   }catch(err){

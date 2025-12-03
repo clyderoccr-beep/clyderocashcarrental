@@ -75,8 +75,8 @@ exports.handler = async (event) => {
         userEmail: email||'',
       },
       // Include bookingId + paid flag so frontend can mark booking as rented
-      success_url: `https://clyderoccr.com/#payments?paid=1&bookingId=${encodeURIComponent(bookingId)}`,
-      cancel_url: 'https://clyderoccr.com/#payment-cancel',
+      success_url: `${(process.env.URL||'https://clyderocashcarrental.netlify.app')}/#payments?paid=1&bookingId=${encodeURIComponent(bookingId)}`,
+      cancel_url: `${(process.env.URL||'https://clyderocashcarrental.netlify.app')}/#payment-cancel`,
     });
 
     return {
