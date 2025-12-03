@@ -1771,6 +1771,11 @@ document.getElementById('signup-form')?.addEventListener('submit', (e)=>{
   // Create Auth account then proceed
   const api=getAuthApi(); const auth=getAuthInstance();
   if(api.createUserWithEmailAndPassword && auth){
+    // Show loading state
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalBtnText = submitBtn ? submitBtn.textContent : '';
+    if(submitBtn){ submitBtn.disabled = true; submitBtn.textContent = 'Creating account...'; }
+    
     api.createUserWithEmailAndPassword(auth,email,password).then(async (userCredential)=>{
       // CRITICAL: Capture photo data BEFORE clearing globals
       const capturedPhotoFile = LICENSE_PHOTO_FILE;
@@ -1780,6 +1785,7 @@ document.getElementById('signup-form')?.addEventListener('submit', (e)=>{
       const uid = userCredential.user.uid;
       console.log('User created with UID:', uid);
       console.log('📸 SIGNUP DEBUG: Starting profile save');
+      if(submitBtn) submitBtn.textContent = 'Saving profile...';
       console.log('📸 capturedPhotoFile:', capturedPhotoFile);
       console.log('📸 capturedPhotoData length:', capturedPhotoData ? capturedPhotoData.length : 0);
       
@@ -1806,6 +1812,7 @@ document.getElementById('signup-form')?.addEventListener('submit', (e)=>{
       if (storage && (capturedPhotoFile || capturedPhotoData)) {
         try {
           console.log('📸 Starting Storage upload...');
+          if(submitBtn) submitBtn.textContent = 'Uploading photo...';
           const safeEmail = (email || 'unknown').replace(/[^a-zA-Z0-9._-]/g, '_');
           const path = `license_photos/${safeEmail}_${createdTs}.jpg`;
           const ref = storageRef(storage, path);
@@ -1832,6 +1839,7 @@ document.getElementById('signup-form')?.addEventListener('submit', (e)=>{
       
       try {
         if (db && uid && setDoc && doc) {
+          if(submitBtn) submitBtn.textContent = 'Finalizing...';
           const profileData = { ...basePayload, licensePhotoUrl: photoUrl, licensePhotoData: photoData };
           console.log('📸 Saving to Firestore:');
           console.log('  - licensePhotoUrl:', photoUrl ? photoUrl.substring(0,100) : 'EMPTY');
@@ -1840,19 +1848,31 @@ document.getElementById('signup-form')?.addEventListener('submit', (e)=>{
           console.log('📸 User profile saved successfully');
         } else {
           console.error('📸 Cannot save to Firestore - missing:', { db: !!db, uid, setDoc: !!setDoc, doc: !!doc });
+          throw new Error('Database not available');
         }
       } catch (saveErr) { 
-        console.error('📸 Profile save failed:', saveErr?.message || saveErr); 
+        console.error('📸 Profile save failed:', saveErr?.message || saveErr);
+        if(submitBtn){ submitBtn.disabled = false; submitBtn.textContent = originalBtnText; }
+        alert('Failed to save your profile: ' + (saveErr?.message || 'Unknown error') + '. Please try again.');
+        return;
       }
       
       // Now that profile is saved, redirect user to login
+      if(submitBtn) submitBtn.textContent = 'Success! Redirecting...';
       try{ e.target.reset(); }catch{}
       const prev = document.getElementById('photoPreview'); if(prev) prev.innerHTML='';
       LICENSE_PHOTO_DATA = '';
       LICENSE_PHOTO_FILE = null;
-      showToast('Account created. Please sign in.');
-      goto('login');
-    }).catch(err=>{ alert(cleanErrorMessage(err)); return; });
+      setTimeout(()=>{
+        showToast('Account created. Please sign in.');
+        goto('login');
+      }, 500);
+    }).catch(err=>{ 
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      if(submitBtn){ submitBtn.disabled = false; submitBtn.textContent = 'Sign Up'; }
+      alert(cleanErrorMessage(err)); 
+      return; 
+    });
   } else {
     // Fallback: create local-only indicator, then send to login
     try{ e.target.reset(); }catch{}
