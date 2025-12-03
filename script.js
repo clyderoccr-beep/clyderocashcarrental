@@ -1714,12 +1714,16 @@ document.addEventListener('change', (e)=>{
   if(e.target.id==='licensePhoto'){
     const file=e.target.files[0];
     const preview=document.getElementById('photoPreview');
+    console.log('📸 License photo input changed, file:', file);
     if(file && file.type.startsWith('image/')){
       LICENSE_PHOTO_FILE = file;
+      console.log('📸 LICENSE_PHOTO_FILE set, size:', file.size, 'type:', file.type);
       const reader=new FileReader();
       reader.onload=(ev)=>{
         preview.innerHTML=`<img src="${ev.target.result}" alt="License photo preview" style="width:100%;border-radius:8px;border:1px solid rgba(255,255,255,.12)">`;
         LICENSE_PHOTO_DATA = ev.target.result;
+        console.log('📸 LICENSE_PHOTO_DATA set, length:', LICENSE_PHOTO_DATA.length);
+        console.log('📸 Base64 preview (first 100 chars):', LICENSE_PHOTO_DATA.substring(0,100));
       };
       reader.readAsDataURL(file);
     }
@@ -1780,6 +1784,9 @@ document.getElementById('signup-form')?.addEventListener('submit', (e)=>{
       (async ()=>{
         const uid = userCredential.user.uid;
         console.log('User created with UID:', uid);
+        console.log('📸 SIGNUP DEBUG: Starting background profile save');
+        console.log('📸 LICENSE_PHOTO_FILE:', LICENSE_PHOTO_FILE);
+        console.log('📸 LICENSE_PHOTO_DATA length:', LICENSE_PHOTO_DATA ? LICENSE_PHOTO_DATA.length : 0);
         const db=getDB(); const { doc, setDoc } = getUtils();
         const storage = getStorage(); const { storageRef, uploadBytes, getDownloadURL } = getStorageUtils();
         const createdTs = Date.now();
@@ -1794,30 +1801,46 @@ document.getElementById('signup-form')?.addEventListener('submit', (e)=>{
         // Try to upload LICENSE_PHOTO_FILE, else LICENSE_PHOTO_DATA (base64)
         if (LICENSE_PHOTO_DATA) {
           photoData = LICENSE_PHOTO_DATA;
+          console.log('📸 photoData set from LICENSE_PHOTO_DATA, length:', photoData.length);
+        } else {
+          console.log('📸 WARNING: LICENSE_PHOTO_DATA is empty, no base64 to save');
         }
         if (storage && (LICENSE_PHOTO_FILE || LICENSE_PHOTO_DATA)) {
           try {
+            console.log('📸 Starting Storage upload...');
             const safeEmail = (email || 'unknown').replace(/[^a-zA-Z0-9._-]/g, '_');
             const path = `license_photos/${safeEmail}_${createdTs}.jpg`;
             const ref = storageRef(storage, path);
             let fileToUpload = LICENSE_PHOTO_FILE;
             if (!fileToUpload && LICENSE_PHOTO_DATA) {
+              console.log('📸 Converting base64 to Blob for upload...');
               // Convert base64 to Blob
               const arr = LICENSE_PHOTO_DATA.split(','), mime = arr[0].match(/:(.*?);/)[1], bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
               for (let i = 0; i < n; i++) u8arr[i] = bstr.charCodeAt(i);
               fileToUpload = new Blob([u8arr], { type: mime });
+              console.log('📸 Blob created, size:', fileToUpload.size);
+            } else {
+              console.log('📸 Using LICENSE_PHOTO_FILE directly, size:', fileToUpload?.size);
             }
             await uploadBytes(ref, fileToUpload);
             photoUrl = await getDownloadURL(ref);
-            console.log('License photo uploaded:', photoUrl);
-          } catch (upErr) { console.warn('Photo upload failed:', upErr?.message || upErr); }
+            console.log('📸 License photo uploaded successfully:', photoUrl);
+          } catch (upErr) { console.warn('📸 Photo upload failed:', upErr?.message || upErr); }
+        } else {
+          console.log('📸 Skipping Storage upload - no file or data, or storage not available');
         }
         try {
           if (db && uid && setDoc && doc) {
-            await setDoc(doc(db, 'users', uid), { ...basePayload, licensePhotoUrl: photoUrl, licensePhotoData: photoData });
-            console.log('User profile saved (background)');
+            const profileData = { ...basePayload, licensePhotoUrl: photoUrl, licensePhotoData: photoData };
+            console.log('📸 Saving to Firestore:');
+            console.log('  - licensePhotoUrl:', photoUrl ? photoUrl.substring(0,100) : 'EMPTY');
+            console.log('  - licensePhotoData length:', photoData ? photoData.length : 0);
+            await setDoc(doc(db, 'users', uid), profileData);
+            console.log('📸 User profile saved successfully (background)');
+          } else {
+            console.error('📸 Cannot save to Firestore - missing:', { db: !!db, uid, setDoc: !!setDoc, doc: !!doc });
           }
-        } catch (saveErr) { console.error('Background profile save failed:', saveErr?.message || saveErr); }
+        } catch (saveErr) { console.error('📸 Background profile save failed:', saveErr?.message || saveErr); }
       })();
     }).catch(err=>{ alert(cleanErrorMessage(err)); return; });
   } else {
@@ -2317,7 +2340,9 @@ document.addEventListener('click',(e)=>{
     console.log('Member email:', u.email);
     console.log('Full member object:', u);
     console.log('licensePhotoUrl:', u.licensePhotoUrl);
+    console.log('licensePhotoData exists:', !!u.licensePhotoData);
     console.log('licensePhotoData length:', u.licensePhotoData ? u.licensePhotoData.length : 0);
+    console.log('licensePhotoData preview:', u.licensePhotoData ? u.licensePhotoData.substring(0,100) : 'NONE');
     console.log('photoUrl:', u.photoUrl);
     console.log('============================');
     
@@ -2346,7 +2371,11 @@ document.addEventListener('click',(e)=>{
     if(img){ 
       // Try license photo first, then fall back to profile photo URL
       const photoUrl = u.licensePhotoUrl || u.licensePhotoData || u.photoUrl || '';
-      console.log('Final photoUrl chosen:', photoUrl ? photoUrl.substring(0,100)+'...' : 'EMPTY');
+      console.log('📸 Photo URL selection:');
+      console.log('  - licensePhotoUrl:', u.licensePhotoUrl ? 'EXISTS ('+u.licensePhotoUrl.substring(0,50)+')' : 'NONE');
+      console.log('  - licensePhotoData:', u.licensePhotoData ? 'EXISTS (length: '+u.licensePhotoData.length+')' : 'NONE');
+      console.log('  - photoUrl (profile):', u.photoUrl ? 'EXISTS' : 'NONE');
+      console.log('  - Final photoUrl chosen:', photoUrl ? photoUrl.substring(0,100)+'...' : 'EMPTY');
       if(photoUrl){ 
         img.src = photoUrl; 
         img.style.display='block';
