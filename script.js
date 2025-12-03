@@ -857,8 +857,8 @@ document.addEventListener('click', async (e)=>{
     
     // Show existing photo if available
     const previewDiv = document.getElementById('updatePhotoPreview');
-    if(data.licensePhotoData){
-      previewDiv.innerHTML = `<img src="${data.licensePhotoData}" alt="Current license photo" style="width:100%;height:auto;border-radius:8px;border:1px solid #ccc">`;
+    if(data.licensePhotoUrl){
+      previewDiv.innerHTML = `<img src="${data.licensePhotoUrl}" alt="Current license photo" style="width:100%;height:auto;border-radius:8px;border:1px solid #ccc">`;
     } else {
       previewDiv.innerHTML = '<small style="color:#666">No photo on file</small>';
     }
@@ -1802,13 +1802,7 @@ document.getElementById('signup-form')?.addEventListener('submit', (e)=>{
       let photoData = '';
       
       // Try to upload capturedPhotoFile, else capturedPhotoData (base64)
-      if (capturedPhotoData) {
-        photoData = capturedPhotoData;
-        console.log('📸 photoData set from capturedPhotoData, length:', photoData.length);
-      } else {
-        console.log('📸 WARNING: capturedPhotoData is empty, no base64 to save');
-      }
-      
+      // NOTE: We compress and only save Storage URL, not base64 (Firestore 1MB field limit)
       if (storage && (capturedPhotoFile || capturedPhotoData)) {
         try {
           console.log('📸 Starting Storage upload...');
@@ -1817,16 +1811,50 @@ document.getElementById('signup-form')?.addEventListener('submit', (e)=>{
           const path = `license_photos/${safeEmail}_${createdTs}.jpg`;
           const ref = storageRef(storage, path);
           let fileToUpload = capturedPhotoFile;
-          if (!fileToUpload && capturedPhotoData) {
-            console.log('📸 Converting base64 to Blob for upload...');
-            // Convert base64 to Blob
-            const arr = capturedPhotoData.split(','), mime = arr[0].match(/:(.*?);/)[1], bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
-            for (let i = 0; i < n; i++) u8arr[i] = bstr.charCodeAt(i);
-            fileToUpload = new Blob([u8arr], { type: mime });
-            console.log('📸 Blob created, size:', fileToUpload.size);
-          } else {
-            console.log('📸 Using capturedPhotoFile directly, size:', fileToUpload?.size);
+          
+          // Compress image before upload to reduce size
+          if (capturedPhotoFile || capturedPhotoData) {
+            console.log('📸 Compressing photo before upload...');
+            const sourceFile = capturedPhotoFile || await (async () => {
+              // Convert base64 to Blob
+              const arr = capturedPhotoData.split(','), mime = arr[0].match(/:(.*?);/)[1], bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+              for (let i = 0; i < n; i++) u8arr[i] = bstr.charCodeAt(i);
+              return new Blob([u8arr], { type: mime });
+            })();
+            
+            // Compress to max 800x800 at 0.7 quality
+            fileToUpload = await new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = (ev) => {
+                const img = new Image();
+                img.onload = () => {
+                  const canvas = document.createElement('canvas');
+                  let width = img.width;
+                  let height = img.height;
+                  const MAX = 800;
+                  if (width > height) {
+                    if (width > MAX) { height *= (MAX / width); width = MAX; }
+                  } else {
+                    if (height > MAX) { width *= (MAX / height); height = MAX; }
+                  }
+                  canvas.width = width;
+                  canvas.height = height;
+                  const ctx = canvas.getContext('2d');
+                  ctx.drawImage(img, 0, 0, width, height);
+                  canvas.toBlob((blob) => {
+                    if (blob) resolve(blob);
+                    else reject(new Error('Compression failed'));
+                  }, 'image/jpeg', 0.7);
+                };
+                img.onerror = reject;
+                img.src = ev.target.result;
+              };
+              reader.onerror = reject;
+              reader.readAsDataURL(sourceFile);
+            });
+            console.log('📸 Compressed size:', fileToUpload.size);
           }
+          
           await uploadBytes(ref, fileToUpload);
           photoUrl = await getDownloadURL(ref);
           console.log('📸 License photo uploaded successfully:', photoUrl);
@@ -1840,10 +1868,10 @@ document.getElementById('signup-form')?.addEventListener('submit', (e)=>{
       try {
         if (db && uid && setDoc && doc) {
           if(submitBtn) submitBtn.textContent = 'Finalizing...';
-          const profileData = { ...basePayload, licensePhotoUrl: photoUrl, licensePhotoData: photoData };
+          // Only save URL, not base64 data (Firestore 1MB field limit)
+          const profileData = { ...basePayload, licensePhotoUrl: photoUrl };
           console.log('📸 Saving to Firestore:');
           console.log('  - licensePhotoUrl:', photoUrl ? photoUrl.substring(0,100) : 'EMPTY');
-          console.log('  - licensePhotoData length:', photoData ? photoData.length : 0);
           await setDoc(doc(db, 'users', uid), profileData);
           console.log('📸 User profile saved successfully');
         } else {
@@ -2370,10 +2398,7 @@ document.addEventListener('click',(e)=>{
     console.log('Member email:', u.email);
     console.log('Full member object:', u);
     console.log('licensePhotoUrl:', u.licensePhotoUrl);
-    console.log('licensePhotoData exists:', !!u.licensePhotoData);
-    console.log('licensePhotoData length:', u.licensePhotoData ? u.licensePhotoData.length : 0);
-    console.log('licensePhotoData preview:', u.licensePhotoData ? u.licensePhotoData.substring(0,100) : 'NONE');
-    console.log('photoUrl:', u.photoUrl);
+    console.log('photoUrl (profile):', u.photoUrl);
     console.log('============================');
     
     const d = document.getElementById('memberDetails'); 
@@ -2392,18 +2417,17 @@ document.addEventListener('click',(e)=>{
     d.textContent = lines.join('\n'); 
     
     // Add photo status indicator to details
-    const hasLicense = !!(u.licensePhotoUrl || u.licensePhotoData);
+    const hasLicense = !!u.licensePhotoUrl;
     const hasProfile = !!u.photoUrl;
     const photoStatus = hasLicense ? '📸 License photo: ✅' : (hasProfile ? '📸 License photo: ❌ (showing profile photo)' : '📸 License photo: ❌ Not uploaded');
     d.textContent = lines.join('\n') + '\n\n' + photoStatus;
     
     const img=document.getElementById('memberPhoto'); 
     if(img){ 
-      // Try license photo first, then fall back to profile photo URL
-      const photoUrl = u.licensePhotoUrl || u.licensePhotoData || u.photoUrl || '';
+      // Try license photo URL first, then fall back to profile photo URL
+      const photoUrl = u.licensePhotoUrl || u.photoUrl || '';
       console.log('📸 Photo URL selection:');
       console.log('  - licensePhotoUrl:', u.licensePhotoUrl ? 'EXISTS ('+u.licensePhotoUrl.substring(0,50)+')' : 'NONE');
-      console.log('  - licensePhotoData:', u.licensePhotoData ? 'EXISTS (length: '+u.licensePhotoData.length+')' : 'NONE');
       console.log('  - photoUrl (profile):', u.photoUrl ? 'EXISTS' : 'NONE');
       console.log('  - Final photoUrl chosen:', photoUrl ? photoUrl.substring(0,100)+'...' : 'EMPTY');
       if(photoUrl){ 
