@@ -3315,31 +3315,6 @@ document.addEventListener('DOMContentLoaded', ()=>{
       showToast('Late fee applied if past due. Proceed to pay.');
     });
   }
-  const saveCardBtn = document.getElementById('saveCardBtn');
-  if(saveCardBtn && !saveCardBtn.dataset.bound){
-    saveCardBtn.dataset.bound='1';
-    saveCardBtn.addEventListener('click', async ()=>{
-      const email = getSessionEmail();
-      if(!email){ alert('Please log in first.'); return; }
-      try{
-        saveCardBtn.disabled = true; const prev=saveCardBtn.textContent; saveCardBtn.textContent='Opening secure card save…';
-        const res = await fetch('/.netlify/functions/create-setup-session', {
-          method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email })
-        });
-        if(!res.ok){ throw new Error(await res.text()); }
-        const data = await res.json(); if(!data.url) throw new Error('No session URL');
-        window.location.href = data.url;
-      }catch(e){ alert('Unable to start save-card flow: '+(e.message||e)); }
-      finally{ saveCardBtn.disabled=false; saveCardBtn.textContent='Save Card for Late Fees'; }
-    });
-  }
-  const savePayPalBtn = document.getElementById('savePayPalBtn');
-  if(savePayPalBtn && !savePayPalBtn.dataset.bound){
-    savePayPalBtn.dataset.bound='1';
-    savePayPalBtn.addEventListener('click', ()=>{
-      showPayPalHostedStatus('Saving PayPal for future charges requires PayPal Vault/Reference Transactions. Contact PayPal to enable this on your account.', false);
-    });
-  }
   // Terms agreement handling for payments
   const termsChk = document.getElementById('paymentTermsAgree');
   const statusMsg = document.getElementById('termsAgreeStatus');
