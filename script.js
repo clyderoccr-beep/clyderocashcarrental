@@ -565,28 +565,45 @@ function updateMembershipPanel(){
       // Do not show card-on-file status to customers; keep internal only
       if(pmStatus){ pmStatus.style.display='none'; pmStatus.textContent=''; }
       const rmBtn = document.getElementById('removeSavedCard'); if(rmBtn){ rmBtn.style.display = hasCard ? 'inline-block' : 'none'; }
-      // Async debt check: disable removal if any overdue unpaid booking
+      const delBtn = document.getElementById('accountDelete');
+      // Async debt/rental check: disable card removal if debt exists, hide delete button if debt or active rentals
       setTimeout(async ()=>{
         try{
-          if(!hasCard) return; // no card, ignore
           const db=getDB(); const u=getUtils()||{}; if(!(db&&u.collection&&u.where&&u.getDocs&&u.query)) return;
           const q = await u.getDocs(u.query(u.collection(db,'bookings'), u.where('userEmail','==',member.email)));
-          let owes=false; const now=Date.now();
+          let owes=false, hasActiveRentals=false; const now=Date.now();
           q.forEach(docSnap=>{
             const b=docSnap.data();
             const ret=b.returnDate? new Date(b.returnDate).getTime():0;
             const overdue = ret && now>ret;
             const unpaidLate = overdue && !b.lateFeePaid;
-            const activeStatus = ['active','extended','pending','rented'].includes(b.status||'');
-            if(activeStatus && (unpaidLate || overdue && !b.paidAt)) owes=true;
+            const activeStatus = ['active','extended','pending','rented','accepted'].includes(b.status||'');
+            if(activeStatus){
+              hasActiveRentals = true;
+              if(unpaidLate || (overdue && !b.paidAt)) owes=true;
+            }
           });
-          if(owes && rmBtn){
+          // Disable card removal if owes debt
+          if(hasCard && owes && rmBtn){
             rmBtn.disabled=true; rmBtn.title='Cannot remove saved card while an overdue or unpaid booking exists.';
             rmBtn.textContent='Remove Saved Card (Locked)';
           }
-        }catch(e){ console.warn('Debt check failed', e.message); }
+          // Hide delete account button if has active rentals or owes debt
+          if(delBtn){
+            if(hasActiveRentals || owes){
+              delBtn.style.display = 'none';
+            } else {
+              delBtn.style.display = 'inline-block';
+            }
+          }
+        }catch(e){ console.warn('Debt/rental check failed', e.message); }
       },10);
-    } else if(summary){ summary.textContent = `Logged in as ${email}`; }
+    } else if(summary){ 
+      summary.textContent = `Logged in as ${email}`;
+      // No member profile: show delete button (allow account deletion)
+      const delBtn = document.getElementById('accountDelete');
+      if(delBtn){ delBtn.style.display = 'inline-block'; }
+    }
     if(typeof renderAccountBookings==='function'){ renderAccountBookings(); }
   } else { 
     console.log('User logged out, showing membership content');
