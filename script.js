@@ -1806,7 +1806,10 @@ document.getElementById('signup-form')?.addEventListener('submit', (e)=>{
       console.log('📸 capturedPhotoData length (after fallback):', capturedPhotoData ? capturedPhotoData.length : 0);
       
       const db=getDB(); const { doc, setDoc } = getUtils();
-      const storage = getStorage(); const { storageRef, uploadBytes, getDownloadURL } = getStorageUtils();
+      const storage = getStorage();
+      const storageUtils = getStorageUtils() || {};
+      const { storageRef, uploadBytes, getDownloadURL } = storageUtils;
+      console.log('📸 Storage SDK check:', { storage: !!storage, storageRef: !!storageRef, uploadBytes: !!uploadBytes, getDownloadURL: !!getDownloadURL });
       const createdTs = Date.now();
       const basePayload={
         email, first, last, address, state, country,
