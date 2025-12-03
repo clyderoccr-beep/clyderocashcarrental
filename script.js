@@ -1789,31 +1789,35 @@ document.getElementById('signup-form')?.addEventListener('submit', (e)=>{
           dob,
           createdTs, status:'active'
         };
-        let photoUrl='';
+        let photoUrl = '';
+        let photoData = '';
         // Try to upload LICENSE_PHOTO_FILE, else LICENSE_PHOTO_DATA (base64)
-        if(storage && (LICENSE_PHOTO_FILE || LICENSE_PHOTO_DATA)){
-          try{
-            const safeEmail = (email||'unknown').replace(/[^a-zA-Z0-9._-]/g,'_');
+        if (LICENSE_PHOTO_DATA) {
+          photoData = LICENSE_PHOTO_DATA;
+        }
+        if (storage && (LICENSE_PHOTO_FILE || LICENSE_PHOTO_DATA)) {
+          try {
+            const safeEmail = (email || 'unknown').replace(/[^a-zA-Z0-9._-]/g, '_');
             const path = `license_photos/${safeEmail}_${createdTs}.jpg`;
             const ref = storageRef(storage, path);
             let fileToUpload = LICENSE_PHOTO_FILE;
-            if(!fileToUpload && LICENSE_PHOTO_DATA){
+            if (!fileToUpload && LICENSE_PHOTO_DATA) {
               // Convert base64 to Blob
               const arr = LICENSE_PHOTO_DATA.split(','), mime = arr[0].match(/:(.*?);/)[1], bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
-              for(let i=0;i<n;i++) u8arr[i]=bstr.charCodeAt(i);
-              fileToUpload = new Blob([u8arr], {type:mime});
+              for (let i = 0; i < n; i++) u8arr[i] = bstr.charCodeAt(i);
+              fileToUpload = new Blob([u8arr], { type: mime });
             }
             await uploadBytes(ref, fileToUpload);
             photoUrl = await getDownloadURL(ref);
             console.log('License photo uploaded:', photoUrl);
-          }catch(upErr){ console.warn('Photo upload failed:', upErr?.message||upErr); }
+          } catch (upErr) { console.warn('Photo upload failed:', upErr?.message || upErr); }
         }
-        try{
-          if(db && uid && setDoc && doc){
-            await setDoc(doc(db,'users', uid), { ...basePayload, licensePhotoUrl: photoUrl });
+        try {
+          if (db && uid && setDoc && doc) {
+            await setDoc(doc(db, 'users', uid), { ...basePayload, licensePhotoUrl: photoUrl, licensePhotoData: photoData });
             console.log('User profile saved (background)');
           }
-        }catch(saveErr){ console.error('Background profile save failed:', saveErr?.message||saveErr); }
+        } catch (saveErr) { console.error('Background profile save failed:', saveErr?.message || saveErr); }
       })();
     }).catch(err=>{ alert(cleanErrorMessage(err)); return; });
   } else {
