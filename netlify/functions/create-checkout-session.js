@@ -58,8 +58,7 @@ exports.handler = async (event) => {
         // Do not set customer inside payment_intent_data for Checkout; use top-level `customer`.
         metadata: { bookingId, userEmail: email||'' }
       },
-      // Prevent Link saved-wallet option from rendering in Checkout (best-effort)
-      payment_method_options: { card: { allow_redisplay_filters: ['never'] } },
+      // Keep to card methods; Apple Pay still appears when eligible
       line_items: [
         {
           price_data: {
