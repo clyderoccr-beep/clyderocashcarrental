@@ -540,6 +540,17 @@ function updateMembershipPanel(){
     content.style.display='none'; 
     panel.style.display='block';
     try{ renderAccountSummary(); }catch(_){ }
+    
+    // Force refresh bookings from Firestore when viewing membership page
+    try{ 
+      refreshCustomerBookingsFromFirestore(email).catch(e=> {
+        console.warn('Auto-refresh bookings failed:', e);
+        // Fallback to local render
+        renderAccountBookings();
+      });
+    }catch(_){ 
+      renderAccountBookings(); 
+    }
     const member = (typeof MEMBERS!=='undefined')? MEMBERS.find(m=>m.email===email):null;
     if(member && summary){
       const lines = [
