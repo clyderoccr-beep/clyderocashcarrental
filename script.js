@@ -1778,16 +1778,32 @@ document.getElementById('signup-form')?.addEventListener('submit', (e)=>{
     
     api.createUserWithEmailAndPassword(auth,email,password).then(async (userCredential)=>{
       // CRITICAL: Capture photo data BEFORE clearing globals
-      const capturedPhotoFile = LICENSE_PHOTO_FILE;
-      const capturedPhotoData = LICENSE_PHOTO_DATA;
+      let capturedPhotoFile = LICENSE_PHOTO_FILE;
+      let capturedPhotoData = LICENSE_PHOTO_DATA;
       console.log('📸 CAPTURED before clearing - File:', capturedPhotoFile, 'Data length:', capturedPhotoData ? capturedPhotoData.length : 0);
+      
+      // FALLBACK: If we have a file but no base64 data yet (FileReader hasn't completed), read it now
+      if (capturedPhotoFile && !capturedPhotoData) {
+        console.log('📸 FALLBACK: Reading file directly during signup (FileReader was too slow)');
+        try {
+          capturedPhotoData = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (ev) => resolve(ev.target.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(capturedPhotoFile);
+          });
+          console.log('📸 FALLBACK: Got base64 data, length:', capturedPhotoData ? capturedPhotoData.length : 0);
+        } catch (readErr) {
+          console.error('📸 FALLBACK: Failed to read file:', readErr);
+        }
+      }
       
       const uid = userCredential.user.uid;
       console.log('User created with UID:', uid);
       console.log('📸 SIGNUP DEBUG: Starting profile save');
       if(submitBtn) submitBtn.textContent = 'Saving profile...';
       console.log('📸 capturedPhotoFile:', capturedPhotoFile);
-      console.log('📸 capturedPhotoData length:', capturedPhotoData ? capturedPhotoData.length : 0);
+      console.log('📸 capturedPhotoData length (after fallback):', capturedPhotoData ? capturedPhotoData.length : 0);
       
       const db=getDB(); const { doc, setDoc } = getUtils();
       const storage = getStorage(); const { storageRef, uploadBytes, getDownloadURL } = getStorageUtils();
