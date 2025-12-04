@@ -473,20 +473,26 @@
     /* 📱 Mobile Hamburger Menu */
     #mobileMenuToggle {
       display:none;
-      background:linear-gradient(135deg, var(--christmas-green), var(--green-deep));
-      border:2px solid var(--gold);
-      color:var(--gold-highlight);
-      padding:8px 16px;
-      border-radius:12px;
-      font-size:16px;
-      font-weight:700;
+      background:transparent;
+      border:none;
+      color:#000000;
+      padding:4px 8px;
+      border-radius:0;
+      font-size:24px;
+      font-weight:400;
       cursor:pointer;
-      box-shadow:0 4px 12px rgba(14,138,38,.3);
+      box-shadow:none;
+    }
+    #profileIcon {
+      display:none;
     }
     @media (max-width: 768px) {
       #mobileMenuToggle {
-        display:flex !important;
+        display:block !important;
         align-items:center;
+      }
+      #profileIcon {
+        display:block !important;
       }
       header nav {
         display:none;
@@ -507,14 +513,6 @@
       header nav.active {
         display:flex;
       }
-      header nav #mobileMenuClose {
-        display:block !important;
-        position:absolute;
-        top:10px;
-        right:12px;
-        background:transparent !important;
-        border:none !important;
-        font-size:28px;
         color:#1a1a1a;
         padding:4px 8px !important;
         min-height:auto !important;
@@ -558,18 +556,12 @@
   <div id="toast"></div>
   <div class="wrap">
     <header class="wrap">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0">
-        <div style="display:flex;align-items:center;gap:10px">
-          <img id="siteLogo" src="assets/icon3.jpeg" alt="Car logo" loading="lazy" style="width:28px;height:28px;border-radius:6px;object-fit:contain;border:1px solid rgba(255,255,255,.2);background:#111;padding:2px;cursor:pointer" title="Go to Home" />
-          <div>
-            <div style="font-weight:800;line-height:1">Clydero Cash Car Rental</div>
-            <small style="color:var(--muted)">Atlanta, GA</small>
-          </div>
-        </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;width:100%">
         <button id="mobileMenuToggle" type="button">☰</button>
+        <img id="siteLogo" src="assets/icon3.jpeg" alt="Car logo" loading="lazy" style="width:28px;height:28px;border-radius:6px;object-fit:contain;border:1px solid rgba(255,255,255,.2);background:#111;padding:2px;cursor:pointer" title="Go to Home" />
+        <button id="profileIcon" type="button" style="background:transparent;border:none;font-size:20px;cursor:pointer;color:#000000;padding:0;margin:0">👤</button>
       </div>
       <nav>
-        <button id="mobileMenuClose" type="button" style="display:none">×</button>
         <button class="navbtn" data-nav="membership">My Account</button>
         <button class="navbtn" data-nav="vehicles">Vehicles</button>
         <button class="navbtn" data-nav="booking" style="display:none">Booking</button>
