@@ -1529,15 +1529,39 @@ function renderVehicles(){
   try{ if(window.__vehTimers){ Object.values(window.__vehTimers).forEach(t=>{ try{ clearInterval(t); }catch{} }); } }catch{}
   window.__vehTimers = {};
   grid.innerHTML='';
+  
+  // Merge admin vehicles and host vehicles
+  let allVehicles = [...VEHICLES];
+  
+  // Add all host vehicles (from all hosts)
+  try {
+    const allHosts = JSON.parse(localStorage.getItem(ALL_HOSTS_KEY) || '[]');
+    allHosts.forEach(host => {
+      const profileData = JSON.parse(localStorage.getItem(HOST_PROFILE_KEY + host.email) || '{}');
+      // Only show vehicles from active, non-banned hosts
+      if(profileData.active && !profileData.banned) {
+        const vehicles = JSON.parse(localStorage.getItem(HOST_VEHICLES_KEY + host.email) || '[]');
+        // Filter out rented vehicles - only show available and pending
+        const visibleVehicles = vehicles.filter(v => {
+          const status = v.rentalStatus || 'available';
+          return status === 'available' || status === 'pending';
+        });
+        allVehicles = allVehicles.concat(visibleVehicles);
+      }
+    });
+  } catch(e) {
+    console.warn('Failed to load host vehicles:', e);
+  }
+  
   // Fallback: if realtime/Firestore provided no vehicles, restore defaults
-  if(!VEHICLES.length){ DEFAULT_VEHICLES.forEach(v=>VEHICLES.push({ ...v })); }
+  if(!allVehicles.length){ DEFAULT_VEHICLES.forEach(v=>allVehicles.push({ ...v })); }
   
   // Filter vehicles based on selected type
-  const filtered = VEHICLE_FILTER === 'All' ? VEHICLES : VEHICLES.filter(v => v.type === VEHICLE_FILTER);
+  const filtered = VEHICLE_FILTER === 'All' ? allVehicles : allVehicles.filter(v => v.type === VEHICLE_FILTER);
   
   filtered.forEach(v=>{
-    const isAvail = v.available !== false;
-    const isPending = v.pending === true;
+    const isAvail = v.available !== false && (v.rentalStatus === 'available' || !v.rentalStatus);
+    const isPending = v.pending === true || v.rentalStatus === 'pending';
     const el=document.createElement('article'); el.className='card';
     el.setAttribute('data-vehicle-id', v.id);
     el.setAttribute('data-vehicle-country', v.country || '');
@@ -1545,40 +1569,48 @@ function renderVehicles(){
     el.setAttribute('data-vehicle-lat', v.latitude || 0);
     el.setAttribute('data-vehicle-lng', v.longitude || 0);
     const bookBtn = (isAvail && !isPending)
-      ? `<button class='navbtn' aria-label='Book ${v.name}' data-nav='booking' data-veh='${v.id}'>Book</button>`
+      ? `<button class='navbtn' aria-label='Book ${v.name || v.makeModel}' data-nav='booking' data-veh='${v.id}'>Book</button>`
       : `<button class='navbtn' disabled title='Unavailable' aria-disabled='true'>Book</button>`;
     const statusBadge = isAvail
       ? (isPending? `<span class='badge' style='margin-left:8px;background:#ffc10733;border-color:#ffc10766;color:#7a5e00'>Pending</span>` : '')
       : `<span class='badge unavailable' style='margin-left:8px'>Unavailable</span>`;
-    const firstImg = (v.imgs&&v.imgs[0])||'';
+    
+    // Use host vehicle photos if available, otherwise fall back to imgs
+    const photos = v.photos || v.imgs || [];
+    const firstImg = photos[0] || '';
+    
     const imgHtml = firstImg 
-      ? `<img id="veh-img-${v.id}" alt="Photo of ${v.name}" loading="lazy" src="${firstImg}" data-gallery="${v.id}" onerror="this.src='https://via.placeholder.com/400x300.png?text=No+Image';this.onerror=null;" style="width:100%;height:auto;min-height:200px;object-fit:cover;background:#f0f0f0;cursor:pointer">` 
+      ? `<img id="veh-img-${v.id}" alt="Photo of ${v.name || v.makeModel}" loading="lazy" src="${firstImg}" data-gallery="${v.id}" onerror="this.src='https://via.placeholder.com/400x300.png?text=No+Image';this.onerror=null;" style="width:100%;height:auto;min-height:200px;object-fit:cover;background:#f0f0f0;cursor:pointer">` 
       : `<div style="width:100%;height:200px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;color:#999">No Image</div>`;
+    
+    // Show host contact info if it's a host vehicle
+    const hostContact = v.hostId ? `<div style='font-size:12px;color:#666;margin-top:8px;padding-top:8px;border-top:1px solid #eee'><strong>Host Contact:</strong> ${v.hostId}</div>` : '';
+    
     el.innerHTML=`${imgHtml}\n<div class='body'>
       <div style='display:flex;align-items:center;gap:8px'>
         <span class='veh-dot ${isAvail && !isPending?'available':'unavailable'}' title='${isAvail && !isPending?'Available':(isPending?'Pending':'Unavailable')}'></span>
-        <div style='font-weight:800'>${v.name}</div>
+        <div style='font-weight:800'>${v.name || v.makeModel}</div>
       </div>
-      <div class='muted' style='margin:6px 0'>Seats ${v.seats} • ${v.type}</div>
+      <div class='muted' style='margin:6px 0'>${v.seats ? 'Seats ' + v.seats + ' • ' : ''}${v.type}</div>
       <div style='display:flex;gap:8px;align-items:center'>
         ${bookBtn}
-        <span style='margin-left:auto;color:#32CD32;font-weight:700'>$${v.price}/week</span>${statusBadge}
+        <span style='margin-left:auto;color:#32CD32;font-weight:700'>$${v.price}/${v.rentalTerm === 'Weekly' ? 'week' : v.rentalTerm === 'Daily' ? 'day' : 'week'}</span>${statusBadge}
       </div>
-      <div style='margin-top:8px'><button class='navbtn' data-gallery='${v.id}' aria-label='View photo gallery for ${v.name}'>View Photos</button></div>
+      ${photos.length > 0 ? `<div style='margin-top:8px'><button class='navbtn' data-gallery='${v.id}' aria-label='View photo gallery for ${v.name || v.makeModel}'>View Photos (${photos.length})</button></div>` : ''}
+      ${hostContact}
     </div>`;
     grid.appendChild(el);
 
     // Per-card slideshow: automatically cycle through vehicle images on the card
     try{
-      const imgsArr = Array.isArray(v.imgs) ? v.imgs : [];
-      if(imgsArr.length > 1){
+      if(photos.length > 1){
         let idx = 0;
         const imgEl = document.getElementById(`veh-img-${v.id}`);
         if(imgEl){
           // Advance every 2 seconds
           const timer = setInterval(()=>{
-            idx = (idx + 1) % imgsArr.length;
-            imgEl.src = imgsArr[idx];
+            idx = (idx + 1) % photos.length;
+            imgEl.src = photos[idx];
           }, 2000);
           window.__vehTimers[v.id] = timer;
         }
@@ -4245,7 +4277,164 @@ const COUNTRIES_DATA = {
 document.addEventListener('DOMContentLoaded', function() {
   initHeroSearch();
   initSignupToggle();
+  initVehiclePhotoUpload();
+  initHostProfilePhotos();
 });
+
+// Initialize vehicle photo uploads
+let VEHICLE_PHOTOS = [];
+function initVehiclePhotoUpload() {
+  const input = document.getElementById('vehiclePhotosInput');
+  const preview = document.getElementById('vehiclePhotosPreview');
+  
+  if(!input || !preview) return;
+  
+  input.addEventListener('change', (e) => {
+    const files = Array.from(e.target.files).slice(0, 6); // Max 6 photos
+    VEHICLE_PHOTOS = [];
+    preview.innerHTML = '';
+    
+    files.forEach((file, index) => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const img = document.createElement('div');
+        img.style.cssText = 'position:relative;width:100%;aspect-ratio:1;border-radius:8px;overflow:hidden;border:2px solid ' + (index === 0 ? '#d4af37' : '#e0e0e0');
+        img.innerHTML = `
+          <img src="${ev.target.result}" style="width:100%;height:100%;object-fit:cover">
+          <div style="position:absolute;top:4px;left:4px;background:rgba(0,0,0,0.7);color:#fff;padding:2px 6px;border-radius:4px;font-size:11px">${index === 0 ? 'Main' : index + 1}</div>
+          <button onclick="removeVehiclePhoto(${index})" style="position:absolute;top:4px;right:4px;background:rgba(255,0,0,0.8);color:#fff;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:14px;line-height:1">×</button>
+        `;
+        preview.appendChild(img);
+        VEHICLE_PHOTOS.push(ev.target.result);
+      };
+      reader.readAsDataURL(file);
+    });
+  });
+}
+
+function removeVehiclePhoto(index) {
+  VEHICLE_PHOTOS.splice(index, 1);
+  const preview = document.getElementById('vehiclePhotosPreview');
+  if(preview) {
+    preview.children[index]?.remove();
+  }
+}
+
+// Initialize host profile photo uploads
+function initHostProfilePhotos() {
+  const avatarBtn = document.getElementById('hostAvatarEditBtn');
+  const avatarInput = document.getElementById('hostAvatarFile');
+  const coverBtn = document.getElementById('hostCoverEditBtn');
+  const coverInput = document.getElementById('hostCoverFile');
+  
+  if(avatarBtn && avatarInput) {
+    avatarBtn.addEventListener('click', () => avatarInput.click());
+    avatarInput.addEventListener('change', (e) => {
+      const file = e.target.files?.[0];
+      if(file) handleHostAvatarUpload(file);
+    });
+  }
+  
+  if(coverBtn && coverInput) {
+    coverBtn.addEventListener('click', () => coverInput.click());
+    coverInput.addEventListener('change', (e) => {
+      const file = e.target.files?.[0];
+      if(file) handleHostCoverUpload(file);
+    });
+  }
+}
+
+async function handleHostAvatarUpload(file) {
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const email = getSessionEmail();
+    if(!email) return;
+    
+    const auth = getAuthInstance();
+    const uid = auth?.currentUser?.uid;
+    if(!uid) return;
+    
+    try {
+      // Upload to Firebase Storage
+      const storage = getStorage();
+      const storageUtils = getStorageUtils();
+      if(storage && storageUtils.storageRef && storageUtils.uploadBytes && storageUtils.getDownloadURL) {
+        const path = `host_avatars/${uid}_${Date.now()}.jpg`;
+        const ref = storageUtils.storageRef(storage, path);
+        
+        // Convert to blob
+        const response = await fetch(e.target.result);
+        const blob = await response.blob();
+        
+        await storageUtils.uploadBytes(ref, blob);
+        const url = await storageUtils.getDownloadURL(ref);
+        
+        // Update Firestore
+        const db = getDB();
+        const { doc, updateDoc } = getUtils();
+        await updateDoc(doc(db, 'users', uid), { hostAvatarUrl: url });
+        
+        // Update UI
+        const avatar = document.getElementById('hostAvatar');
+        if(avatar) {
+          avatar.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover">`;
+        }
+        
+        showToast('Host avatar updated!');
+      }
+    } catch(err) {
+      console.error('Avatar upload failed:', err);
+      showToast('Failed to upload avatar');
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+async function handleHostCoverUpload(file) {
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const email = getSessionEmail();
+    if(!email) return;
+    
+    const auth = getAuthInstance();
+    const uid = auth?.currentUser?.uid;
+    if(!uid) return;
+    
+    try {
+      // Upload to Firebase Storage
+      const storage = getStorage();
+      const storageUtils = getStorageUtils();
+      if(storage && storageUtils.storageRef && storageUtils.uploadBytes && storageUtils.getDownloadURL) {
+        const path = `host_covers/${uid}_${Date.now()}.jpg`;
+        const ref = storageUtils.storageRef(storage, path);
+        
+        // Convert to blob
+        const response = await fetch(e.target.result);
+        const blob = await response.blob();
+        
+        await storageUtils.uploadBytes(ref, blob);
+        const url = await storageUtils.getDownloadURL(ref);
+        
+        // Update Firestore
+        const db = getDB();
+        const { doc, updateDoc } = getUtils();
+        await updateDoc(doc(db, 'users', uid), { hostCoverUrl: url });
+        
+        // Update UI
+        const cover = document.getElementById('hostCover');
+        if(cover) {
+          cover.style.backgroundImage = `url('${url}')`;
+        }
+        
+        showToast('Host cover updated!');
+      }
+    } catch(err) {
+      console.error('Cover upload failed:', err);
+      showToast('Failed to upload cover');
+    }
+  };
+  reader.readAsDataURL(file);
+}
 
 // Initialize signup account type toggle
 function initSignupToggle() {
@@ -4922,8 +5111,13 @@ async function saveVehicle() {
     state: document.getElementById('vehicleState').value,
     zip: document.getElementById('vehicleZip').value,
     country: document.getElementById('vehicleCountry').value,
+    photos: VEHICLE_PHOTOS || [],
+    rentalStatus: 'available', // available, pending, rented
     createdAt: new Date().toISOString(),
   };
+  
+  // Reset photos after save
+  VEHICLE_PHOTOS = [];
 
   try {
     // Save to local storage for now (Firestore integration would go here)
@@ -5263,7 +5457,111 @@ document.addEventListener('click', (e) => {
   if(e.target.id === 'hostsRefresh') {
     renderAdminHosts();
   }
+  if(e.target.id === 'rentalStatusRefresh') {
+    renderAdminRentalStatus();
+  }
 });
+
+// ===== ADMIN RENTAL STATUS MANAGEMENT =====
+window.renderAdminRentalStatus = function() {
+  const container = document.getElementById('adminRentalStatus');
+  if(!container) return;
+
+  try {
+    const allHosts = JSON.parse(localStorage.getItem(ALL_HOSTS_KEY) || '[]');
+    let allVehicles = [];
+
+    // Collect all vehicles from all hosts
+    allHosts.forEach(host => {
+      const vehicles = JSON.parse(localStorage.getItem(HOST_VEHICLES_KEY + host.email) || '[]');
+      allVehicles = allVehicles.concat(vehicles.map(v => ({ ...v, hostEmail: host.email })));
+    });
+
+    if(allVehicles.length === 0) {
+      container.innerHTML = '<p style="color:#999">No host vehicles yet.</p>';
+      return;
+    }
+
+    container.innerHTML = allVehicles.map(vehicle => {
+      const status = vehicle.rentalStatus || 'available';
+      const statusColors = {
+        available: '#4caf50',
+        pending: '#ff9800',
+        rented: '#f44336'
+      };
+      const statusIcons = {
+        available: '✅',
+        pending: '⏳',
+        rented: '🔒'
+      };
+
+      const mainPhoto = vehicle.photos && vehicle.photos[0] ? vehicle.photos[0] : '';
+
+      return `
+        <div class="card">
+          <div class="body">
+            ${mainPhoto ? `<img src="${mainPhoto}" style="width:100%;height:150px;object-fit:cover;border-radius:8px;margin-bottom:8px">` : ''}
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <strong style="color:#000">${vehicle.makeModel || 'Unknown'}</strong>
+              <span style="background:${statusColors[status]};color:#fff;padding:4px 10px;border-radius:12px;font-size:12px;font-weight:700">
+                ${statusIcons[status]} ${status.toUpperCase()}
+              </span>
+            </div>
+            <div style="color:#666;font-size:13px;margin:4px 0">
+              <div><strong>Host:</strong> ${vehicle.hostEmail}</div>
+              <div><strong>Year:</strong> ${vehicle.year}</div>
+              <div><strong>Price:</strong> $${vehicle.price}/day</div>
+              <div><strong>Location:</strong> ${vehicle.city}, ${vehicle.state}</div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-top:12px">
+              <button onclick="adminSetRentalStatus('${vehicle.id}', '${vehicle.hostEmail}', 'available')" 
+                class="navbtn" style="font-size:11px;padding:6px;background:${status === 'available' ? '#4caf50' : '#ccc'}">
+                Available
+              </button>
+              <button onclick="adminSetRentalStatus('${vehicle.id}', '${vehicle.hostEmail}', 'pending')" 
+                class="navbtn" style="font-size:11px;padding:6px;background:${status === 'pending' ? '#ff9800' : '#ccc'}">
+                Pending
+              </button>
+              <button onclick="adminSetRentalStatus('${vehicle.id}', '${vehicle.hostEmail}', 'rented')" 
+                class="navbtn" style="font-size:11px;padding:6px;background:${status === 'rented' ? '#f44336' : '#ccc'}">
+                Rented
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch(e) {
+    console.warn('Render rental status failed:', e);
+    container.innerHTML = '<p style="color:#c62828">Error loading vehicles</p>';
+  }
+};
+
+// Admin set rental status
+window.adminSetRentalStatus = function(vehicleId, hostEmail, newStatus) {
+  try {
+    const vehicles = JSON.parse(localStorage.getItem(HOST_VEHICLES_KEY + hostEmail) || '[]');
+    const vehicle = vehicles.find(v => v.id === vehicleId);
+    
+    if(!vehicle) {
+      showToast('Vehicle not found');
+      return;
+    }
+
+    vehicle.rentalStatus = newStatus;
+    localStorage.setItem(HOST_VEHICLES_KEY + hostEmail, JSON.stringify(vehicles));
+
+    showToast(`Status updated to ${newStatus}`);
+    renderAdminRentalStatus();
+    
+    // Refresh main vehicle listings if status changed to/from rented
+    if(newStatus === 'rented' || vehicle.rentalStatus === 'rented') {
+      renderVehicles();
+    }
+  } catch(e) {
+    showToast('Status update failed: ' + e.message);
+  }
+};
 
 // ===== VEHICLE SHUFFLING =====
 function shuffleVehicles() {

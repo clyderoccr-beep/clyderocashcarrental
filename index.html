@@ -1551,6 +1551,20 @@
                   👤 Host Profile
                 </summary>
                 <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e0e0e0">
+                  <!-- Host Profile Cover -->
+                  <div id="hostCover" style="height:160px;border-radius:8px;border:1px solid #d0d0d0;background:#e9ecef center/cover no-repeat;position:relative;overflow:visible;margin-bottom:12px">
+                    <button id="hostCoverEditBtn" type="button" title="Change cover" aria-label="Change host cover" 
+                      style="position:absolute;bottom:8px;right:8px;width:36px;height:36px;border-radius:50%;border:none;background:transparent;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:24px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.8));z-index:3">📷</button>
+                  </div>
+                  <!-- Host Avatar positioned below cover -->
+                  <div style="position:relative;margin-top:-32px;margin-left:40px;width:96px;height:96px;z-index:2;margin-bottom:20px">
+                    <div id="hostAvatar" style="width:96px;height:96px;border-radius:50%;overflow:hidden;border:3px solid #fff;background:#eee;display:flex;align-items:center;justify-content:center;font-weight:700;color:#555;box-shadow:0 2px 12px rgba(0,0,0,.10)">🏠</div>
+                    <button id="hostAvatarEditBtn" type="button" title="Change photo" aria-label="Change host profile photo"
+                      style="position:absolute;bottom:0;right:0;width:auto;height:auto;border:none;background:transparent;color:#000;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:20px;padding:0;line-height:1;filter:drop-shadow(0 1px 2px rgba(255,255,255,.8));">📷</button>
+                  </div>
+                  <input id="hostCoverFile" type="file" accept="image/*" style="display:none">
+                  <input id="hostAvatarFile" type="file" accept="image/*" style="display:none">
+                  
                   <div id="hostProfileInfo" style="display:grid;gap:8px;margin-bottom:12px">
                     <div><strong>Name:</strong> <span id="hostName"></span></div>
                     <div><strong>Email:</strong> <span id="hostEmail"></span></div>
@@ -1682,6 +1696,14 @@
           <div>
             <label style="color:#000">Description</label>
             <textarea id="vehicleDescription" placeholder="Describe your vehicle..." style="width:100%;min-height:100px;color:#000;border-radius:6px;padding:8px;border:1px solid #ccc"></textarea>
+          </div>
+
+          <!-- Vehicle Photos Section -->
+          <div style="border:1px solid #e0e0e0;border-radius:8px;padding:12px;background:#fafafa">
+            <label style="display:block;font-weight:700;margin-bottom:8px;color:#000">📸 Vehicle Photos (Up to 6)</label>
+            <input id="vehiclePhotosInput" type="file" accept="image/*" multiple style="width:100%;color:#000;margin-bottom:8px">
+            <small style="display:block;color:#666;margin-bottom:8px">Select multiple photos (max 6). First photo will be the main image.</small>
+            <div id="vehiclePhotosPreview" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px"></div>
           </div>
 
           <div style="display:flex;gap:8px;margin-top:12px">
@@ -2597,6 +2619,17 @@
               <button class="navbtn" id="hostsRefresh" type="button">Refresh Hosts</button>
             </div>
             <div id="adminHosts" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px"></div>
+          </div>
+        </details>
+        <!-- Host Vehicle Rental Status Management -->
+        <details class="card" style="max-width:1000px;margin-top:16px">
+          <summary style="cursor:pointer;font-size:18px;font-weight:700;padding:16px;margin:-16px;margin-bottom:16px;background:rgba(212,175,55,0.1);border-radius:8px;user-select:none">🚗 Admin Rental Status Management</summary>
+          <div class="body">
+            <p style="color:var(--muted);margin-top:0">Mark any host's vehicles as Available, Pending, or Rented.</p>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0">
+              <button class="navbtn" id="rentalStatusRefresh" type="button">Refresh All Vehicles</button>
+            </div>
+            <div id="adminRentalStatus" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px"></div>
           </div>
         </details>
         <!-- Bookings Section -->
