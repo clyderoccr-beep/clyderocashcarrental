@@ -116,20 +116,25 @@
       max-width:100%;
       margin:0;
     }
+    /* DESKTOP: Logo left, Pin right */
     header > div {
       display:flex;
       align-items:center;
       justify-content:space-between;
-      padding:2px 40px !important;
+      padding:8px 40px !important;
       width:100%;
       max-width:100%;
       gap:0;
+      position:relative;
     }
+    /* Logo positioned far left */
     header > div > div:first-child {
       display:flex;
       align-items:center;
       gap:0;
       flex:0 0 auto;
+      position:absolute;
+      left:40px;
     }
     header #siteLogo {
       display:block !important;
@@ -141,6 +146,13 @@
       background:transparent !important;
       object-fit:contain;
       cursor:pointer;
+    }
+    /* Location pin positioned far right */
+    header #headerLocationBtn {
+      position:absolute !important;
+      right:40px !important;
+      top:50% !important;
+      transform:translateY(-50%) !important;
     }
     header > div > div:first-child > div {
       display:none;
@@ -464,6 +476,21 @@
     }
     @keyframes spin {
       to { transform:rotate(360deg); }
+    }
+    
+    /* MOBILE: Logo and Pin centered */
+    @media (max-width:768px) {
+      /* Center logo and pin on mobile */
+      header > div > div:first-child {
+        position:static !important;
+        left:auto !important;
+      }
+      header #headerLocationBtn {
+        position:static !important;
+        right:auto !important;
+        top:auto !important;
+        transform:none !important;
+      }
     }
     
     /* TABLET: 768px and below - 2-column grid */
