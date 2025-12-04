@@ -4122,8 +4122,13 @@ function initHeroSearch() {
   const stateSelect = document.getElementById('heroState');
   const locationBtn = document.getElementById('heroLocationBtn');
   const searchBtn = document.getElementById('heroSearchBtn');
+  const priceRangeSelect = document.getElementById('heroPriceRange');
+  const durationBtns = document.querySelectorAll('.duration-btn');
   
   if (!countrySelect) return; // Hero search not available
+  
+  // Initialize duration selection (weekly is default)
+  window.heroSearchDuration = 'weekly';
   
   // Populate country dropdown
   Object.keys(COUNTRIES_DATA).sort().forEach(country => {
@@ -4148,6 +4153,22 @@ function initHeroSearch() {
     searchVehicles();
   });
   
+  // Duration button handlers
+  durationBtns.forEach(btn => {
+    btn.addEventListener('click', function() {
+      durationBtns.forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      window.heroSearchDuration = this.getAttribute('data-duration');
+    });
+  });
+  
+  // Price range change handler
+  if (priceRangeSelect) {
+    priceRangeSelect.addEventListener('change', function() {
+      window.heroPriceRange = this.value;
+    });
+  }
+  
   // Allow Enter key in inputs to search
   countrySelect.addEventListener('keypress', function(e) {
     if (e.key === 'Enter') searchVehicles();
@@ -4155,6 +4176,11 @@ function initHeroSearch() {
   stateSelect.addEventListener('keypress', function(e) {
     if (e.key === 'Enter') searchVehicles();
   });
+  if (priceRangeSelect) {
+    priceRangeSelect.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') searchVehicles();
+    });
+  }
 }
 
 function updateStateDropdown(country) {
@@ -4275,17 +4301,42 @@ function filterVehiclesByLocation(country, state, location) {
   // Get all vehicles
   const vehicles = Array.from(document.querySelectorAll('[data-vehicle-id]'));
   
-  // Filter based on country/state
+  // Get filter values from form inputs if available
+  const minPrice = parseFloat(document.getElementById('minPrice')?.value || 0);
+  const maxPrice = parseFloat(document.getElementById('maxPrice')?.value || 999999);
+  const minDuration = parseInt(document.getElementById('minDuration')?.value || 1, 10);
+  const maxDuration = parseInt(document.getElementById('maxDuration')?.value || 52, 10);
+  
+  // Filter based on country/state/price/duration
   vehicles.forEach(vehicleEl => {
     const vehicleCountry = vehicleEl.getAttribute('data-vehicle-country') || '';
     const vehicleState = vehicleEl.getAttribute('data-vehicle-state') || '';
     
+    // Get vehicle price from the vehicle data
+    const vehicleId = vehicleEl.getAttribute('data-vehicle-id');
+    const vehicle = VEHICLES.find(v => v.id === vehicleId);
+    const vehiclePrice = vehicle?.price || 0;
+    
     let show = true;
     
+    // Check country/state filters
     if (country && vehicleCountry.toLowerCase() !== country.toLowerCase()) {
       show = false;
     } else if (state && vehicleState.toLowerCase() !== state.toLowerCase()) {
       show = false;
+    }
+    
+    // Check price filter
+    if (show && (vehiclePrice < minPrice || vehiclePrice > maxPrice)) {
+      show = false;
+    }
+    
+    // Check duration filter (if applicable)
+    if (show && minDuration && maxDuration) {
+      // Vehicles are available for any duration, but we check if selected duration is valid
+      if (minDuration > maxDuration) {
+        show = false;
+      }
     }
     
     vehicleEl.style.display = show ? 'block' : 'none';
@@ -4296,7 +4347,7 @@ function filterVehiclesByLocation(country, state, location) {
   const vehicleEmpty = document.getElementById('vehicle-empty');
   const visibleVehicles = vehicles.filter(v => v.style.display !== 'none').length;
   
-  if (visibleVehicles === 0 && (country || state)) {
+  if (visibleVehicles === 0 && (country || state || minPrice > 0 || maxPrice < 999999 || minDuration > 1 || maxDuration < 52)) {
     vehicleEmpty.style.display = 'block';
     vehicleGrid.style.display = 'none';
   } else {
