@@ -388,8 +388,8 @@ try{
 }
 
 // Router: show one section at a time, default = blank
-const ROUTES = { vehicles:'#vehicles', about:'#about', booking:'#booking', payments:'#payments', login:'#login', membership:'#membership', signup:'#signup', contact:'#contact', terms:'#terms', admin:'#admin' };
-const MEMBER_ONLY = new Set(['booking','payments']);
+const ROUTES = { vehicles:'#vehicles', about:'#about', booking:'#booking', payments:'#payments', login:'#login', membership:'#membership', signup:'#signup', contact:'#contact', terms:'#terms', admin:'#admin', host:'#host' };
+const MEMBER_ONLY = new Set(['booking','payments','host']);
 function show(sel){ Object.values(ROUTES).forEach(id=>{ const n=document.querySelector(id); if(n) n.style.display = (id===sel)?'block':'none'; }); }
 function goto(name){ 
   const sel=ROUTES[name]; if(!sel) return; 
@@ -667,6 +667,8 @@ document.addEventListener('DOMContentLoaded', async ()=>{
         VEHICLES.length = 0;
         DEFAULT_VEHICLES.forEach(v=> VEHICLES.push({ ...v }));
       }
+      // Shuffle vehicles on page load with a random seed
+      shuffleVehicles();
       renderVehicles();
     }catch(e){ console.warn('Render vehicles failed:', e?.message||e); }
   seedBooking(); 
@@ -674,6 +676,17 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   renderAbout(); 
   // Start realtime after initial snapshot load
   setupRealtimeForRole();
+  
+  // Set up vehicle shuffling every 3 hours (10800000 ms)
+  setInterval(() => {
+    try {
+      shuffleVehicles();
+      renderVehicles();
+      showToast('Vehicles have been shuffled!');
+    } catch(e) {
+      console.warn('Shuffle failed:', e);
+    }
+  }, 10800000); // 3 hours
   
   // Wait for Firebase Auth to initialize and restore session
   const checkAuthAndUpdateUI = () => {
@@ -4401,3 +4414,313 @@ function calculateDistance(lat1, lng1, lat2, lng2) {
 }
 
 // (Client-side EmailJS path removed; using server function for reliability)
+
+// ===== HOST MANAGEMENT =====
+const HOST_VEHICLES_KEY = 'hostVehicles_';
+
+// Initialize host UI
+document.addEventListener('DOMContentLoaded', () => {
+  // Host signup
+  const hostSignupBtn = document.getElementById('hostSignupBtn');
+  if(hostSignupBtn) {
+    hostSignupBtn.addEventListener('click', () => {
+      goto('signup');
+      // Mark signup form for host signup
+      const form = document.getElementById('signup-form');
+      if(form) form.dataset.hostSignup = 'true';
+    });
+  }
+
+  // Host login
+  const hostLoginBtn = document.getElementById('hostLoginBtn');
+  if(hostLoginBtn) {
+    hostLoginBtn.addEventListener('click', () => {
+      goto('login');
+    });
+  }
+
+  // Host logout
+  const hostLogoutBtn = document.getElementById('hostLogoutBtn');
+  if(hostLogoutBtn) {
+    hostLogoutBtn.addEventListener('click', async () => {
+      if(confirm('Logout from host account?')) {
+        try {
+          await logoutUser();
+          goto('host');
+        } catch(e) {
+          showToast('Logout failed: ' + e.message);
+        }
+      }
+    });
+  }
+
+  // Add vehicle button
+  const hostAddVehicleBtn = document.getElementById('hostAddVehicleBtn');
+  if(hostAddVehicleBtn) {
+    hostAddVehicleBtn.addEventListener('click', () => {
+      openVehicleEditModal(null);
+    });
+  }
+
+  // Vehicle location map click
+  const vehicleLocationMap = document.getElementById('vehicleLocationMap');
+  if(vehicleLocationMap) {
+    vehicleLocationMap.addEventListener('click', () => {
+      useVehicleLocation();
+    });
+  }
+
+  // Vehicle use my location button
+  const vehicleUseMyLocationBtn = document.getElementById('vehicleUseMyLocationBtn');
+  if(vehicleUseMyLocationBtn) {
+    vehicleUseMyLocationBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      useVehicleLocation();
+    });
+  }
+
+  // Vehicle edit form submission
+  const vehicleEditForm = document.getElementById('vehicleEditForm');
+  if(vehicleEditForm) {
+    vehicleEditForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      saveVehicle();
+    });
+  }
+
+  // Vehicle edit cancel button
+  const vehicleEditCancelBtn = document.getElementById('vehicleEditCancelBtn');
+  if(vehicleEditCancelBtn) {
+    vehicleEditCancelBtn.addEventListener('click', () => {
+      closeVehicleEditModal();
+    });
+  }
+});
+
+// Open vehicle edit modal
+function openVehicleEditModal(vehicleData) {
+  const modal = document.getElementById('vehicleEditModal');
+  const title = document.getElementById('veTitle');
+  const form = document.getElementById('vehicleEditForm');
+
+  if(!modal) return;
+
+  title.textContent = vehicleData ? 'Edit Vehicle' : 'Add Vehicle';
+  form.reset();
+  form.dataset.vehicleId = vehicleData?.id || '';
+
+  // Populate form if editing
+  if(vehicleData) {
+    document.getElementById('vehicleType').value = vehicleData.type || '';
+    document.getElementById('vehicleMakeModel').value = vehicleData.makeModel || vehicleData.make + ' ' + vehicleData.model || '';
+    document.getElementById('vehicleYear').value = vehicleData.year || '';
+    document.getElementById('vehiclePrice').value = vehicleData.price || '';
+    document.getElementById('vehicleRentalTerm').value = vehicleData.rentalTerm || '';
+    document.getElementById('vehicleDescription').value = vehicleData.description || '';
+    document.getElementById('vehicleAddress').value = vehicleData.address || '';
+    document.getElementById('vehicleCity').value = vehicleData.city || '';
+    document.getElementById('vehicleState').value = vehicleData.state || '';
+    document.getElementById('vehicleZip').value = vehicleData.zip || '';
+    document.getElementById('vehicleCountry').value = vehicleData.country || '';
+  }
+
+  modal.style.display = 'block';
+}
+
+// Close vehicle edit modal
+function closeVehicleEditModal() {
+  const modal = document.getElementById('vehicleEditModal');
+  if(modal) modal.style.display = 'none';
+}
+
+// Use vehicle location from geolocation
+function useVehicleLocation() {
+  if(!navigator.geolocation) {
+    showToast('Geolocation not supported');
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    async (position) => {
+      const { latitude, longitude } = position.coords;
+      
+      try {
+        // Use Nominatim to get address from coordinates
+        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
+        const data = await response.json();
+        
+        document.getElementById('vehicleAddress').value = data.address?.road || data.address?.street || '';
+        document.getElementById('vehicleCity').value = data.address?.city || data.address?.town || '';
+        document.getElementById('vehicleState').value = data.address?.state || '';
+        document.getElementById('vehicleZip').value = data.address?.postcode || '';
+        document.getElementById('vehicleCountry').value = data.address?.country || '';
+        
+        showToast('Location updated!');
+      } catch(e) {
+        showToast('Failed to get address: ' + e.message);
+      }
+    },
+    (error) => {
+      showToast('Location access denied: ' + error.message);
+    }
+  );
+}
+
+// Save vehicle
+async function saveVehicle() {
+  const email = getSessionEmail();
+  if(!email) {
+    showToast('Please log in as a host first');
+    goto('login');
+    return;
+  }
+
+  const vehicleId = document.getElementById('vehicleEditForm').dataset.vehicleId || 'v_' + Date.now();
+  const vehicle = {
+    id: vehicleId,
+    hostId: email,
+    type: document.getElementById('vehicleType').value,
+    makeModel: document.getElementById('vehicleMakeModel').value,
+    make: document.getElementById('vehicleMakeModel').value.split(' ')[0],
+    model: document.getElementById('vehicleMakeModel').value.split(' ').slice(1).join(' '),
+    year: parseInt(document.getElementById('vehicleYear').value),
+    price: parseFloat(document.getElementById('vehiclePrice').value),
+    rentalTerm: document.getElementById('vehicleRentalTerm').value,
+    description: document.getElementById('vehicleDescription').value,
+    address: document.getElementById('vehicleAddress').value,
+    city: document.getElementById('vehicleCity').value,
+    state: document.getElementById('vehicleState').value,
+    zip: document.getElementById('vehicleZip').value,
+    country: document.getElementById('vehicleCountry').value,
+    createdAt: new Date().toISOString(),
+  };
+
+  try {
+    // Save to local storage for now (Firestore integration would go here)
+    let hostVehicles = JSON.parse(localStorage.getItem(HOST_VEHICLES_KEY + email) || '[]');
+    const index = hostVehicles.findIndex(v => v.id === vehicleId);
+    if(index >= 0) {
+      hostVehicles[index] = { ...hostVehicles[index], ...vehicle };
+    } else {
+      hostVehicles.push(vehicle);
+    }
+    localStorage.setItem(HOST_VEHICLES_KEY + email, JSON.stringify(hostVehicles));
+
+    showToast(document.getElementById('vehicleEditForm').dataset.vehicleId ? 'Vehicle updated!' : 'Vehicle added!');
+    closeVehicleEditModal();
+    renderHostFleet();
+  } catch(e) {
+    showToast('Error saving vehicle: ' + e.message);
+  }
+}
+
+// Render host fleet
+function renderHostFleet() {
+  const email = getSessionEmail();
+  if(!email) return;
+
+  const grid = document.getElementById('hostFleetGrid');
+  const empty = document.getElementById('hostFleetEmpty');
+
+  if(!grid) return;
+
+  try {
+    const vehicles = JSON.parse(localStorage.getItem(HOST_VEHICLES_KEY + email) || '[]');
+    
+    if(vehicles.length === 0) {
+      grid.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+
+    empty.style.display = 'none';
+    grid.innerHTML = vehicles.map(v => `
+      <div class="card" style="cursor:pointer" onclick="editHostVehicle('${v.id}')">
+        <div class="body">
+          <h3>${v.year} ${v.make} ${v.model}</h3>
+          <p style="color:#666;margin:4px 0"><strong>${v.type}</strong> • $${v.price}/day</p>
+          <p style="color:#666;font-size:13px;margin:4px 0">${v.address}, ${v.city}, ${v.state}</p>
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <button onclick="editHostVehicle('${v.id}'); event.stopPropagation()" class="navbtn" style="flex:1">Edit</button>
+            <button onclick="deleteHostVehicle('${v.id}'); event.stopPropagation()" class="navbtn" style="flex:1;background:#c1121f">Delete</button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) {
+    console.warn('Render host fleet failed:', e);
+  }
+}
+
+// Edit host vehicle
+function editHostVehicle(vehicleId) {
+  const email = getSessionEmail();
+  if(!email) return;
+
+  const vehicles = JSON.parse(localStorage.getItem(HOST_VEHICLES_KEY + email) || '[]');
+  const vehicle = vehicles.find(v => v.id === vehicleId);
+
+  if(vehicle) {
+    openVehicleEditModal(vehicle);
+  }
+}
+
+// Delete host vehicle
+function deleteHostVehicle(vehicleId) {
+  const email = getSessionEmail();
+  if(!email) return;
+
+  if(!confirm('Delete this vehicle?')) return;
+
+  try {
+    let vehicles = JSON.parse(localStorage.getItem(HOST_VEHICLES_KEY + email) || '[]');
+    vehicles = vehicles.filter(v => v.id !== vehicleId);
+    localStorage.setItem(HOST_VEHICLES_KEY + email, JSON.stringify(vehicles));
+    showToast('Vehicle deleted');
+    renderHostFleet();
+  } catch(e) {
+    showToast('Error deleting vehicle: ' + e.message);
+  }
+}
+
+// Update host panel when user logs in
+function updateHostPanel() {
+  const email = getSessionEmail();
+  const hostLoginPanel = document.getElementById('hostLoginPanel');
+  const hostPanel = document.getElementById('hostPanel');
+
+  if(!hostLoginPanel || !hostPanel) return;
+
+  if(email) {
+    hostLoginPanel.style.display = 'none';
+    hostPanel.style.display = 'block';
+    
+    document.getElementById('hostName').textContent = email.split('@')[0];
+    document.getElementById('hostEmail').textContent = email;
+    document.getElementById('hostPhone').textContent = 'Not provided';
+    
+    renderHostFleet();
+  } else {
+    hostLoginPanel.style.display = 'block';
+    hostPanel.style.display = 'none';
+  }
+}
+
+// Hook into navigation to update host panel when needed
+const origGoto = window.goto;
+window.goto = function(name) {
+  if(name === 'host') {
+    updateHostPanel();
+  }
+  return origGoto.call(this, name);
+};
+
+// ===== VEHICLE SHUFFLING =====
+function shuffleVehicles() {
+  // Fisher-Yates shuffle algorithm
+  for(let i = VEHICLES.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [VEHICLES[i], VEHICLES[j]] = [VEHICLES[j], VEHICLES[i]];
+  }
+}
+
