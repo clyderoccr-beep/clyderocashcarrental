@@ -182,18 +182,21 @@
     
     .wrap{max-width:var(--maxw); margin:0 auto; padding:12px}
     
-    /* Hero Section - Turo Style */
+    /* Hero Section - Full-Width Turo Style */
     .hero-section {
       position:relative;
-      width:100%;
-      height:400px;
-      margin:0;
-      padding:0;
-      overflow:hidden;
-      border-radius:24px;
+      width:100vw;
+      left:50%;
+      right:50%;
+      margin-left:-50vw;
+      margin-right:-50vw;
+      height:500px;
       display:flex;
+      flex-direction:column;
       align-items:center;
       justify-content:center;
+      overflow:hidden;
+      background:linear-gradient(135deg, #f5f5f5, #ffffff);
     }
     .hero-background {
       position:absolute;
@@ -201,73 +204,221 @@
       left:0;
       width:100%;
       height:100%;
+      background-image:url('assets/banhead.jpeg');
       background-size:cover;
       background-position:center;
       background-repeat:no-repeat;
+      background-attachment:fixed;
+      z-index:0;
+      opacity:0.95;
+    }
+    .hero-background::after {
+      content:'';
+      position:absolute;
+      top:0;
+      left:0;
+      width:100%;
+      height:100%;
+      background:rgba(0,0,0,0.25);
       z-index:1;
     }
     .hero-content {
       position:relative;
       z-index:2;
       display:flex;
+      flex-direction:column;
       align-items:center;
       justify-content:center;
       width:100%;
       height:100%;
+      gap:40px;
+      padding:40px 20px;
+      animation:fadeInDown 0.8s ease-out;
     }
-    .search-box {
-      background:rgba(255,255,255,0.95);
-      backdrop-filter:blur(10px);
-      padding:40px 60px;
-      border-radius:16px;
-      box-shadow:0 8px 32px rgba(0,0,0,0.15);
+    .hero-text {
       text-align:center;
-      max-width:500px;
-    }
-    .search-box h2 {
-      font-size:32px;
-      color:#000000;
-      margin:0 0 12px 0;
-      font-weight:900;
-      letter-spacing:-0.5px;
-    }
-    .search-box p {
-      font-size:16px;
-      color:#666666;
-      margin:0 0 24px 0;
-      line-height:1.5;
-    }
-    .search-btn {
-      background:linear-gradient(135deg, #000000, #333333);
       color:#ffffff;
-      border:none;
-      padding:14px 32px;
+      text-shadow:0 2px 8px rgba(0,0,0,0.3);
+    }
+    .hero-title {
+      font-size:56px;
+      font-weight:900;
+      margin:0 0 12px 0;
+      letter-spacing:-1px;
+      line-height:1.2;
+      animation:fadeInUp 0.8s ease-out 0.2s both;
+    }
+    .hero-subtitle {
+      font-size:20px;
+      color:rgba(255,255,255,0.95);
+      margin:0;
+      font-weight:400;
+      letter-spacing:0.3px;
+      animation:fadeInUp 0.8s ease-out 0.4s both;
+    }
+    .hero-search-container {
+      width:100%;
+      max-width:700px;
+      animation:fadeInUp 0.8s ease-out 0.6s both;
+    }
+    .search-bar {
+      background:rgba(255,255,255,0.98);
+      backdrop-filter:blur(12px);
+      border-radius:50px;
+      padding:8px 16px;
+      box-shadow:0 12px 40px rgba(0,0,0,0.2);
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+    .search-input-group {
+      display:grid;
+      grid-template-columns:1fr 1fr 50px 50px;
+      gap:8px;
+      align-items:center;
+    }
+    .search-input,
+    .location-btn,
+    .search-submit-btn {
+      padding:12px 16px;
+      border:1px solid #e0e0e0;
       border-radius:8px;
-      font-size:16px;
-      font-weight:700;
+      font-size:14px;
+      font-family:inherit;
+      background:#ffffff;
+      color:#333333;
       cursor:pointer;
       transition:all 0.3s ease;
-      box-shadow:0 4px 12px rgba(0,0,0,0.2);
     }
-    .search-btn:hover {
-      transform:translateY(-2px);
-      box-shadow:0 6px 20px rgba(0,0,0,0.3);
+    .search-input {
+      border:none;
+      background:#f9f9f9;
+    }
+    .search-input:focus {
+      outline:none;
+      background:#ffffff;
+      border:1px solid #cccccc;
+      box-shadow:0 2px 8px rgba(0,0,0,0.1);
+    }
+    .search-input:disabled {
+      background:#f0f0f0;
+      color:#999999;
+      cursor:not-allowed;
+    }
+    .location-btn,
+    .search-submit-btn {
+      border:1px solid #e0e0e0;
+      background:#ffffff;
+      font-size:18px;
+      padding:12px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .location-btn:hover,
+    .search-submit-btn:hover {
+      background:#f5f5f5;
+      border-color:#999999;
+    }
+    .location-btn:active,
+    .search-submit-btn:active {
+      transform:scale(0.95);
+    }
+    .loading-indicator {
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      font-size:13px;
+      color:#666666;
+      padding:8px;
+      text-align:center;
+    }
+    .spinner {
+      display:inline-block;
+      width:14px;
+      height:14px;
+      border:2px solid #e0e0e0;
+      border-top-color:#333333;
+      border-radius:50%;
+      animation:spin 0.6s linear infinite;
+    }
+    
+    @keyframes fadeInDown {
+      from {
+        opacity:0;
+        transform:translateY(-20px);
+      }
+      to {
+        opacity:1;
+        transform:translateY(0);
+      }
+    }
+    @keyframes fadeInUp {
+      from {
+        opacity:0;
+        transform:translateY(20px);
+      }
+      to {
+        opacity:1;
+        transform:translateY(0);
+      }
+    }
+    @keyframes spin {
+      to { transform:rotate(360deg); }
     }
     
     @media (max-width:768px) {
       .hero-section {
-        height:300px;
-        border-radius:16px;
+        height:350px;
       }
-      .search-box {
-        padding:30px 24px;
-        max-width:calc(100% - 48px);
+      .hero-content {
+        gap:24px;
+        padding:30px 16px;
       }
-      .search-box h2 {
-        font-size:24px;
+      .hero-title {
+        font-size:36px;
       }
-      .search-box p {
+      .hero-subtitle {
+        font-size:16px;
+      }
+      .hero-search-container {
+        max-width:calc(100% - 32px);
+      }
+      .search-input-group {
+        grid-template-columns:1fr 1fr 44px 44px;
+        gap:6px;
+      }
+      .search-input,
+      .location-btn,
+      .search-submit-btn {
+        padding:10px 12px;
+        font-size:13px;
+      }
+    }
+    
+    @media (max-width:480px) {
+      .hero-section {
+        height:320px;
+      }
+      .hero-content {
+        gap:20px;
+        padding:24px 12px;
+      }
+      .hero-title {
+        font-size:28px;
+      }
+      .hero-subtitle {
         font-size:14px;
+      }
+      .search-input-group {
+        grid-template-columns:1fr 1fr 40px 40px;
+      }
+      .search-input,
+      .location-btn,
+      .search-submit-btn {
+        padding:8px 10px;
+        font-size:12px;
       }
     }
     
@@ -608,6 +759,7 @@
       header nav.active #mobileMenuClose {
         display:block !important;
       }
+      header nav #mobileMenuClose {
         color:#1a1a1a;
         padding:4px 8px !important;
         min-height:auto !important;
@@ -673,12 +825,28 @@
 
     <!-- Hero Banner Section -->
     <section id="hero" class="hero-section">
-      <div class="hero-background" style="background-image: url('assets/banhead.jpeg')"></div>
+      <div class="hero-background"></div>
       <div class="hero-content">
-        <div class="search-box">
-          <h2>Rent a Car Today</h2>
-          <p>Find the perfect vehicle for your journey</p>
-          <button class="search-btn" data-nav="vehicles">Browse Vehicles</button>
+        <div class="hero-text">
+          <h1 class="hero-title">Making Rental Easier</h1>
+          <p class="hero-subtitle">Find the perfect vehicle anywhere in the world</p>
+        </div>
+        <div class="hero-search-container">
+          <div class="search-bar">
+            <div class="search-input-group">
+              <select id="heroCountry" class="search-input" aria-label="Select country">
+                <option value="">Select Country</option>
+              </select>
+              <select id="heroState" class="search-input" aria-label="Select state" disabled>
+                <option value="">Select State/Region</option>
+              </select>
+              <button id="heroLocationBtn" class="location-btn" title="Use my location">📍</button>
+              <button id="heroSearchBtn" class="search-submit-btn" title="Search vehicles">🔍</button>
+            </div>
+            <div id="heroLoadingIndicator" class="loading-indicator" style="display:none">
+              <span class="spinner"></span> Finding location...
+            </div>
+          </div>
         </div>
       </div>
     </section>

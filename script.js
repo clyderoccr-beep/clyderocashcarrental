@@ -1458,6 +1458,11 @@ function renderVehicles(){
     const isAvail = v.available !== false;
     const isPending = v.pending === true;
     const el=document.createElement('article'); el.className='card';
+    el.setAttribute('data-vehicle-id', v.id);
+    el.setAttribute('data-vehicle-country', v.country || '');
+    el.setAttribute('data-vehicle-state', v.state || '');
+    el.setAttribute('data-vehicle-lat', v.latitude || 0);
+    el.setAttribute('data-vehicle-lng', v.longitude || 0);
     const bookBtn = (isAvail && !isPending)
       ? `<button class='navbtn' aria-label='Book ${v.name}' data-nav='booking' data-veh='${v.id}'>Book</button>`
       : `<button class='navbtn' disabled title='Unavailable' aria-disabled='true'>Book</button>`;
@@ -4051,6 +4056,295 @@ async function recordTermsAcceptance(){
     }
     localStorage.setItem('termsAccepted_'+TERMS_VERSION, '1');
   }catch(e){ console.warn('Failed to persist terms acceptance', e.message); }
+}
+
+// ===== HERO SEARCH BAR - GEOLOCATION & VEHICLE FILTERING =====
+
+// Country & State Data
+const COUNTRIES_DATA = {
+  'United States': {
+    'code': 'US',
+    'states': ['Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut', 'Delaware', 'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky', 'Louisiana', 'Maine', 'Maryland', 'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi', 'Missouri', 'Montana', 'Nebraska', 'Nevada', 'New Hampshire', 'New Jersey', 'New Mexico', 'New York', 'North Carolina', 'North Dakota', 'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island', 'South Carolina', 'South Dakota', 'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming']
+  },
+  'Canada': {
+    'code': 'CA',
+    'states': ['Alberta', 'British Columbia', 'Manitoba', 'New Brunswick', 'Newfoundland and Labrador', 'Nova Scotia', 'Ontario', 'Prince Edward Island', 'Quebec', 'Saskatchewan']
+  },
+  'United Kingdom': {
+    'code': 'GB',
+    'states': ['England', 'Scotland', 'Wales', 'Northern Ireland']
+  },
+  'Australia': {
+    'code': 'AU',
+    'states': ['New South Wales', 'Queensland', 'South Australia', 'Tasmania', 'Victoria', 'Western Australia', 'Northern Territory', 'Australian Capital Territory']
+  },
+  'Germany': {
+    'code': 'DE',
+    'states': ['Baden-Württemberg', 'Bavaria', 'Berlin', 'Brandenburg', 'Bremen', 'Hamburg', 'Hesse', 'Lower Saxony', 'Mecklenburg-Vorpomerania', 'North Rhine-Westphalia', 'Rhineland-Palatinate', 'Saarland', 'Saxony', 'Saxony-Anhalt', 'Schleswig-Holstein', 'Thuringia']
+  },
+  'France': {
+    'code': 'FR',
+    'states': ['Île-de-France', 'Provence-Alpes-Côte d\'Azur', 'Auvergne-Rhône-Alpes', 'Occitanie', 'Nouvelle-Aquitaine', 'Bourgogne-Franche-Comté', 'Normandy', 'Brittany', 'Pays de la Loire', 'Centre-Val de Loire', 'Grand Est', 'Corsica']
+  },
+  'Italy': {
+    'code': 'IT',
+    'states': ['Abruzzo', 'Basilicata', 'Calabria', 'Campania', 'Emilia-Romagna', 'Friuli-Venezia Giulia', 'Lazio', 'Liguria', 'Lombardy', 'Marche', 'Molise', 'Piedmont', 'Puglia', 'Sardinia', 'Sicily', 'Tuscany', 'Trentino-Alto Adige', 'Umbria', 'Valle d\'Aosta', 'Veneto']
+  },
+  'Spain': {
+    'code': 'ES',
+    'states': ['Andalusia', 'Aragon', 'Asturias', 'Balearic Islands', 'Basque Country', 'Canary Islands', 'Cantabria', 'Castile and León', 'Castilla-La Mancha', 'Catalonia', 'Extremadura', 'Galicia', 'La Rioja', 'Madrid', 'Murcia', 'Navarre', 'Valencia']
+  },
+  'Japan': {
+    'code': 'JP',
+    'states': ['Hokkaido', 'Aomori', 'Iwate', 'Miyagi', 'Akita', 'Yamagata', 'Fukushima', 'Ibaraki', 'Tochigi', 'Gunma', 'Saitama', 'Chiba', 'Tokyo', 'Kanagawa', 'Niigata', 'Toyama', 'Ishikawa', 'Fukui', 'Yamanashi', 'Nagano', 'Gifu', 'Shizuoka', 'Aichi', 'Mie', 'Shiga', 'Kyoto', 'Osaka', 'Hyogo', 'Nara', 'Wakayama', 'Tottori', 'Shimane', 'Okayama', 'Hiroshima', 'Yamaguchi', 'Tokushima', 'Kagawa', 'Ehime', 'Kochi', 'Fukuoka', 'Saga', 'Nagasaki', 'Kumamoto', 'Oita', 'Miyazaki', 'Kagoshima', 'Okinawa']
+  },
+  'South Korea': {
+    'code': 'KR',
+    'states': ['Seoul', 'Busan', 'Daegu', 'Incheon', 'Gwangju', 'Daejeon', 'Ulsan', 'Sejong', 'Gyeonggi', 'Gangwon', 'North Chungcheong', 'South Chungcheong', 'North Jeolla', 'South Jeolla', 'North Gyeongsang', 'South Gyeongsang', 'Jeju']
+  },
+  'China': {
+    'code': 'CN',
+    'states': ['Anhui', 'Beijing', 'Chongqing', 'Fujian', 'Gansu', 'Guangdong', 'Guangxi', 'Guizhou', 'Hainan', 'Hebei', 'Heilongjiang', 'Henan', 'Hong Kong', 'Hubei', 'Hunan', 'Inner Mongolia', 'Jiangsu', 'Jiangxi', 'Jilin', 'Liaoning', 'Macao', 'Ningxia', 'Qinghai', 'Shaanxi', 'Shandong', 'Shanghai', 'Shanxi', 'Sichuan', 'Taiwan', 'Tianjin', 'Tibet', 'Xinjiang', 'Yunnan', 'Zhejiang']
+  },
+  'Mexico': {
+    'code': 'MX',
+    'states': ['Aguascalientes', 'Baja California', 'Baja California Sur', 'Campeche', 'Chiapas', 'Chihuahua', 'Ciudad de México', 'Coahuila', 'Colima', 'Durango', 'Guanajuato', 'Guerrero', 'Hidalgo', 'Jalisco', 'México', 'Michoacán', 'Morelos', 'Nayarit', 'Nuevo León', 'Oaxaca', 'Puebla', 'Querétaro', 'Quintana Roo', 'San Luis Potosí', 'Sinaloa', 'Sonora', 'Tabasco', 'Tamaulipas', 'Tlaxcala', 'Veracruz', 'Yucatán', 'Zacatecas']
+  }
+};
+
+// Initialize hero search
+document.addEventListener('DOMContentLoaded', function() {
+  initHeroSearch();
+});
+
+function initHeroSearch() {
+  const countrySelect = document.getElementById('heroCountry');
+  const stateSelect = document.getElementById('heroState');
+  const locationBtn = document.getElementById('heroLocationBtn');
+  const searchBtn = document.getElementById('heroSearchBtn');
+  
+  if (!countrySelect) return; // Hero search not available
+  
+  // Populate country dropdown
+  Object.keys(COUNTRIES_DATA).sort().forEach(country => {
+    const option = document.createElement('option');
+    option.value = country;
+    option.textContent = country;
+    countrySelect.appendChild(option);
+  });
+  
+  // Update states when country changes
+  countrySelect.addEventListener('change', function() {
+    updateStateDropdown(this.value);
+  });
+  
+  // Location button handler
+  locationBtn.addEventListener('click', function() {
+    useMyLocation();
+  });
+  
+  // Search button handler
+  searchBtn.addEventListener('click', function() {
+    searchVehicles();
+  });
+  
+  // Allow Enter key in inputs to search
+  countrySelect.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') searchVehicles();
+  });
+  stateSelect.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') searchVehicles();
+  });
+}
+
+function updateStateDropdown(country) {
+  const stateSelect = document.getElementById('heroState');
+  const states = COUNTRIES_DATA[country]?.states || [];
+  
+  stateSelect.innerHTML = '<option value="">Select State/Region</option>';
+  
+  if (states.length > 0) {
+    stateSelect.disabled = false;
+    states.forEach(state => {
+      const option = document.createElement('option');
+      option.value = state;
+      option.textContent = state;
+      stateSelect.appendChild(option);
+    });
+  } else {
+    stateSelect.disabled = true;
+  }
+}
+
+function useMyLocation() {
+  const locationBtn = document.getElementById('heroLocationBtn');
+  const loadingIndicator = document.getElementById('heroLoadingIndicator');
+  
+  if (!navigator.geolocation) {
+    alert('Geolocation is not supported by your browser');
+    return;
+  }
+  
+  locationBtn.disabled = true;
+  loadingIndicator.style.display = 'flex';
+  
+  navigator.geolocation.getCurrentPosition(
+    async function(position) {
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+      
+      try {
+        // Use OpenStreetMap Nominatim for reverse geocoding (free, no API key needed)
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+        );
+        const data = await response.json();
+        
+        const address = data.address || {};
+        const country = address.country || '';
+        const state = address.state || address.province || address.region || '';
+        
+        // Set country dropdown
+        const countrySelect = document.getElementById('heroCountry');
+        if (country) {
+          const countryKey = Object.keys(COUNTRIES_DATA).find(c => 
+            c.toLowerCase() === country.toLowerCase()
+          );
+          if (countryKey) {
+            countrySelect.value = countryKey;
+            updateStateDropdown(countryKey);
+            
+            // Set state dropdown if available
+            if (state) {
+              const stateSelect = document.getElementById('heroState');
+              const stateKey = COUNTRIES_DATA[countryKey]?.states.find(s =>
+                s.toLowerCase() === state.toLowerCase()
+              );
+              if (stateKey) {
+                stateSelect.value = stateKey;
+              }
+            }
+          }
+        }
+        
+        // Store location for filtering
+        window.heroUserLocation = { lat, lng, city: address.city || '', country, state };
+        
+        // Immediately search
+        searchVehicles();
+      } catch (error) {
+        console.warn('Reverse geocoding failed:', error);
+        alert('Could not determine your location. Please select manually.');
+      } finally {
+        locationBtn.disabled = false;
+        loadingIndicator.style.display = 'none';
+      }
+    },
+    function(error) {
+      locationBtn.disabled = false;
+      loadingIndicator.style.display = 'none';
+      console.warn('Geolocation error:', error.message);
+      if (error.code === error.PERMISSION_DENIED) {
+        alert('Location permission denied. Please select country/state manually.');
+      } else {
+        alert('Could not get your location. Please select manually.');
+      }
+    },
+    { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+  );
+}
+
+function searchVehicles() {
+  const countrySelect = document.getElementById('heroCountry');
+  const stateSelect = document.getElementById('heroState');
+  const selectedCountry = countrySelect.value;
+  const selectedState = stateSelect.value;
+  const userLocation = window.heroUserLocation;
+  
+  // Navigate to vehicles section
+  const vehiclesSection = document.getElementById('vehicles');
+  if (vehiclesSection) {
+    vehiclesSection.scrollIntoView({ behavior: 'smooth' });
+  }
+  
+  // Filter vehicles based on selection
+  filterVehiclesByLocation(selectedCountry, selectedState, userLocation);
+}
+
+function filterVehiclesByLocation(country, state, location) {
+  // Get all vehicles
+  const vehicles = Array.from(document.querySelectorAll('[data-vehicle-id]'));
+  
+  // Filter based on country/state
+  vehicles.forEach(vehicleEl => {
+    const vehicleCountry = vehicleEl.getAttribute('data-vehicle-country') || '';
+    const vehicleState = vehicleEl.getAttribute('data-vehicle-state') || '';
+    
+    let show = true;
+    
+    if (country && vehicleCountry.toLowerCase() !== country.toLowerCase()) {
+      show = false;
+    } else if (state && vehicleState.toLowerCase() !== state.toLowerCase()) {
+      show = false;
+    }
+    
+    vehicleEl.style.display = show ? 'block' : 'none';
+  });
+  
+  // Show message if no vehicles found
+  const vehicleGrid = document.getElementById('vehicle-grid');
+  const vehicleEmpty = document.getElementById('vehicle-empty');
+  const visibleVehicles = vehicles.filter(v => v.style.display !== 'none').length;
+  
+  if (visibleVehicles === 0 && (country || state)) {
+    vehicleEmpty.style.display = 'block';
+    vehicleGrid.style.display = 'none';
+  } else {
+    vehicleEmpty.style.display = 'none';
+    vehicleGrid.style.display = 'grid';
+  }
+  
+  // Sort by distance if user location is available
+  if (location && location.lat && location.lng) {
+    sortVehiclesByDistance(vehicles, location);
+  }
+}
+
+function sortVehiclesByDistance(vehicles, userLocation) {
+  const vehiclesWithDistance = vehicles.map(el => {
+    const vehicleLat = parseFloat(el.getAttribute('data-vehicle-lat')) || 0;
+    const vehicleLng = parseFloat(el.getAttribute('data-vehicle-lng')) || 0;
+    
+    const distance = calculateDistance(
+      userLocation.lat,
+      userLocation.lng,
+      vehicleLat,
+      vehicleLng
+    );
+    
+    return { element: el, distance };
+  });
+  
+  vehiclesWithDistance.sort((a, b) => a.distance - b.distance);
+  
+  const vehicleGrid = document.getElementById('vehicle-grid');
+  vehicleGrid.innerHTML = '';
+  vehiclesWithDistance.forEach(({ element }) => {
+    vehicleGrid.appendChild(element.cloneNode(true));
+  });
+}
+
+function calculateDistance(lat1, lng1, lat2, lng2) {
+  // Haversine formula for calculating distance between two coordinates (in km)
+  const R = 6371; // Earth's radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
 }
 
 // (Client-side EmailJS path removed; using server function for reliability)
