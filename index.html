@@ -223,23 +223,24 @@ a<!DOCTYPE html>
       display:none !important;
     }
     
-    /* Announcement Banner - Hidden (Turo style) */
+    /* Announcement Banner - Show at top */
     .holiday{
-      display:none;
-      background:linear-gradient(90deg, #2c2c2c 0%, #3a3a3a 100%);
-      color:#ffffff; 
+      display:block;
+      background:#f5f5f5;
+      color:#000000; 
       text-align:center; 
       padding:12px 40px; 
-      font-weight:700; 
+      font-weight:600; 
       font-size:14px;
-      box-shadow:0 2px 6px rgba(0,0,0,.1);
+      box-shadow:none;
       text-shadow:none;
-      letter-spacing:0.5px;
+      letter-spacing:0;
       position:sticky;
       top:0;
       z-index:51;
       width:100%;
       box-sizing:border-box;
+      border-bottom:1px solid #e0e0e0;
     }
     .section{display:block; padding:24px 0}
     .card{
@@ -553,7 +554,7 @@ a<!DOCTYPE html>
   </style>
 </head>
 <body>
-  <div class="holiday">🚗 Premium Car Rental — Quality Vehicles, Professional Service ✨</div>
+  <div class="holiday">If you wanna ride, call Clyde 📞</div>
   <div id="toast"></div>
   <div class="wrap">
     <header class="wrap">
