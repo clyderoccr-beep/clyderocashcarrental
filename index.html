@@ -1159,6 +1159,7 @@
         <button id="mobileMenuClose" type="button" style="background:transparent;border:none;font-size:24px;color:#000000;cursor:pointer;padding:8px;position:absolute;top:8px;right:8px;display:none">×</button>
         <button class="navbtn" data-nav="membership">My Account</button>
         <button class="navbtn" data-nav="vehicles">Vehicles</button>
+        <button class="navbtn" data-nav="host">Become a Host</button>
         <button class="navbtn" data-nav="booking" style="display:none">Booking</button>
         <button class="navbtn" data-nav="payments" style="display:none">Payments</button>
         <button class="navbtn" data-nav="contact">Contact</button>
@@ -1462,6 +1463,139 @@
           <img id="vgImage" alt="Selected vehicle gallery photo" loading="lazy" style="width:100%;height:auto;max-height:70vh;object-fit:contain;border-radius:8px;border:1px solid rgba(255,255,255,.12);touch-action:none;cursor:zoom-in">
         </div>
         <div id="vgCaption" class="muted" style="margin-top:8px"></div>
+      </div>
+    </div>
+    
+    <!-- Host Management Section -->
+    <section id="host" class="section">
+      <div class="wrap">
+        <h2>Become a Host</h2>
+        <div id="hostLoginPanel">
+          <p style="color:#ffffff;margin-bottom:20px">Join our network of vehicle owners and earn income by renting your vehicles.</p>
+          <div style="display:grid;gap:12px;grid-template-columns:1fr 1fr;max-width:600px">
+            <button class="navbtn" id="hostSignupBtn" type="button">Create Host Account</button>
+            <button class="navbtn" id="hostLoginBtn" type="button">Host Login</button>
+          </div>
+        </div>
+        <div id="hostPanel" style="display:none">
+          <div class="card" style="max-width:900px">
+            <div class="body">
+              <!-- Host Profile Section -->
+              <details open style="margin-bottom:16px;border:1px solid #e0e0e0;border-radius:8px;padding:12px;background:#fafafa">
+                <summary style="cursor:pointer;font-weight:700;font-size:16px;color:#111;user-select:none;outline:none">
+                  👤 Host Profile
+                </summary>
+                <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e0e0e0">
+                  <div id="hostProfileInfo" style="display:grid;gap:8px;margin-bottom:12px">
+                    <div><strong>Name:</strong> <span id="hostName"></span></div>
+                    <div><strong>Email:</strong> <span id="hostEmail"></span></div>
+                    <div><strong>Phone:</strong> <span id="hostPhone"></span></div>
+                  </div>
+                  <button class="navbtn" id="hostEditProfileBtn" type="button">Edit Profile</button>
+                </div>
+              </details>
+
+              <!-- Fleet Management Section -->
+              <details open style="margin-bottom:16px;border:1px solid #e0e0e0;border-radius:8px;padding:12px;background:#fafafa">
+                <summary style="cursor:pointer;font-weight:700;font-size:16px;color:#111;user-select:none;outline:none">
+                  🚗 My Fleet
+                </summary>
+                <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e0e0e0">
+                  <button class="navbtn" id="hostAddVehicleBtn" type="button" style="margin-bottom:12px">+ Add Vehicle</button>
+                  <div id="hostFleetGrid" style="display:grid;gap:12px;grid-template-columns:repeat(auto-fill, minmax(280px, 1fr))"></div>
+                  <div id="hostFleetEmpty" class="muted" style="text-align:center;padding:24px;display:none">No vehicles yet. Click "Add Vehicle" to get started!</div>
+                </div>
+              </details>
+
+              <!-- Earnings Section -->
+              <details style="margin-bottom:16px;border:1px solid #e0e0e0;border-radius:8px;padding:12px;background:#fafafa">
+                <summary style="cursor:pointer;font-weight:700;font-size:16px;color:#111;user-select:none;outline:none">
+                  💰 Earnings
+                </summary>
+                <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e0e0e0">
+                  <div id="hostEarningsInfo" style="display:grid;gap:8px;margin-bottom:12px">
+                    <div><strong>Total Earnings:</strong> $<span id="hostTotalEarnings">0.00</span></div>
+                    <div><strong>This Month:</strong> $<span id="hostMonthEarnings">0.00</span></div>
+                  </div>
+                </div>
+              </details>
+
+              <button class="navbtn" id="hostLogoutBtn" type="button" style="background:#c1121f;border-color:#c1121f;margin-top:12px">Logout</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Vehicle Add/Edit Modal -->
+    <div id="vehicleEditModal" class="card" style="max-width:700px;margin:12px auto;display:none" aria-modal="true" role="dialog" aria-labelledby="veTitle">
+      <div class="body">
+        <h3 id="veTitle">Add Vehicle</h3>
+        <form id="vehicleEditForm" style="display:grid;gap:12px;margin-top:12px">
+          <!-- Location Section with Live Pin -->
+          <div style="border:1px solid #e0e0e0;border-radius:8px;padding:12px;background:#fafafa">
+            <label style="display:block;font-weight:700;margin-bottom:8px;color:#000">📍 Live Location (Click to update)</label>
+            <div id="vehicleLocationMap" style="width:100%;height:200px;border-radius:8px;border:1px solid #d0d0d0;background:#f0f0f0;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#666;font-size:14px;position:relative;overflow:hidden">
+              <div style="text-align:center">Click or tap to set vehicle location</div>
+            </div>
+            <input id="vehicleAddress" type="text" placeholder="Street Address" required style="width:100%;color:#000;margin-top:8px">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+              <input id="vehicleCity" type="text" placeholder="City" required style="width:100%;color:#000">
+              <input id="vehicleState" type="text" placeholder="State" required style="width:100%;color:#000">
+            </div>
+            <input id="vehicleZip" type="text" placeholder="Zip Code" required style="width:100%;color:#000;margin-top:8px">
+            <input id="vehicleCountry" type="text" placeholder="Country" required style="width:100%;color:#000;margin-top:8px">
+            <button id="vehicleUseMyLocationBtn" class="navbtn" type="button" style="width:100%;margin-top:8px">Use My Current Location</button>
+          </div>
+
+          <!-- Vehicle Details -->
+          <div>
+            <label style="color:#000">Vehicle Type</label>
+            <select id="vehicleType" required style="width:100%;color:#000">
+              <option value="">Select Type</option>
+              <option value="SUV">SUV</option>
+              <option value="Sedan">Sedan</option>
+              <option value="Coupe">Coupe</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <div>
+            <label style="color:#000">Make & Model</label>
+            <input id="vehicleMakeModel" type="text" placeholder="e.g., Toyota Camry" required style="width:100%;color:#000">
+          </div>
+
+          <div>
+            <label style="color:#000">Year</label>
+            <input id="vehicleYear" type="number" min="1990" max="2099" required style="width:100%;color:#000">
+          </div>
+
+          <div>
+            <label style="color:#000">Price (Daily)</label>
+            <input id="vehiclePrice" type="number" step="0.01" min="0" required style="width:100%;color:#000">
+          </div>
+
+          <div>
+            <label style="color:#000">Rental Term</label>
+            <select id="vehicleRentalTerm" required style="width:100%;color:#000">
+              <option value="">Select Term</option>
+              <option value="Daily">Daily</option>
+              <option value="Weekly">Weekly</option>
+              <option value="Monthly">Monthly</option>
+              <option value="Both">Both Daily & Weekly</option>
+            </select>
+          </div>
+
+          <div>
+            <label style="color:#000">Description</label>
+            <textarea id="vehicleDescription" placeholder="Describe your vehicle..." style="width:100%;min-height:100px;color:#000;border-radius:6px;padding:8px;border:1px solid #ccc"></textarea>
+          </div>
+
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <button class="navbtn" id="vehicleSaveBtn" type="submit">Save Vehicle</button>
+            <button class="navbtn" id="vehicleEditCancelBtn" type="button" style="background:#999">Cancel</button>
+          </div>
+        </form>
       </div>
     </div>
     
