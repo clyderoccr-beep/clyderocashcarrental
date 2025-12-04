@@ -4912,9 +4912,70 @@ window.selectHostPlan = async function(planType, price, vehicleLimit) {
     return;
   }
 
-  // In production, integrate with Stripe/PayPal here
-  const confirmed = confirm(`Subscribe to ${planType === 'basic' ? 'Basic' : 'Pro'} Plan for $${price}/month?`);
-  if(!confirmed) return;
+  try {
+    // Show loading state
+    const selectBtn = event.target;
+    if(selectBtn) {
+      selectBtn.disabled = true;
+      selectBtn.textContent = 'Processing...';
+    }
+
+    // Create Stripe checkout session for subscription
+    const response = await fetch('/.netlify/functions/create-checkout-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        planType: planType,
+        price: price,
+        vehicleLimit: vehicleLimit,
+        email: email,
+        hostEmail: email,
+        isHostSubscription: true // Flag to indicate this is a host subscription
+      })
+    });
+
+    if(!response.ok) {
+      throw new Error('Failed to create checkout session');
+    }
+
+    const data = await response.json();
+    
+    if(data.url) {
+      // Redirect to Stripe checkout
+      window.location.href = data.url;
+    } else if(data.clientSecret) {
+      // Use client secret for payment confirmation
+      showToast('Redirecting to payment...');
+      // Store subscription details for later activation after payment
+      sessionStorage.setItem('pendingHostSubscription', JSON.stringify({
+        planType: planType,
+        price: price,
+        vehicleLimit: vehicleLimit,
+        email: email
+      }));
+      // Redirect to payment confirmation
+      goto('payments');
+    } else {
+      throw new Error('Invalid response from server');
+    }
+
+  } catch(e) {
+    console.error('Plan selection error:', e);
+    showToast('Error: ' + e.message);
+    if(event.target) {
+      event.target.disabled = false;
+      event.target.textContent = planType === 'basic' ? 'Select Basic' : 'Select Pro';
+    }
+  }
+};
+
+// Activate host subscription after payment is confirmed
+window.activateHostSubscriptionAfterPayment = async function(planType, price, vehicleLimit) {
+  const email = getSessionEmail();
+  if(!email) {
+    showToast('Please log in to activate subscription');
+    return false;
+  }
 
   try {
     // Calculate expiry date (30 days from now)
@@ -4932,7 +4993,8 @@ window.selectHostPlan = async function(planType, price, vehicleLimit) {
       active: true,
       banned: false,
       accountType: 'private',
-      paymentMethods: []
+      paymentMethods: [],
+      paymentId: 'paid_' + Date.now() // Mark as paid
     };
 
     localStorage.setItem(HOST_PROFILE_KEY + email, JSON.stringify(hostProfile));
@@ -4944,12 +5006,34 @@ window.selectHostPlan = async function(planType, price, vehicleLimit) {
       localStorage.setItem(ALL_HOSTS_KEY, JSON.stringify(allHosts));
     }
 
+    // Update Firestore with subscription info
+    const auth = getAuthInstance();
+    const uid = auth?.currentUser?.uid;
+    if(uid) {
+      const db = getDB();
+      const { doc, updateDoc } = getUtils();
+      if(db && doc && updateDoc) {
+        await updateDoc(doc(db, 'users', uid), {
+          hostSubscription: {
+            plan: planType,
+            price: price,
+            vehicleLimit: vehicleLimit,
+            renewalDate: renewalDate.toISOString(),
+            active: true,
+            activatedAt: now.toISOString()
+          }
+        });
+      }
+    }
+
     showToast('Subscription activated! Welcome to hosting!');
-    document.getElementById('hostSubscriptionPanel').style.display = 'none';
     updateHostPanel();
     checkHostSubscriptionStatus();
+    return true;
   } catch(e) {
-    showToast('Subscription failed: ' + e.message);
+    console.error('Subscription activation failed:', e);
+    showToast('Subscription activation failed: ' + e.message);
+    return false;
   }
 };
 
@@ -4963,24 +5047,42 @@ window.renewHostSubscription = async function() {
     const plan = profileData.plan || 'basic';
     const price = HOST_PLANS[plan].price;
 
-    const confirmed = confirm(`Renew ${HOST_PLANS[plan].name} for $${price}/month?`);
-    if(!confirmed) return;
+    // Redirect to payment for renewal
+    sessionStorage.setItem('pendingHostSubscription', JSON.stringify({
+      planType: plan,
+      price: price,
+      vehicleLimit: profileData.vehicleLimit || 5,
+      email: email,
+      isRenewal: true
+    }));
 
-    // Calculate new expiry
-    const now = new Date();
-    const renewalDate = new Date(now.getTime() + (30 * 24 * 60 * 60 * 1000));
+    showToast('Redirecting to payment...');
+    
+    // Create checkout session for renewal
+    const response = await fetch('/.netlify/functions/create-checkout-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        planType: plan,
+        price: price,
+        vehicleLimit: profileData.vehicleLimit || 5,
+        email: email,
+        hostEmail: email,
+        isHostSubscription: true,
+        isRenewal: true
+      })
+    });
 
-    profileData.subscriptionStart = now.toISOString();
-    profileData.renewalDate = renewalDate.toISOString();
-    profileData.active = true;
-
-    localStorage.setItem(HOST_PROFILE_KEY + email, JSON.stringify(profileData));
-
-    showToast('Subscription renewed successfully!');
-    checkHostSubscriptionStatus();
-    updateHostPanel();
+    if(response.ok) {
+      const data = await response.json();
+      if(data.url) {
+        window.location.href = data.url;
+      }
+    } else {
+      throw new Error('Failed to create renewal checkout');
+    }
   } catch(e) {
-    showToast('Renewal failed: ' + e.message);
+    showToast('Renewal error: ' + e.message);
   }
 };
 

@@ -27,11 +27,61 @@ exports.handler = async (event) => {
 
   try {
     const body = JSON.parse(event.body || '{}');
-    const { bookingId, amount, email } = body;
+    const { bookingId, amount, email, isHostSubscription, planType, price, vehicleLimit } = body;
 
     if (!process.env.STRIPE_SECRET_KEY) {
       return { statusCode: 500, body: 'Missing STRIPE_SECRET_KEY env variable.' };
     }
+
+    // Handle host subscription checkout
+    if (isHostSubscription && planType && price) {
+      // Ensure a Customer exists
+      let customerId = null;
+      if (email) {
+        const existing = await stripe.customers.list({ email, limit: 1 });
+        customerId = existing.data[0]?.id || (await stripe.customers.create({ email })).id;
+      }
+
+      const productName = `${planType} Host Plan - ${vehicleLimit} vehicles/month`;
+      const session = await stripe.checkout.sessions.create({
+        mode: 'payment',
+        payment_method_types: ['card'],
+        customer: customerId || undefined,
+        customer_email: customerId ? undefined : (email || undefined),
+        payment_intent_data: {
+          setup_future_usage: 'off_session',
+          metadata: { isHostSubscription: 'true', planType, hostEmail: email||'', price, vehicleLimit }
+        },
+        line_items: [
+          {
+            price_data: {
+              currency: 'usd',
+              product_data: { name: productName },
+              unit_amount: Math.round(price * 100), // Convert dollars to cents
+            },
+            quantity: 1,
+          },
+        ],
+        metadata: {
+          isHostSubscription: 'true',
+          planType,
+          hostEmail: email||'',
+          price,
+          vehicleLimit,
+          origin: 'stripe_checkout',
+        },
+        success_url: `${(process.env.URL||'https://clyderocashcarrental.netlify.app')}/#my-host-account?subscriptionPaid=1`,
+        cancel_url: `${(process.env.URL||'https://clyderocashcarrental.netlify.app')}/#my-host-account?subscriptionCanceled=1`,
+      });
+
+      return {
+        statusCode: 200,
+        body: JSON.stringify({ url: session.url }),
+        headers: { 'Content-Type': 'application/json' },
+      };
+    }
+
+    // Handle booking payment checkout
     if (!bookingId || typeof bookingId !== 'string') {
       return { statusCode: 400, body: 'Invalid bookingId.' };
     }

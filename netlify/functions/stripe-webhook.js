@@ -71,16 +71,75 @@ exports.handler = async (event) => {
             }
           }catch(e){ console.warn('Failed to store saved card details', e.message); }
         } else {
-          // Payment mode (booking payment)
+          // Payment mode (booking payment or host subscription)
           const bookingId = session.metadata?.bookingId;
+          const isHostSubscription = session.metadata?.isHostSubscription === 'true';
+          const hostEmail = session.metadata?.hostEmail || session.customer_details?.email || '';
+          const planType = session.metadata?.planType;
+          const price = Number(session.metadata?.price || 0);
+          const vehicleLimit = Number(session.metadata?.vehicleLimit || 5);
           const lateFeeCents = Number(session.metadata?.lateFee || 0);
-          console.log('Checkout completed for booking', bookingId, 'session', session.id, 'lateFeeCents', lateFeeCents);
-          // Mark booking paid in Firestore if available
-          try{
-            const { getAdmin } = require('./_firebaseAdmin');
-            const admin = getAdmin();
-            const db = admin.firestore();
-            if(bookingId){
+          
+          console.log('Checkout completed - isHostSubscription:', isHostSubscription, 'bookingId:', bookingId, 'hostEmail:', hostEmail);
+          
+          // Handle host subscription payment
+          if(isHostSubscription && hostEmail && planType) {
+            try{
+              const { getAdmin } = require('./_firebaseAdmin');
+              const admin = getAdmin();
+              const db = admin.firestore();
+              
+              // Find user by email and update subscription
+              const userQuery = await db.collection('users').where('email', '==', hostEmail).limit(1).get();
+              if(!userQuery.empty) {
+                const userDoc = userQuery.docs[0];
+                const renewalDate = new Date();
+                renewalDate.setDate(renewalDate.getDate() + 30); // 30 days from now
+                
+                await userDoc.ref.update({
+                  hostSubscription: {
+                    plan: planType,
+                    price: price,
+                    vehicleLimit: vehicleLimit,
+                    renewalDate: renewalDate.toISOString(),
+                    active: true,
+                    activatedAt: new Date().toISOString(),
+                    paymentId: session.payment_intent,
+                    stripeSessionId: session.id
+                  },
+                  accountType: 'host', // Ensure account is marked as host
+                  hostActive: true,
+                  hostBanned: false
+                });
+                
+                console.log('Host subscription activated for:', hostEmail, 'plan:', planType);
+              }
+              
+              // Send confirmation email
+              try{
+                const payload = {
+                  to: hostEmail,
+                  type: 'host_subscription',
+                  planType: planType,
+                  price: price,
+                  vehicleLimit: vehicleLimit,
+                  renewalDate: new Date(new Date().getTime() + 30*24*60*60*1000).toISOString()
+                };
+                await fetch(process.env.URL ? `${process.env.URL}/.netlify/functions/notify-event` : '/.netlify/functions/notify-event', {
+                  method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify(payload)
+                });
+              }catch(e){ console.warn('Host subscription email failed', e.message); }
+              
+            }catch(e){ console.warn('Host subscription activation failed', e.message); }
+          } 
+          // Handle booking payment
+          else if(bookingId) {
+            console.log('Checkout completed for booking', bookingId, 'session', session.id, 'lateFeeCents', lateFeeCents);
+            // Mark booking paid in Firestore if available
+            try{
+              const { getAdmin } = require('./_firebaseAdmin');
+              const admin = getAdmin();
+              const db = admin.firestore();
               const docRef = db.collection('bookings').doc(bookingId);
               const docSnap = await docRef.get();
               if(docSnap.exists){
@@ -89,7 +148,8 @@ exports.handler = async (event) => {
                 const q = await db.collection('bookings').where('id','==',bookingId).limit(1).get();
                 const ref = q.docs[0]?.ref; if(ref){ await ref.update({ status:'paid', lateFeePaid:true, lateFeeCents, paidAt: new Date().toISOString() }); }
               }
-            }
+            }catch(e){ console.warn('Firestore booking update failed in webhook', e.message); }
+          }
             // Also store saved card details from the payment for future late-fee charges
             try{
               const email = session.customer_details?.email || session.metadata?.userEmail || '';
