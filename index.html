@@ -107,7 +107,7 @@ a<!DOCTYPE html>
     @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-20px)}}
     @keyframes sparkleFloat{0%,100%{transform:translate(0,0) rotate(0deg)}50%{transform:translate(10px,-15px) rotate(180deg)}}
     
-    /* Modern Clean Header - Turo-inspired */
+    /* Modern Clean Header - Turo-inspired, Full-width */
     header{
       position:sticky; 
       top:60px; 
@@ -116,22 +116,26 @@ a<!DOCTYPE html>
       box-shadow:0 2px 8px rgba(0,0,0,.08);
       border-bottom:1px solid #e5e5e5;
       padding:0;
+      width:100%;
     }
     header.wrap {
       padding:0;
+      max-width:100%;
+      margin:0;
     }
     header > div {
       display:flex;
       align-items:center;
       justify-content:space-between;
-      padding:12px 24px !important;
+      padding:12px 40px !important;
+      width:100%;
       max-width:100%;
     }
     header > div > div:first-child {
       display:flex;
       align-items:center;
-      gap:12px;
-      flex:1;
+      gap:14px;
+      flex:0 0 auto;
     }
     header #siteLogo {
       width:40px !important;
@@ -166,13 +170,15 @@ a<!DOCTYPE html>
       margin:0 !important;
     }
     
-    /* Desktop Navigation - Right-aligned */
+    /* Desktop Navigation - Right-aligned, Full Width */
     nav{
       display:flex; 
-      gap:6px; 
+      gap:8px; 
       flex-wrap:nowrap;
       align-items:center;
       justify-content:flex-end;
+      flex:1;
+      padding-right:0;
     }
     nav #mobileMenuClose {
       display:none !important;
@@ -240,12 +246,12 @@ a<!DOCTYPE html>
       transform:translateY(-2px);
     }
     
-    /* 🎁 Clean Announcement Banner */
+    /* 🎁 Clean Announcement Banner - Full Width */
     .holiday{
       background:linear-gradient(90deg, #2c2c2c 0%, #3a3a3a 100%);
       color:#ffffff; 
       text-align:center; 
-      padding:12px 16px; 
+      padding:12px 40px; 
       font-weight:700; 
       font-size:14px;
       box-shadow:0 2px 6px rgba(0,0,0,.1);
@@ -254,6 +260,8 @@ a<!DOCTYPE html>
       position:sticky;
       top:0;
       z-index:51;
+      width:100%;
+      box-sizing:border-box;
     }
     .section{display:block; padding:24px 0}
     .card{
