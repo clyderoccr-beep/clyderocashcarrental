@@ -533,6 +533,7 @@ document.addEventListener('click', (e)=>{
       if(sel){ sel.value=t.dataset.veh; } 
     }
   }
+});
 
 // Click logo to return to default page (vehicles)
 document.addEventListener('click',(e)=>{
