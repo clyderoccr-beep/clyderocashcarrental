@@ -259,9 +259,10 @@
     }
     .hero-search-container {
       width:100%;
-      max-width:1000px;
+      max-width:1200px;
       position:relative;
       animation:fadeInUp 0.8s ease-out 0.6s both;
+      margin:0 auto;
     }
     .search-bar {
       background:transparent;
@@ -275,6 +276,7 @@
       position:relative;
       flex-wrap:wrap;
       justify-content:center;
+      width:100%;
     }
     .search-wrapper {
       display:flex;
@@ -284,11 +286,13 @@
       flex-wrap:wrap;
       justify-content:center;
     }
+    /* DESKTOP: 4-column grid */
     .search-blocks-container {
       display:grid;
       grid-template-columns:repeat(4, 1fr);
       gap:12px;
-      flex:0 1 auto;
+      max-width:800px;
+      width:100%;
     }
     .search-block {
       background:#ffffff;
@@ -462,6 +466,7 @@
       to { transform:rotate(360deg); }
     }
     
+    /* TABLET: 768px and below - 2-column grid */
     @media (max-width:768px) {
       .hero-section {
         height:550px;
@@ -478,20 +483,47 @@
       }
       .hero-search-container {
         max-width:calc(100% - 40px);
+        width:100%;
       }
       .search-bar {
         flex-direction:column;
         padding:20px;
+        gap:16px;
       }
+      .search-wrapper {
+        gap:16px;
+      }
+      /* EXPLICIT RESET: Override desktop 4-column to tablet 2-column */
       .search-blocks-container {
+        display:grid;
         grid-template-columns:1fr 1fr;
         gap:12px;
+        max-width:100%;
+        width:100%;
+      }
+      .search-block {
+        padding:12px 14px;
+      }
+      .search-block-label {
+        font-size:12px;
+      }
+      .search-block select {
+        font-size:13px;
+      }
+      .term-btn {
+        font-size:12px;
+        padding:12px 8px;
       }
       .search-submit-btn-main {
         width:100%;
         padding:16px;
+        font-size:16px;
+        min-width:auto;
       }
       .floating-location-btn {
+        width:48px;
+        height:48px;
+        font-size:20px;
         top:auto;
         bottom:-24px;
         left:50%;
@@ -505,6 +537,7 @@
       }
     }
     
+    /* MOBILE: 480px and below - 1-column grid */
     @media (max-width:480px) {
       .hero-section {
         height:520px;
@@ -530,19 +563,35 @@
         padding:16px;
         border-radius:16px;
         flex-direction:column;
+        gap:16px;
+        background:transparent;
+        box-shadow:none;
       }
+      .search-wrapper {
+        flex-direction:column;
+        gap:16px;
+        width:100%;
+      }
+      /* EXPLICIT RESET: Override tablet/desktop to mobile 1-column */
       .search-blocks-container {
+        display:grid;
         grid-template-columns:1fr;
         gap:10px;
+        max-width:100%;
+        width:100%;
       }
       .search-block {
         padding:12px 14px;
+        background:#ffffff;
+        border:1px solid #e8e8e8;
+        border-radius:12px;
       }
       .search-block-label {
         font-size:10px;
       }
       .search-block select {
         font-size:13px;
+        width:100%;
       }
       .term-btn {
         font-size:11px;
@@ -571,6 +620,7 @@
       }
     }
     
+    /* EXTRA-SMALL: 360px and below */
     @media (max-width:360px) {
       .hero-section {
         height:540px;
@@ -595,19 +645,36 @@
       .search-bar {
         padding:14px;
         border-radius:14px;
+        flex-direction:column;
+        gap:14px;
+        background:transparent;
+        box-shadow:none;
       }
+      .search-wrapper {
+        flex-direction:column;
+        gap:14px;
+        width:100%;
+      }
+      /* EXPLICIT RESET: Ensure 1-column layout is locked */
       .search-blocks-container {
+        display:grid;
         grid-template-columns:1fr;
         gap:8px;
+        max-width:100%;
+        width:100%;
       }
       .search-block {
         padding:10px 12px;
+        background:#ffffff;
+        border:1px solid #e8e8e8;
+        border-radius:12px;
       }
       .search-block-label {
         font-size:9px;
       }
       .search-block select {
         font-size:12px;
+        width:100%;
       }
       .term-btn {
         font-size:10px;
@@ -616,12 +683,18 @@
       .search-submit-btn-main {
         padding:14px;
         font-size:15px;
+        width:100%;
       }
       .floating-location-btn {
         width:40px;
         height:40px;
         font-size:16px;
         bottom:-20px;
+        left:50%;
+        transform:translateX(-50%);
+      }
+      .floating-location-btn:hover {
+        transform:translateX(-50%) scale(1.1);
       }
       .card {
         padding:16px;
