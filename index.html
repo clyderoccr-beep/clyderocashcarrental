@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+a<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -18,17 +18,7 @@
   <!-- PayPal SDK will be loaded dynamically in script.js (sb for local, prod ID for site) -->
   <style>
         /* Logout button: Green + Gold theme */
-        #accountLogout{
-          background:linear-gradient(135deg, var(--christmas-green), var(--green-deep)) !important;
-          border:2px solid var(--gold) !important;
-          color:var(--gold-highlight) !important;
-          box-shadow:0 6px 20px rgba(14,138,38,.4), inset 0 2px 0 rgba(255,255,255,.25) !important;
-        }
-        #accountLogout:hover{
-          background:linear-gradient(135deg, var(--green-highlight), var(--christmas-green)) !important;
-          border-color:var(--gold-highlight) !important;
-          transform:translateY(-2px);
-        }
+        /* (Styled via header #accountLogout in main CSS) */
         
         /* Vehicle filter active state */
         .filter-option.active{
@@ -117,73 +107,153 @@
     @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-20px)}}
     @keyframes sparkleFloat{0%,100%{transform:translate(0,0) rotate(0deg)}50%{transform:translate(10px,-15px) rotate(180deg)}}
     
+    /* Modern Clean Header - Turo-inspired */
     header{
       position:sticky; 
-      top:0; 
+      top:60px; 
       z-index:50; 
-      background:linear-gradient(135deg, var(--christmas-red) 0%, var(--red-highlight) 100%);
-      box-shadow:0 6px 24px rgba(214,0,28,.4), inset 0 2px 0 rgba(255,255,255,.2), 0 0 40px rgba(255,76,76,.3);
-      border-bottom:3px solid var(--gold);
-      backdrop-filter:blur(10px);
+      background:#ffffff;
+      box-shadow:0 2px 8px rgba(0,0,0,.08);
+      border-bottom:1px solid #e5e5e5;
+      padding:0;
     }
-    .wrap{max-width:var(--maxw); margin:0 auto; padding:12px}
-    nav{display:flex; gap:10px; flex-wrap:wrap}
+    header.wrap {
+      padding:0;
+    }
+    header > div {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:12px 24px !important;
+      max-width:100%;
+    }
+    header > div > div:first-child {
+      display:flex;
+      align-items:center;
+      gap:12px;
+      flex:1;
+    }
+    header #siteLogo {
+      width:40px !important;
+      height:40px !important;
+      border-radius:8px !important;
+      padding:0 !important;
+    }
+    header > div > div:first-child > div {
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+    }
+    header > div > div:first-child > div > div {
+      font-weight:900;
+      font-size:18px;
+      line-height:1.2;
+      color:#1a1a1a;
+    }
+    header > div > div:first-child > div > small {
+      font-size:12px;
+      color:#666 !important;
+      font-weight:500;
+    }
+    #mobileMenuToggle {
+      display:none;
+      background:linear-gradient(135deg, var(--christmas-green), var(--green-deep)) !important;
+      border:2px solid var(--gold) !important;
+      color:var(--gold-highlight) !important;
+      padding:8px 16px !important;
+      font-size:16px;
+      min-height:40px;
+      margin:0 !important;
+    }
     
-    /* 🎁 Glossy Green Buttons with 3D Depth */
+    /* Desktop Navigation - Right-aligned */
+    nav{
+      display:flex; 
+      gap:6px; 
+      flex-wrap:nowrap;
+      align-items:center;
+      justify-content:flex-end;
+    }
+    nav #mobileMenuClose {
+      display:none !important;
+    }
+    
+    .wrap{max-width:var(--maxw); margin:0 auto; padding:12px}
+    
+    /* 🎁 Navigation Buttons - Clean & Professional */
     .navbtn{
-      min-height:44px; 
-      padding:10px 18px; 
-      border-radius:20px; 
-      background:linear-gradient(135deg, var(--christmas-green) 0%, var(--green-deep) 100%);
-      color:var(--gold-highlight) !important; 
-      border:2px solid var(--gold); 
+      min-height:40px; 
+      padding:8px 16px; 
+      border-radius:8px; 
+      background:transparent;
+      color:#1a1a1a; 
+      border:none; 
       cursor:pointer; 
-      font-weight:700; 
-      letter-spacing:.5px; 
-      box-shadow:0 6px 20px rgba(14,138,38,.4), inset 0 2px 0 rgba(255,255,255,.25), 0 0 15px rgba(76,255,114,.2);
-      transition:all .3s ease;
+      font-weight:600; 
+      font-size:14px;
+      letter-spacing:.3px; 
+      box-shadow:none;
+      transition:all .2s ease;
       position:relative;
-      text-shadow:0 1px 3px rgba(0,0,0,.3);
+      text-shadow:none;
     }
     .navbtn::before{
-      content:'';
-      position:absolute;
-      top:2px;
-      left:10%;
-      width:80%;
-      height:35%;
-      background:radial-gradient(circle, rgba(255,255,255,.3) 0%, transparent 70%);
-      border-radius:20px 20px 50% 50%;
-      opacity:.8;
-      pointer-events:none;
+      display:none;
     }
     .navbtn:hover{
-      background:linear-gradient(135deg, var(--green-highlight) 0%, var(--christmas-green) 100%);
-      box-shadow:0 8px 28px rgba(14,138,38,.6), inset 0 3px 0 rgba(255,255,255,.35), 0 0 25px rgba(76,255,114,.4);
-      transform:translateY(-3px);
-      border-color:var(--gold-highlight);
+      background:linear-gradient(135deg, var(--gold-highlight), var(--gold));
+      color:#1a1a1a !important;
+      box-shadow:0 4px 12px rgba(255,216,107,.3);
+      transform:none;
+      border-color:transparent;
     }
     .navbtn:hover::after{
-      content:'';
-      position:absolute;
-      inset:0;
-      background:radial-gradient(circle at 50% 120%, rgba(255,255,255,.15), transparent 70%);
-      border-radius:20px;
-      pointer-events:none;
+      display:none;
     }
-    .navbtn:active{transform:translateY(-1px); box-shadow:0 4px 16px rgba(14,138,38,.5)}
-    .navbtn:focus-visible{outline:3px solid var(--gold); outline-offset:3px}
+    .navbtn:active{transform:none; box-shadow:none}
+    .navbtn:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
     
-    /* 🎅 Holiday Banner */
+    /* Special styling for action buttons in header */
+    header .navbtn[data-nav="login"],
+    header #accountLogout {
+      background:linear-gradient(135deg, var(--christmas-green), var(--green-deep)) !important;
+      border:2px solid var(--gold) !important;
+      color:var(--gold-highlight) !important;
+      box-shadow:0 4px 12px rgba(14,138,38,.3);
+      border-radius:8px;
+    }
+    header .navbtn[data-nav="login"]:hover,
+    header #accountLogout:hover {
+      background:linear-gradient(135deg, var(--green-highlight), var(--christmas-green)) !important;
+      box-shadow:0 6px 16px rgba(14,138,38,.4);
+      transform:translateY(-2px);
+    }
+    header #adminTab {
+      background:linear-gradient(135deg, var(--christmas-red), var(--red-deep)) !important;
+      border:2px solid var(--gold) !important;
+      color:var(--gold-highlight) !important;
+      box-shadow:0 4px 12px rgba(214,0,28,.3);
+    }
+    header #adminTab:hover {
+      background:linear-gradient(135deg, var(--red-highlight), var(--christmas-red)) !important;
+      box-shadow:0 6px 16px rgba(214,0,28,.4);
+      transform:translateY(-2px);
+    }
+    
+    /* 🎁 Clean Announcement Banner */
     .holiday{
-      background:linear-gradient(90px, var(--christmas-red) 0%, var(--red-highlight) 50%, var(--christmas-red) 100%);
-      color:var(--gold-highlight); 
+      background:linear-gradient(90deg, #2c2c2c 0%, #3a3a3a 100%);
+      color:#ffffff; 
       text-align:center; 
-      padding:10px 12px; 
-      font-weight:800; 
-      box-shadow:0 4px 16px rgba(214,0,28,.4), inset 0 2px 0 rgba(255,255,255,.2);
-      text-shadow:0 2px 4px rgba(0,0,0,.3);
-      letter-spacing:1px;
+      padding:12px 16px; 
+      font-weight:700; 
+      font-size:14px;
+      box-shadow:0 2px 6px rgba(0,0,0,.1);
+      text-shadow:none;
+      letter-spacing:0.5px;
+      position:sticky;
+      top:0;
+      z-index:51;
     }
     .section{display:block; padding:24px 0}
     .card{
@@ -435,60 +505,58 @@
     }
     @media (max-width: 768px) {
       #mobileMenuToggle {
-        display:block;
+        display:flex !important;
+        align-items:center;
       }
       header nav {
         display:none;
         position:fixed;
-        top:0;
+        top:60px;
         left:0;
-        width:100%;
-        height:100vh;
-        background:linear-gradient(135deg, var(--christmas-red), var(--red-deep));
+        right:0;
         flex-direction:column;
-        padding:60px 20px 20px;
-        z-index:999;
+        gap:0;
+        background:white;
+        border-top:1px solid #e5e5e5;
+        padding:12px;
+        max-height:calc(100vh - 200px);
         overflow-y:auto;
-        animation:slideIn 0.3s ease;
+        z-index:1000;
+        animation:slideDown 0.3s ease;
       }
-      header nav.mobile-open {
+      header nav.active {
         display:flex;
+      }
+      header nav #mobileMenuClose {
+        display:block !important;
+        position:absolute;
+        top:10px;
+        right:12px;
+        background:transparent !important;
+        border:none !important;
+        font-size:28px;
+        color:#1a1a1a;
+        padding:4px 8px !important;
+        min-height:auto !important;
+        box-shadow:none;
+        width:auto;
+        height:auto;
+      }
+      header nav #mobileMenuClose:hover {
+        background:#f5f5f5 !important;
+        color:#1a1a1a;
+        transform:none;
       }
       header nav .navbtn {
         width:100%;
-        margin:6px 0;
-        font-size:18px;
-        padding:14px;
+        margin:8px 0 !important;
+        border-radius:8px !important;
+        padding:10px 12px !important;
+        font-size:14px;
       }
-      header nav #accountLogout {
-        position:absolute;
-        bottom:20px;
-        right:20px;
-        width:auto;
-        background:var(--gold);
-        color:#1a1a1a;
-        border-color:var(--gold);
-      }
-      #mobileMenuClose {
-        position:absolute;
-        top:15px;
-        right:15px;
-        background:#c1121f;
-        color:#ffffff;
-        border:none;
-        width:40px;
-        height:40px;
-        border-radius:50%;
-        font-size:24px;
-        font-weight:700;
-        cursor:pointer;
-        box-shadow:0 4px 12px rgba(0,0,0,.3);
-        transition:all 0.2s ease;
-      }
-      #mobileMenuClose:hover {
-        background:#ffffff;
-        color:#c1121f;
-        transform:scale(1.1);
+      @keyframes slideDown {
+        from { transform:translateY(-10px); opacity:0; }
+        to { transform:translateY(0); opacity:1; }
       }
       /* 📱 Mobile: Stack vehicle editor to single column */
       #vehEditorGrid {

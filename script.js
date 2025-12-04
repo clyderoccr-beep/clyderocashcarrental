@@ -8,8 +8,22 @@ document.addEventListener('DOMContentLoaded', function() {
   
   if (menuToggle && nav) {
     menuToggle.addEventListener('click', function() {
-      nav.classList.add('mobile-open');
-      if (menuClose) menuClose.style.display = 'block';
+      nav.classList.toggle('active');
+    });
+  }
+  
+  if (menuClose && nav) {
+    menuClose.addEventListener('click', function() {
+      nav.classList.remove('active');
+    });
+  }
+  
+  // Close mobile menu when nav button is clicked
+  if (nav) {
+    nav.querySelectorAll('.navbtn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        nav.classList.remove('active');
+      });
     });
   }
   // ===== MIGRATE EXISTING CUSTOMER FORM =====
