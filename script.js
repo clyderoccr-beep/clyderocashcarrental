@@ -1969,10 +1969,57 @@ function processBooking(data){
           licenseIssueDate: member.licenseIssueDate||'', licenseExpireDate: member.licenseExpireDate||''
         } : { email }
       };
-      addDoc(collection(db,'bookings'), payload).then(ref=>{ 
+      addDoc(collection(db,'bookings'), payload).then(async ref=>{ 
         localBk.fireId = ref.id; 
         saveBookingsForEmail(email); 
         console.log('Booking saved to Firestore with ID:', ref.id, payload);
+        
+        // Send SMS notification to host if this is a host vehicle
+        try {
+          const veh = VEHICLES.find(v=>v.id===vehId);
+          if(veh && veh.hostId) {
+            // Get host profile data to find phone number
+            const hostProfileData = JSON.parse(localStorage.getItem(HOST_PROFILE_KEY + veh.hostId) || '{}');
+            const hostPhone = hostProfileData.phone;
+            
+            // Also check Firestore for host phone
+            const hostDb = getDB();
+            const { collection: coll, query: q, where, getDocs } = getUtils();
+            if(hostDb && coll && q && where && getDocs) {
+              const hostQuery = q(coll(hostDb, 'users'), where('email', '==', veh.hostId));
+              const hostSnap = await getDocs(hostQuery);
+              let firestoreHostPhone = '';
+              hostSnap.forEach(doc => {
+                const data = doc.data();
+                firestoreHostPhone = data.hostPhone || '';
+              });
+              
+              const phoneToUse = firestoreHostPhone || hostPhone;
+              
+              if(phoneToUse) {
+                console.log('Sending SMS notification to host:', veh.hostId, phoneToUse);
+                fetch('/.netlify/functions/send-sms-notification', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    hostEmail: veh.hostId,
+                    hostPhone: phoneToUse,
+                    vehicleMakeModel: veh.makeModel || veh.name,
+                    customerName: member ? `${member.first} ${member.last}` : email,
+                    bookingDate: pickupDate
+                  })
+                }).then(res => res.json())
+                  .then(data => console.log('SMS notification response:', data))
+                  .catch(err => console.warn('SMS notification failed:', err));
+              } else {
+                console.warn('Host phone number not found for SMS notification');
+              }
+            }
+          }
+        } catch(smsErr) {
+          console.warn('SMS notification error:', smsErr);
+        }
+        
         // Audit: booking created (non-blocking)
         try{
           const veh = VEHICLES.find(v=>v.id===vehId);
