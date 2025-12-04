@@ -116,26 +116,18 @@
       max-width:100%;
       margin:0;
     }
-    /* DESKTOP: Logo left, Pin right */
+    /* DESKTOP: Logo left, Pin right, Profile center */
     header > div {
       display:flex;
       align-items:center;
-      justify-content:space-between;
+      justify-content:center;
       padding:8px 40px !important;
       width:100%;
       max-width:100%;
-      gap:0;
+      gap:40px;
       position:relative;
     }
-    /* Logo positioned far left */
-    header > div > div:first-child {
-      display:flex;
-      align-items:center;
-      gap:0;
-      flex:0 0 auto;
-      position:absolute;
-      left:40px;
-    }
+    /* Logo positioned far left (order:1) */
     header #siteLogo {
       display:block !important;
       width:40px !important;
@@ -146,26 +138,24 @@
       background:transparent !important;
       object-fit:contain;
       cursor:pointer;
+      position:absolute;
+      left:40px;
+      flex:0 0 auto;
     }
-    /* Location pin positioned far right */
+    /* Location pin positioned far right (order:3) */
     header #headerLocationBtn {
       position:absolute !important;
       right:40px !important;
       top:50% !important;
       transform:translateY(-50%) !important;
+      flex:0 0 auto;
     }
-    header > div > div:first-child > div {
-      display:none;
-    }
-    header > div > div:first-child > div > div {
-      font-weight:900;
-      font-size:24px;
-      line-height:1.2;
-      color:#000000;
-      letter-spacing:-0.5px;
-    }
-    header > div > div:first-child > div > small {
-      display:none !important;
+    /* Profile icon in center (order:2) */
+    header #profileIcon {
+      flex:0 0 auto;
+      position:relative;
+      left:auto;
+      right:auto;
     }
     #mobileMenuToggle {
       display:none;
@@ -480,10 +470,18 @@
     
     /* MOBILE: Logo and Pin centered */
     @media (max-width:768px) {
-      /* Center logo and pin on mobile */
-      header > div > div:first-child {
+      /* Center header elements on tablet/mobile */
+      header > div {
+        padding:8px 16px !important;
+        justify-content:center;
+        gap:20px;
+      }
+      header #siteLogo {
         position:static !important;
         left:auto !important;
+      }
+      header #profileIcon {
+        position:static !important;
       }
       header #headerLocationBtn {
         position:static !important;
@@ -1148,13 +1146,14 @@
   <div id="toast"></div>
   <div class="wrap">
     <header class="wrap">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;width:100%">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;width:100%;position:relative">
         <button id="mobileMenuToggle" type="button">☰</button>
-        <div style="display:flex;align-items:center;gap:6px;position:absolute;left:50%;transform:translateX(-50%)">
-          <img id="siteLogo" src="assets/icon3.jpeg" alt="Car logo" loading="lazy" style="width:28px;height:28px;border-radius:6px;object-fit:contain;border:1px solid rgba(255,255,255,.2);background:#111;padding:2px;cursor:pointer" title="Go to Home" />
-          <button id="headerLocationBtn" type="button" style="background:transparent;border:none;font-size:16px;cursor:pointer;color:#d4af37;padding:0;margin:0;display:flex;align-items:center;justify-content:center" title="Use my location">📍</button>
-        </div>
-        <button id="profileIcon" type="button" style="background:transparent;border:none;font-size:20px;cursor:pointer;color:#000000;padding:0;margin:0" data-nav="membership">👤</button>
+        <!-- Logo positioned left on desktop -->
+        <img id="siteLogo" src="assets/icon3.jpeg" alt="Car logo" loading="lazy" style="width:28px;height:28px;border-radius:6px;object-fit:contain;border:1px solid rgba(255,255,255,.2);background:#111;padding:2px;cursor:pointer;flex:0 0 auto;order:1" title="Go to Home" />
+        <!-- Location pin positioned right on desktop -->
+        <button id="headerLocationBtn" type="button" style="background:transparent;border:none;font-size:16px;cursor:pointer;color:#d4af37;padding:0;margin:0;display:flex;align-items:center;justify-content:center;flex:0 0 auto;order:3" title="Use my location">📍</button>
+        <!-- Profile icon in center on desktop -->
+        <button id="profileIcon" type="button" style="background:transparent;border:none;font-size:20px;cursor:pointer;color:#000000;padding:0;margin:0;flex:0 0 auto;order:2" data-nav="membership">👤</button>
       </div>
       <nav>
         <button id="mobileMenuClose" type="button" style="background:transparent;border:none;font-size:24px;color:#000000;cursor:pointer;padding:8px;position:absolute;top:8px;right:8px;display:none">×</button>
