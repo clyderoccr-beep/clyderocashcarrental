@@ -5390,19 +5390,53 @@ function renderHostFleet() {
     }
 
     empty.style.display = 'none';
-    grid.innerHTML = vehicles.map(v => `
-      <div class="card" style="cursor:pointer" onclick="editHostVehicle('${v.id}')">
-        <div class="body">
-          <h3>${v.year} ${v.make} ${v.model}</h3>
-          <p style="color:#666;margin:4px 0"><strong>${v.type}</strong> • $${v.price}/day</p>
-          <p style="color:#666;font-size:13px;margin:4px 0">${v.address}, ${v.city}, ${v.state}</p>
-          <div style="display:flex;gap:8px;margin-top:12px">
-            <button onclick="editHostVehicle('${v.id}'); event.stopPropagation()" class="navbtn" style="flex:1">Edit</button>
-            <button onclick="deleteHostVehicle('${v.id}'); event.stopPropagation()" class="navbtn" style="flex:1;background:#c1121f">Delete</button>
+    grid.innerHTML = vehicles.map(v => {
+      const mainPhoto = v.photos && v.photos.length > 0 ? v.photos[0] : '';
+      const statusBadge = v.status === 'rented' ? 
+        '<div style="position:absolute;top:12px;right:12px;background:#c62828;color:#fff;padding:6px 12px;border-radius:6px;font-size:12px;font-weight:700;z-index:2">RENTED</div>' :
+        v.status === 'pending' ?
+        '<div style="position:absolute;top:12px;right:12px;background:#f57c00;color:#fff;padding:6px 12px;border-radius:6px;font-size:12px;font-weight:700;z-index:2">PENDING</div>' :
+        '';
+      
+      return `
+        <div style="border-radius:12px;overflow:hidden;border:1px solid #e0e0e0;background:#fff;cursor:pointer;transition:transform 0.2s,box-shadow 0.2s;position:relative" 
+             onclick="editHostVehicle('${v.id}')"
+             onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,0.12)'"
+             onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='none'">
+          <!-- Vehicle Image -->
+          <div style="position:relative;width:100%;height:240px;background:#f0f0f0 center/cover no-repeat;${mainPhoto ? `background-image:url(${mainPhoto})` : ''};display:flex;align-items:center;justify-content:center;color:#999">
+            ${!mainPhoto ? '<div style="font-size:48px">🚗</div>' : ''}
+            <!-- Unlimited Miles Badge -->
+            <div style="position:absolute;top:12px;left:12px;background:#fff;color:#121214;padding:6px 12px;border-radius:6px;font-size:12px;font-weight:600;z-index:2;box-shadow:0 2px 8px rgba(0,0,0,0.1)">
+              Unlimited miles
+            </div>
+            ${statusBadge}
+          </div>
+          
+          <!-- Vehicle Info -->
+          <div style="padding:16px">
+            <h3 style="font-size:18px;font-weight:700;margin:0 0 8px;color:#121214;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+              ${v.year} ${v.make} ${v.model}
+            </h3>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+              <span style="font-size:14px;color:#666">${v.type}</span>
+              <span style="color:#d0d0d0">•</span>
+              <span style="font-size:16px;font-weight:700;color:#121214">$${v.price}</span>
+              <span style="font-size:14px;color:#666">/day</span>
+            </div>
+            <div style="font-size:13px;color:#666;margin-bottom:12px;display:flex;align-items:center;gap:4px">
+              📍 ${v.city}, ${v.state}
+            </div>
+            
+            <!-- Action Buttons -->
+            <div style="display:flex;gap:8px;margin-top:12px">
+              <button onclick="editHostVehicle('${v.id}'); event.stopPropagation()" class="navbtn" style="flex:1;padding:10px;font-size:14px;background:#121214;border-color:#121214">Edit</button>
+              <button onclick="deleteHostVehicle('${v.id}'); event.stopPropagation()" class="navbtn" style="flex:1;padding:10px;font-size:14px;background:#c1121f;border-color:#c1121f">Delete</button>
+            </div>
           </div>
         </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
   } catch(e) {
     console.warn('Render host fleet failed:', e);
   }
@@ -5534,9 +5568,43 @@ function updateHostPanel() {
     hostPanel.style.display = 'block';
     
     // Update profile info
-    document.getElementById('hostName').textContent = email.split('@')[0];
+    const displayName = profileData.name || email.split('@')[0];
+    document.getElementById('hostName').textContent = displayName;
+    const hostName2 = document.getElementById('hostName2');
+    if(hostName2) hostName2.textContent = displayName;
     document.getElementById('hostEmail').textContent = email;
     document.getElementById('hostPhone').textContent = profileData.phone || 'Not provided';
+    
+    // Update stats
+    const tripCount = document.getElementById('hostTripCount');
+    if(tripCount) tripCount.textContent = profileData.tripCount || 0;
+    
+    const ratingValue = document.getElementById('hostRatingValue');
+    if(ratingValue) ratingValue.textContent = (profileData.rating || 5.0).toFixed(1);
+    
+    const yearsHosting = document.getElementById('hostYearsHosting');
+    if(yearsHosting) {
+      const joinDate = profileData.joinDate ? new Date(profileData.joinDate) : new Date();
+      const yearsDiff = Math.max(1, new Date().getFullYear() - joinDate.getFullYear());
+      yearsHosting.textContent = yearsDiff;
+    }
+    
+    // Update active rentals count
+    const activeRentals = document.getElementById('hostActiveRentals');
+    if(activeRentals) {
+      const vehicles = JSON.parse(localStorage.getItem(HOST_VEHICLES_KEY + email) || '[]');
+      const rentedCount = vehicles.filter(v => v.status === 'rented').length;
+      activeRentals.textContent = rentedCount;
+    }
+    
+    // Update avatar if available
+    const hostAvatar = document.getElementById('hostAvatar');
+    if(hostAvatar && profileData.avatarUrl) {
+      hostAvatar.style.backgroundImage = `url(${profileData.avatarUrl})`;
+      hostAvatar.style.backgroundSize = 'cover';
+      hostAvatar.style.backgroundPosition = 'center';
+      hostAvatar.textContent = '';
+    }
     
     // Update account type
     const accountTypeSelect = document.getElementById('hostAccountType');
