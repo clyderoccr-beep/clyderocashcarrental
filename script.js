@@ -1163,6 +1163,74 @@ document.addEventListener('click', async (e)=>{
   }
 });
 
+// Upgrade to Host button handler
+document.addEventListener('click', async (e)=>{
+  const btn = e.target.closest('#upgradeToHostBtn');
+  if(!btn) return;
+  e.preventDefault();
+  
+  const email = getSessionEmail();
+  if(!email){ alert('You must be logged in.'); return; }
+  
+  const auth = getAuthInstance();
+  const uid = auth?.currentUser?.uid;
+  if(!uid){ alert('Authentication required.'); return; }
+  
+  const db = getDB();
+  const { doc, getDoc, updateDoc } = getUtils();
+  if(!db){ alert('Database not available.'); return; }
+  
+  try {
+    // Get current user data
+    const userDoc = await getDoc(doc(db, 'users', uid));
+    if(!userDoc.exists()){ alert('User profile not found.'); return; }
+    
+    const data = userDoc.data();
+    
+    // Check if already host
+    if(data.accountType === 'host'){ 
+      alert('You already have a host account!'); 
+      return; 
+    }
+    
+    // Ask for phone number if not already provided
+    let hostPhone = data.hostPhone || '';
+    if(!hostPhone){
+      hostPhone = prompt('Enter your contact phone number (required for host account):');
+      if(!hostPhone){ 
+        alert('Phone number is required to become a host.'); 
+        return; 
+      }
+    }
+    
+    // Ask for business license status
+    const businessLicense = confirm('Do you have a business license?\n\nClick OK for "Licensed Business" or Cancel for "Private Owner"') ? 'business' : 'private';
+    
+    if(!confirm(`Upgrade to Host Account?\n\nYou will need to select a subscription plan:\n• Basic: $5/month (5 vehicles)\n• Pro: $10/month (unlimited vehicles)\n\nContinue?`)){
+      return;
+    }
+    
+    // Update account type
+    await updateDoc(doc(db, 'users', uid), {
+      accountType: 'host',
+      hostPhone: hostPhone,
+      businessLicense: businessLicense
+    });
+    
+    showToast('Account upgraded to Host! Please select your subscription plan.');
+    
+    // Refresh the account panel
+    renderAccountSummary();
+    
+    // Redirect to host section to select subscription
+    goto('host');
+    
+  } catch(err){
+    console.error('Upgrade failed:', err);
+    alert('Failed to upgrade account: ' + (err.message || 'Unknown error'));
+  }
+});
+
 // Update Info modal handlers
 document.addEventListener('click', async (e)=>{
   const btn = e.target.closest('#updateInfoBtn');
@@ -2080,6 +2148,12 @@ document.addEventListener('change', (e)=>{
 
 document.getElementById('signup-form')?.addEventListener('submit', (e)=>{
   e.preventDefault();
+  
+  // Get account type selection
+  const accountTypeRadio = document.querySelector('input[name="accountType"]:checked');
+  const accountType = accountTypeRadio ? accountTypeRadio.value : 'customer';
+  const isHost = accountType === 'host';
+  
   const email=document.getElementById('email').value;
   const verifyEmail=document.getElementById('verifyEmail').value;
   const password=document.getElementById('password').value;
@@ -2095,8 +2169,16 @@ document.getElementById('signup-form')?.addEventListener('submit', (e)=>{
   const licenseExpireDate=document.getElementById('licenseExpireDate')?.value||'';
   const dob=document.getElementById('dob')?.value||'';
   
+  // Host-specific fields
+  const hostPhone = isHost ? (document.getElementById('hostPhone')?.value || '') : '';
+  const businessLicenseRadio = document.querySelector('input[name="businessLicense"]:checked');
+  const businessLicense = isHost ? (businessLicenseRadio ? businessLicenseRadio.value : 'private') : '';
+  
   if(email!==verifyEmail){ alert('Email addresses do not match'); return; }
   if(password!==verifyPassword){ alert('Passwords do not match'); return; }
+  
+  // Validate host phone if they selected host account
+  if(isHost && !hostPhone){ alert('Please enter your contact phone number for host account'); return; }
   
   const issueDateVal = document.getElementById('licenseIssueDate').value;
   const expireDateVal = document.getElementById('licenseExpireDate').value;
@@ -2116,6 +2198,12 @@ document.getElementById('signup-form')?.addEventListener('submit', (e)=>{
     const cutoff = new Date(now.getFullYear()-25, now.getMonth(), now.getDate());
     if(dobDate > cutoff){ alert('You must be at least 25 years old to become a member.'); return; }
   }catch{ alert('Invalid date of birth.'); return; }
+  
+  // Store account type and host data temporarily for use after Firebase account creation
+  window.PENDING_ACCOUNT_TYPE = accountType;
+  window.PENDING_HOST_PHONE = hostPhone;
+  window.PENDING_BUSINESS_LICENSE = businessLicense;
+  
   // Create Auth account then proceed
   const api=getAuthApi(); const auth=getAuthInstance();
   if(api.createUserWithEmailAndPassword && auth){
@@ -2254,9 +2342,16 @@ document.getElementById('signup-form')?.addEventListener('submit', (e)=>{
         if (db && uid && setDoc && doc) {
           if(submitBtn) submitBtn.textContent = 'Finalizing...';
           // Only save URL, not base64 data (Firestore 1MB field limit)
-          const profileData = { ...basePayload, licensePhotoUrl: photoUrl };
+          const profileData = { 
+            ...basePayload, 
+            licensePhotoUrl: photoUrl,
+            accountType: window.PENDING_ACCOUNT_TYPE || 'customer',
+            hostPhone: window.PENDING_HOST_PHONE || '',
+            businessLicense: window.PENDING_BUSINESS_LICENSE || ''
+          };
           console.log('📸 Saving to Firestore:');
           console.log('  - licensePhotoUrl:', photoUrl ? photoUrl.substring(0,100) : 'EMPTY');
+          console.log('  - accountType:', profileData.accountType);
           await setDoc(doc(db, 'users', uid), profileData);
           console.log('📸 User profile saved successfully');
         } else {
@@ -2270,15 +2365,29 @@ document.getElementById('signup-form')?.addEventListener('submit', (e)=>{
         return;
       }
       
-      // Now that profile is saved, redirect user to login
+      // Check if host account - redirect to subscription plans
+      const isHostAccount = window.PENDING_ACCOUNT_TYPE === 'host';
+      
+      // Now that profile is saved, redirect user appropriately
       if(submitBtn) submitBtn.textContent = 'Success! Redirecting...';
       try{ e.target.reset(); }catch{}
       const prev = document.getElementById('photoPreview'); if(prev) prev.innerHTML='';
       LICENSE_PHOTO_DATA = '';
       LICENSE_PHOTO_FILE = null;
+      
+      // Clear temporary data
+      window.PENDING_ACCOUNT_TYPE = null;
+      window.PENDING_HOST_PHONE = null;
+      window.PENDING_BUSINESS_LICENSE = null;
+      
       setTimeout(()=>{
-        showToast('Account created. Please sign in.');
-        goto('login');
+        if (isHostAccount) {
+          showToast('Host account created! Please sign in and select your subscription plan.');
+          goto('login');
+        } else {
+          showToast('Account created. Please sign in.');
+          goto('login');
+        }
       }, 500);
     }).catch(err=>{ 
       const submitBtn = e.target.querySelector('button[type="submit"]');
@@ -3523,6 +3632,13 @@ function renderAccountSummary(){
       const license = data.licenseNumber ? `\nLicense #: ${data.licenseNumber}` : '';
       const status = data.status||'active';
       el.textContent = `Email: ${email}\nName: ${name}\nCountry: ${data.country||'United States'}${license}\nStatus: ${status}\nMember Since: ${data.createdAt? new Date(data.createdAt).toLocaleDateString():''}`;
+      
+      // Show "Upgrade to Host" button only for customer accounts
+      const upgradeBtn = document.getElementById('upgradeToHostBtn');
+      if (upgradeBtn) {
+        const accountType = data.accountType || 'customer';
+        upgradeBtn.style.display = accountType === 'customer' ? 'inline-block' : 'none';
+      }
     }).catch(()=>{});
   }catch{}
 }
@@ -4128,7 +4244,49 @@ const COUNTRIES_DATA = {
 // Initialize hero search
 document.addEventListener('DOMContentLoaded', function() {
   initHeroSearch();
+  initSignupToggle();
 });
+
+// Initialize signup account type toggle
+function initSignupToggle() {
+  const customerLabel = document.getElementById('customerAccountLabel');
+  const hostLabel = document.getElementById('hostAccountLabel');
+  const hostOnlyFields = document.getElementById('hostOnlyFields');
+  const accountTypeRadios = document.querySelectorAll('input[name="accountType"]');
+  
+  if (!accountTypeRadios.length) return;
+  
+  accountTypeRadios.forEach(radio => {
+    radio.addEventListener('change', () => {
+      const isHost = radio.value === 'host';
+      
+      // Toggle field visibility
+      if (hostOnlyFields) {
+        hostOnlyFields.style.display = isHost ? 'block' : 'none';
+      }
+      
+      // Update label styles
+      if (customerLabel && hostLabel) {
+        customerLabel.style.borderColor = radio.value === 'customer' ? '#d4af37' : '#e0e0e0';
+        customerLabel.style.background = radio.value === 'customer' ? '#fffef7' : '#fff';
+        hostLabel.style.borderColor = radio.value === 'host' ? '#d4af37' : '#e0e0e0';
+        hostLabel.style.background = radio.value === 'host' ? '#fffef7' : '#fff';
+      }
+      
+      // Toggle host phone required attribute
+      const hostPhone = document.getElementById('hostPhone');
+      if (hostPhone) {
+        hostPhone.required = isHost;
+      }
+    });
+  });
+  
+  // Trigger initial state
+  const checkedRadio = document.querySelector('input[name="accountType"]:checked');
+  if (checkedRadio) {
+    checkedRadio.dispatchEvent(new Event('change'));
+  }
+}
 
 function initHeroSearch() {
   const countrySelect = document.getElementById('heroCountry');
@@ -4891,6 +5049,48 @@ function updateHostPanel() {
   if(!hostLoginPanel || !hostPanel) return;
 
   if(email) {
+    // Check Firestore for account type
+    const auth = getAuthInstance();
+    const uid = auth?.currentUser?.uid;
+    
+    if(uid) {
+      const db = getDB();
+      const { doc, getDoc } = getUtils();
+      
+      if(db && doc && getDoc) {
+        getDoc(doc(db, 'users', uid)).then(snap => {
+          if(snap.exists()) {
+            const userData = snap.data();
+            const accountType = userData.accountType || 'customer';
+            
+            // If not a host account, show message
+            if(accountType !== 'host') {
+              hostLoginPanel.style.display = 'none';
+              hostSubscriptionPanel.style.display = 'none';
+              hostPanel.style.display = 'none';
+              
+              // Show upgrade message
+              if(hostSubscriptionPanel) {
+                hostSubscriptionPanel.innerHTML = `
+                  <div style="text-align:center;padding:40px">
+                    <h3>Host Account Required</h3>
+                    <p style="color:#666;margin:16px 0">You need a host account to access this section.</p>
+                    <button class="navbtn" onclick="goto('membership')" style="background:#d4af37;border-color:#d4af37">
+                      ⬆️ Upgrade to Host Account
+                    </button>
+                  </div>
+                `;
+                hostSubscriptionPanel.style.display = 'block';
+              }
+              return;
+            }
+          }
+        }).catch(err => {
+          console.error('Failed to check account type:', err);
+        });
+      }
+    }
+    
     // Check if user has a host subscription
     const profileData = JSON.parse(localStorage.getItem(HOST_PROFILE_KEY + email) || '{}');
     

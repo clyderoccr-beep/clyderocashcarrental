@@ -1755,6 +1755,7 @@
                   <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
                     <button class="navbtn" id="updateInfoBtn" type="button">Update Info</button>
                     <button class="navbtn" id="accountDelete" type="button" style="background:#c1121f;border-color:#c1121f">Delete Account</button>
+                    <button class="navbtn" id="upgradeToHostBtn" type="button" style="background:#d4af37;border-color:#d4af37;display:none">⬆️ Upgrade to Host</button>
                   </div>
                 </div>
               </details>
@@ -1851,6 +1852,54 @@
         <h2>Sign Up</h2>
         <form id="signup-form" class="card" style="max-width:520px">
           <div class="body">
+            <!-- Account Type Selection -->
+            <div style="background:linear-gradient(135deg, #f5f5f5, #ffffff);padding:16px;border-radius:12px;margin-bottom:20px;border:2px solid #d4af37">
+              <h3 style="margin:0 0 12px;color:#000;font-size:18px;font-weight:700">I want to:</h3>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <label style="cursor:pointer;padding:16px;border:2px solid #e0e0e0;border-radius:8px;text-align:center;background:#fff;transition:all 0.3s" id="customerAccountLabel">
+                  <input type="radio" name="accountType" value="customer" checked style="margin-right:8px">
+                  <div style="font-weight:700;color:#000;margin-bottom:4px">👤 Book Vehicles</div>
+                  <div style="font-size:12px;color:#666">Customer Account (FREE)</div>
+                </label>
+                <label style="cursor:pointer;padding:16px;border:2px solid #e0e0e0;border-radius:8px;text-align:center;background:#fff;transition:all 0.3s" id="hostAccountLabel">
+                  <input type="radio" name="accountType" value="host" style="margin-right:8px">
+                  <div style="font-weight:700;color:#000;margin-bottom:4px">🏠 Host Vehicles</div>
+                  <div style="font-size:12px;color:#666">Host Account (Paid)</div>
+                </label>
+              </div>
+            </div>
+
+            <!-- Host-Specific Fields (Hidden by default) -->
+            <div id="hostOnlyFields" style="display:none">
+              <div style="background:#fff3cd;border:1px solid #ffc107;padding:12px;border-radius:8px;margin-bottom:16px">
+                <strong style="color:#856404">📋 Host Account Requirements:</strong>
+                <ul style="margin:8px 0;padding-left:20px;color:#856404;font-size:13px">
+                  <li>Monthly subscription fee required</li>
+                  <li>Must select a plan after signup</li>
+                  <li>Business license disclosure required</li>
+                </ul>
+              </div>
+
+              <!-- Business License Acknowledgment -->
+              <div style="background:#fafafa;border:1px solid #e0e0e0;padding:12px;border-radius:8px;margin-bottom:16px">
+                <label style="display:block;font-weight:700;margin-bottom:12px;color:#000">Business Status:</label>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px">
+                  <input type="radio" name="businessLicense" value="private" checked>
+                  <span style="color:#000">🏠 Private Owner (No business license)</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                  <input type="radio" name="businessLicense" value="business">
+                  <span style="color:#000">🏢 Licensed Business</span>
+                </label>
+                <small style="display:block;margin-top:8px;color:#666">This will be shown to customers on your vehicle listings</small>
+              </div>
+
+              <!-- Host Contact Information -->
+              <label style="color:#000;font-weight:700">Host Contact Phone</label>
+              <input id="hostPhone" type="tel" placeholder="(555) 123-4567" style="width:100%;color:#000;margin-bottom:12px">
+              <small style="display:block;margin-top:-8px;margin-bottom:12px;color:#666">Customers will see this on your vehicles</small>
+            </div>
+
             <label style="color:#000">First name</label><input id="firstName" required style="width:100%">
             <label style="margin-top:8px;color:#000">Last name</label><input id="lastName" required style="width:100%">
             
