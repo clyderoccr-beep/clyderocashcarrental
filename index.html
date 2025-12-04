@@ -47,12 +47,12 @@ a<!DOCTYPE html>
     }
     *{box-sizing:border-box}
     html{
-      background:url('assets/CHRISTMASBG.png') center center / cover no-repeat;
+      background:#ffffff center center / cover no-repeat;
       min-height:100%;
     }
     body{
       margin:0; 
-      background:transparent;
+      background:#ffffff;
       color:#2c2c2c; 
       font-family:Segoe UI,Arial,sans-serif; 
       min-height:100vh;
@@ -61,24 +61,17 @@ a<!DOCTYPE html>
     /* 📱 Mobile-optimized vertical background - use wrapper pseudo-element for iOS compatibility */
     @media (max-width: 768px) {
       html {
-        background:none;
+        background:#ffffff;
         position:relative;
       }
       html::before {
-        content: '';
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: url('assets/MBACKGROUND.png') center center / cover no-repeat;
-        z-index: -1;
+        display:none;
       }
     }
     /* Desktop - use fixed attachment */
     @media (min-width: 769px) {
       html {
-        background-attachment: fixed;
+        background-attachment:scroll;
       }
     }
     /* Subtle snowflake overlay - keep on body */
