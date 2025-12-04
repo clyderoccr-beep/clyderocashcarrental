@@ -4417,6 +4417,154 @@ function calculateDistance(lat1, lng1, lat2, lng2) {
 
 // ===== HOST MANAGEMENT =====
 const HOST_VEHICLES_KEY = 'hostVehicles_';
+const HOST_PROFILE_KEY = 'hostProfile_';
+const ALL_HOSTS_KEY = 'allHosts';
+
+// Host subscription plans
+const HOST_PLANS = {
+  basic: { name: 'Basic Plan', price: 5, vehicleLimit: 5 },
+  pro: { name: 'Pro Plan', price: 10, vehicleLimit: -1 } // -1 = unlimited
+};
+
+// Select host plan
+window.selectHostPlan = async function(planType, price, vehicleLimit) {
+  const email = getSessionEmail();
+  if(!email) {
+    showToast('Please log in first');
+    goto('login');
+    return;
+  }
+
+  // In production, integrate with Stripe/PayPal here
+  const confirmed = confirm(`Subscribe to ${planType === 'basic' ? 'Basic' : 'Pro'} Plan for $${price}/month?`);
+  if(!confirmed) return;
+
+  try {
+    // Calculate expiry date (30 days from now)
+    const now = new Date();
+    const renewalDate = new Date(now.getTime() + (30 * 24 * 60 * 60 * 1000));
+
+    // Save host subscription
+    const hostProfile = {
+      email: email,
+      plan: planType,
+      planPrice: price,
+      vehicleLimit: vehicleLimit,
+      subscriptionStart: now.toISOString(),
+      renewalDate: renewalDate.toISOString(),
+      active: true,
+      banned: false,
+      accountType: 'private',
+      paymentMethods: []
+    };
+
+    localStorage.setItem(HOST_PROFILE_KEY + email, JSON.stringify(hostProfile));
+
+    // Add to all hosts list
+    let allHosts = JSON.parse(localStorage.getItem(ALL_HOSTS_KEY) || '[]');
+    if(!allHosts.find(h => h.email === email)) {
+      allHosts.push({ email, plan: planType, active: true });
+      localStorage.setItem(ALL_HOSTS_KEY, JSON.stringify(allHosts));
+    }
+
+    showToast('Subscription activated! Welcome to hosting!');
+    document.getElementById('hostSubscriptionPanel').style.display = 'none';
+    updateHostPanel();
+    checkHostSubscriptionStatus();
+  } catch(e) {
+    showToast('Subscription failed: ' + e.message);
+  }
+};
+
+// Renew host subscription
+window.renewHostSubscription = async function() {
+  const email = getSessionEmail();
+  if(!email) return;
+
+  try {
+    const profileData = JSON.parse(localStorage.getItem(HOST_PROFILE_KEY + email) || '{}');
+    const plan = profileData.plan || 'basic';
+    const price = HOST_PLANS[plan].price;
+
+    const confirmed = confirm(`Renew ${HOST_PLANS[plan].name} for $${price}/month?`);
+    if(!confirmed) return;
+
+    // Calculate new expiry
+    const now = new Date();
+    const renewalDate = new Date(now.getTime() + (30 * 24 * 60 * 60 * 1000));
+
+    profileData.subscriptionStart = now.toISOString();
+    profileData.renewalDate = renewalDate.toISOString();
+    profileData.active = true;
+
+    localStorage.setItem(HOST_PROFILE_KEY + email, JSON.stringify(profileData));
+
+    showToast('Subscription renewed successfully!');
+    checkHostSubscriptionStatus();
+    updateHostPanel();
+  } catch(e) {
+    showToast('Renewal failed: ' + e.message);
+  }
+};
+
+// Check host subscription status
+function checkHostSubscriptionStatus() {
+  const email = getSessionEmail();
+  if(!email) return;
+
+  try {
+    const profileData = JSON.parse(localStorage.getItem(HOST_PROFILE_KEY + email) || '{}');
+    if(!profileData.renewalDate) return;
+
+    const now = new Date();
+    const renewal = new Date(profileData.renewalDate);
+    const expired = now > renewal;
+
+    const statusBanner = document.getElementById('hostSubscriptionStatus');
+    const expiredBanner = document.getElementById('hostSubscriptionExpired');
+
+    if(expired && !profileData.banned) {
+      // Subscription expired - lock account
+      profileData.active = false;
+      localStorage.setItem(HOST_PROFILE_KEY + email, JSON.stringify(profileData));
+      
+      if(statusBanner) statusBanner.style.background = '#ffebee';
+      if(statusBanner) statusBanner.style.borderColor = '#ef5350';
+      if(expiredBanner) expiredBanner.style.display = 'block';
+      
+      // Hide vehicles from public listings
+      hideHostVehicles(email);
+    } else if(profileData.active && !profileData.banned) {
+      if(statusBanner) statusBanner.style.background = '#e8f5e9';
+      if(statusBanner) statusBanner.style.borderColor = '#4caf50';
+      if(expiredBanner) expiredBanner.style.display = 'none';
+      
+      // Show renewal date
+      const renewalEl = document.getElementById('hostRenewalDate');
+      if(renewalEl) renewalEl.textContent = renewal.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    // Update plan display
+    document.getElementById('hostPlanName').textContent = HOST_PLANS[profileData.plan]?.name || 'Basic Plan';
+    document.getElementById('hostPlanPrice').textContent = profileData.planPrice || 5;
+    
+  } catch(e) {
+    console.warn('Subscription check failed:', e);
+  }
+}
+
+// Hide host vehicles when subscription expires
+function hideHostVehicles(hostEmail) {
+  // Implementation would remove/hide vehicles from public VEHICLES array
+  // For now, just mark them as unavailable
+  try {
+    const hostVehicles = JSON.parse(localStorage.getItem(HOST_VEHICLES_KEY + hostEmail) || '[]');
+    hostVehicles.forEach(v => v.available = false);
+    localStorage.setItem(HOST_VEHICLES_KEY + hostEmail, JSON.stringify(hostVehicles));
+  } catch(e) {
+    console.warn('Hide vehicles failed:', e);
+  }
+}
 
 // Initialize host UI
 document.addEventListener('DOMContentLoaded', () => {
@@ -4458,7 +4606,31 @@ document.addEventListener('DOMContentLoaded', () => {
   const hostAddVehicleBtn = document.getElementById('hostAddVehicleBtn');
   if(hostAddVehicleBtn) {
     hostAddVehicleBtn.addEventListener('click', () => {
+      // Check subscription and vehicle limit
+      const email = getSessionEmail();
+      if(!email) return;
+      
+      const profileData = JSON.parse(localStorage.getItem(HOST_PROFILE_KEY + email) || '{}');
+      if(!profileData.active || profileData.banned) {
+        showToast('Please activate/renew your subscription first');
+        return;
+      }
+      
+      const vehicles = JSON.parse(localStorage.getItem(HOST_VEHICLES_KEY + email) || '[]');
+      if(profileData.vehicleLimit > 0 && vehicles.length >= profileData.vehicleLimit) {
+        showToast(`Vehicle limit reached (${profileData.vehicleLimit}). Upgrade to Pro for unlimited vehicles!`);
+        return;
+      }
+      
       openVehicleEditModal(null);
+    });
+  }
+
+  // Save host profile button
+  const hostSaveProfileBtn = document.getElementById('hostSaveProfileBtn');
+  if(hostSaveProfileBtn) {
+    hostSaveProfileBtn.addEventListener('click', () => {
+      saveHostProfile();
     });
   }
 
@@ -4683,25 +4855,85 @@ function deleteHostVehicle(vehicleId) {
   }
 }
 
+// Save host profile
+function saveHostProfile() {
+  const email = getSessionEmail();
+  if(!email) return;
+
+  try {
+    const profileData = JSON.parse(localStorage.getItem(HOST_PROFILE_KEY + email) || '{}');
+    
+    // Get account type
+    const accountType = document.getElementById('hostAccountType')?.value || 'private';
+    
+    // Get payment methods
+    const paymentMethods = Array.from(document.querySelectorAll('.host-payment-method:checked'))
+      .map(cb => cb.value);
+
+    profileData.accountType = accountType;
+    profileData.paymentMethods = paymentMethods;
+
+    localStorage.setItem(HOST_PROFILE_KEY + email, JSON.stringify(profileData));
+    
+    showToast('Profile saved!');
+  } catch(e) {
+    showToast('Save failed: ' + e.message);
+  }
+}
+
 // Update host panel when user logs in
 function updateHostPanel() {
   const email = getSessionEmail();
   const hostLoginPanel = document.getElementById('hostLoginPanel');
+  const hostSubscriptionPanel = document.getElementById('hostSubscriptionPanel');
   const hostPanel = document.getElementById('hostPanel');
 
   if(!hostLoginPanel || !hostPanel) return;
 
   if(email) {
+    // Check if user has a host subscription
+    const profileData = JSON.parse(localStorage.getItem(HOST_PROFILE_KEY + email) || '{}');
+    
+    if(!profileData.plan) {
+      // New host - show subscription plans
+      hostLoginPanel.style.display = 'none';
+      hostSubscriptionPanel.style.display = 'block';
+      hostPanel.style.display = 'none';
+      return;
+    }
+
+    // Existing host - show dashboard
     hostLoginPanel.style.display = 'none';
+    hostSubscriptionPanel.style.display = 'none';
     hostPanel.style.display = 'block';
     
+    // Update profile info
     document.getElementById('hostName').textContent = email.split('@')[0];
     document.getElementById('hostEmail').textContent = email;
-    document.getElementById('hostPhone').textContent = 'Not provided';
+    document.getElementById('hostPhone').textContent = profileData.phone || 'Not provided';
     
+    // Update account type
+    const accountTypeSelect = document.getElementById('hostAccountType');
+    if(accountTypeSelect) accountTypeSelect.value = profileData.accountType || 'private';
+    
+    // Update payment methods
+    document.querySelectorAll('.host-payment-method').forEach(cb => {
+      cb.checked = (profileData.paymentMethods || []).includes(cb.value);
+    });
+
+    // Update vehicle count and limit
+    const vehicles = JSON.parse(localStorage.getItem(HOST_VEHICLES_KEY + email) || '[]');
+    document.getElementById('hostVehicleCount').textContent = vehicles.length;
+    document.getElementById('hostVehicleLimit').textContent = profileData.vehicleLimit === -1 ? '∞' : profileData.vehicleLimit;
+    
+    // Check subscription status
+    checkHostSubscriptionStatus();
+    
+    // Render fleet
     renderHostFleet();
   } else {
     hostLoginPanel.style.display = 'block';
+    hostSubscriptionPanel.style.display = 'none';
     hostPanel.style.display = 'none';
   }
 }
@@ -4714,6 +4946,124 @@ window.goto = function(name) {
   }
   return origGoto.call(this, name);
 };
+
+// ===== ADMIN HOST MANAGEMENT =====
+// Render admin hosts
+window.renderAdminHosts = function() {
+  const container = document.getElementById('adminHosts');
+  if(!container) return;
+
+  try {
+    const allHosts = JSON.parse(localStorage.getItem(ALL_HOSTS_KEY) || '[]');
+    
+    if(allHosts.length === 0) {
+      container.innerHTML = '<p style="color:#999">No hosts yet.</p>';
+      return;
+    }
+
+    container.innerHTML = allHosts.map(host => {
+      const profileData = JSON.parse(localStorage.getItem(HOST_PROFILE_KEY + host.email) || '{}');
+      const vehicles = JSON.parse(localStorage.getItem(HOST_VEHICLES_KEY + host.email) || '[]');
+      const expired = profileData.renewalDate && new Date() > new Date(profileData.renewalDate);
+      const statusColor = profileData.banned ? '#c62828' : (expired ? '#f57c00' : '#2e7d32');
+      const statusText = profileData.banned ? 'BANNED' : (expired ? 'EXPIRED' : 'ACTIVE');
+
+      return `
+        <div class="card" style="border-left:4px solid ${statusColor}">
+          <div class="body">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <strong style="color:#000">${host.email}</strong>
+              <span style="background:${statusColor};color:#fff;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700">${statusText}</span>
+            </div>
+            <div style="color:#666;font-size:13px;margin:4px 0">
+              <div><strong>Plan:</strong> ${HOST_PLANS[profileData.plan]?.name || 'None'} ($${profileData.planPrice || 0}/mo)</div>
+              <div><strong>Vehicles:</strong> ${vehicles.length}/${profileData.vehicleLimit === -1 ? '∞' : profileData.vehicleLimit}</div>
+              <div><strong>Type:</strong> ${profileData.accountType === 'business' ? 'Business' : 'Private Owner'}</div>
+              <div><strong>Renewal:</strong> ${profileData.renewalDate ? new Date(profileData.renewalDate).toLocaleDateString() : 'N/A'}</div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+              ${profileData.banned 
+                ? `<button onclick="adminUnbanHost('${host.email}')" class="navbtn" style="flex:1;background:#4caf50">Unban</button>`
+                : `<button onclick="adminBanHost('${host.email}')" class="navbtn" style="flex:1;background:#c62828">Ban Host</button>`
+              }
+              <button onclick="adminExtendHostSubscription('${host.email}')" class="navbtn" style="flex:1">Extend 30 Days</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch(e) {
+    console.warn('Render admin hosts failed:', e);
+    container.innerHTML = '<p style="color:#c62828">Error loading hosts</p>';
+  }
+};
+
+// Admin ban host
+window.adminBanHost = function(email) {
+  if(!confirm(`Ban host ${email}? This will hide all their vehicles.`)) return;
+
+  try {
+    const profileData = JSON.parse(localStorage.getItem(HOST_PROFILE_KEY + email) || '{}');
+    profileData.banned = true;
+    profileData.active = false;
+    localStorage.setItem(HOST_PROFILE_KEY + email, JSON.stringify(profileData));
+
+    hideHostVehicles(email);
+    showToast('Host banned');
+    renderAdminHosts();
+  } catch(e) {
+    showToast('Ban failed: ' + e.message);
+  }
+};
+
+// Admin unban host
+window.adminUnbanHost = function(email) {
+  if(!confirm(`Unban host ${email}?`)) return;
+
+  try {
+    const profileData = JSON.parse(localStorage.getItem(HOST_PROFILE_KEY + email) || '{}');
+    profileData.banned = false;
+    
+    // Check if subscription is still valid
+    const expired = profileData.renewalDate && new Date() > new Date(profileData.renewalDate);
+    profileData.active = !expired;
+    
+    localStorage.setItem(HOST_PROFILE_KEY + email, JSON.stringify(profileData));
+
+    showToast('Host unbanned');
+    renderAdminHosts();
+  } catch(e) {
+    showToast('Unban failed: ' + e.message);
+  }
+};
+
+// Admin extend host subscription
+window.adminExtendHostSubscription = function(email) {
+  if(!confirm(`Extend subscription for ${email} by 30 days?`)) return;
+
+  try {
+    const profileData = JSON.parse(localStorage.getItem(HOST_PROFILE_KEY + email) || '{}');
+    const currentRenewal = profileData.renewalDate ? new Date(profileData.renewalDate) : new Date();
+    const newRenewal = new Date(currentRenewal.getTime() + (30 * 24 * 60 * 60 * 1000));
+
+    profileData.renewalDate = newRenewal.toISOString();
+    profileData.active = true;
+
+    localStorage.setItem(HOST_PROFILE_KEY + email, JSON.stringify(profileData));
+
+    showToast('Subscription extended');
+    renderAdminHosts();
+  } catch(e) {
+    showToast('Extension failed: ' + e.message);
+  }
+};
+
+// Add hosts refresh button handler
+document.addEventListener('click', (e) => {
+  if(e.target.id === 'hostsRefresh') {
+    renderAdminHosts();
+  }
+});
 
 // ===== VEHICLE SHUFFLING =====
 function shuffleVehicles() {

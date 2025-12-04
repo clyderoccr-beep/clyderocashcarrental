@@ -1470,6 +1470,8 @@
     <section id="host" class="section">
       <div class="wrap">
         <h2>Become a Host</h2>
+        
+        <!-- Login Panel -->
         <div id="hostLoginPanel">
           <p style="color:#ffffff;margin-bottom:20px">Join our network of vehicle owners and earn income by renting your vehicles.</p>
           <div style="display:grid;gap:12px;grid-template-columns:1fr 1fr;max-width:600px">
@@ -1477,9 +1479,72 @@
             <button class="navbtn" id="hostLoginBtn" type="button">Host Login</button>
           </div>
         </div>
+
+        <!-- Subscription Plans Panel -->
+        <div id="hostSubscriptionPanel" style="display:none">
+          <h3 style="color:#fff;margin-bottom:20px">Choose Your Plan</h3>
+          <p style="color:#fff;margin-bottom:24px">Select a subscription plan to start hosting your vehicles</p>
+          
+          <div style="display:grid;gap:20px;grid-template-columns:repeat(auto-fit, minmax(300px, 1fr));max-width:700px;margin:0 auto">
+            <!-- Basic Plan -->
+            <div class="card" style="border:2px solid #d4af37;position:relative">
+              <div class="body">
+                <h3 style="color:#d4af37;margin:0 0 12px">Basic Plan</h3>
+                <div style="font-size:36px;font-weight:800;color:#000;margin:12px 0">
+                  $5<span style="font-size:18px;font-weight:400;color:#666">/month</span>
+                </div>
+                <ul style="list-style:none;padding:0;margin:20px 0;color:#333">
+                  <li style="padding:8px 0;border-bottom:1px solid #eee">✅ Post up to 5 vehicles</li>
+                  <li style="padding:8px 0;border-bottom:1px solid #eee">✅ Live location mapping</li>
+                  <li style="padding:8px 0;border-bottom:1px solid #eee">✅ Basic analytics</li>
+                  <li style="padding:8px 0">✅ Customer support</li>
+                </ul>
+                <button class="navbtn" onclick="selectHostPlan('basic', 5, 5)" style="width:100%;margin-top:12px">Select Basic</button>
+              </div>
+            </div>
+
+            <!-- Pro Plan (Recommended) -->
+            <div class="card" style="border:3px solid #d4af37;position:relative;box-shadow:0 8px 24px rgba(212,175,55,0.3)">
+              <div style="position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:#d4af37;color:#000;padding:4px 16px;border-radius:20px;font-weight:700;font-size:12px">RECOMMENDED</div>
+              <div class="body">
+                <h3 style="color:#d4af37;margin:0 0 12px">Pro Plan</h3>
+                <div style="font-size:36px;font-weight:800;color:#000;margin:12px 0">
+                  $10<span style="font-size:18px;font-weight:400;color:#666">/month</span>
+                </div>
+                <ul style="list-style:none;padding:0;margin:20px 0;color:#333">
+                  <li style="padding:8px 0;border-bottom:1px solid #eee">✅ <strong>Unlimited vehicles</strong></li>
+                  <li style="padding:8px 0;border-bottom:1px solid #eee">✅ Live location mapping</li>
+                  <li style="padding:8px 0;border-bottom:1px solid #eee">✅ Advanced analytics</li>
+                  <li style="padding:8px 0;border-bottom:1px solid #eee">✅ Priority support</li>
+                  <li style="padding:8px 0">✅ Featured listings</li>
+                </ul>
+                <button class="navbtn" onclick="selectHostPlan('pro', 10, -1)" style="width:100%;margin-top:12px;background:linear-gradient(135deg,#d4af37,#f9c846)">Select Pro</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Host Dashboard Panel -->
         <div id="hostPanel" style="display:none">
           <div class="card" style="max-width:900px">
             <div class="body">
+              <!-- Subscription Status Banner -->
+              <div id="hostSubscriptionStatus" style="margin-bottom:16px;padding:12px;border-radius:8px;background:#e8f5e9;border:1px solid #4caf50">
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+                  <div>
+                    <strong style="color:#2e7d32">Active Subscription:</strong> 
+                    <span id="hostPlanName" style="color:#000">Pro Plan</span>
+                    <span style="color:#666;margin-left:8px">($<span id="hostPlanPrice">10</span>/month)</span>
+                  </div>
+                  <div>
+                    <span style="color:#666;font-size:13px">Renews: <strong id="hostRenewalDate">Jan 4, 2026</strong></span>
+                  </div>
+                </div>
+                <div id="hostSubscriptionExpired" style="display:none;margin-top:8px;color:#c62828;font-weight:700">
+                  ⚠️ Your subscription has expired. <button class="navbtn" onclick="renewHostSubscription()" style="display:inline-block;padding:4px 12px;font-size:13px;margin-left:8px">Renew Now</button>
+                </div>
+              </div>
+
               <!-- Host Profile Section -->
               <details open style="margin-bottom:16px;border:1px solid #e0e0e0;border-radius:8px;padding:12px;background:#fafafa">
                 <summary style="cursor:pointer;font-weight:700;font-size:16px;color:#111;user-select:none;outline:none">
@@ -1490,15 +1555,43 @@
                     <div><strong>Name:</strong> <span id="hostName"></span></div>
                     <div><strong>Email:</strong> <span id="hostEmail"></span></div>
                     <div><strong>Phone:</strong> <span id="hostPhone"></span></div>
+                    <div><strong>Account Type:</strong> 
+                      <select id="hostAccountType" style="margin-left:8px;padding:4px 8px;border-radius:4px;border:1px solid #ccc">
+                        <option value="private">Private Owner</option>
+                        <option value="business">Business</option>
+                      </select>
+                    </div>
+                    <div><strong>Accepted Payments:</strong>
+                      <div id="hostPaymentMethods" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px">
+                        <label style="display:flex;align-items:center;gap:4px;cursor:pointer">
+                          <input type="checkbox" class="host-payment-method" value="cash"> Cash
+                        </label>
+                        <label style="display:flex;align-items:center;gap:4px;cursor:pointer">
+                          <input type="checkbox" class="host-payment-method" value="card"> Card
+                        </label>
+                        <label style="display:flex;align-items:center;gap:4px;cursor:pointer">
+                          <input type="checkbox" class="host-payment-method" value="paypal"> PayPal
+                        </label>
+                        <label style="display:flex;align-items:center;gap:4px;cursor:pointer">
+                          <input type="checkbox" class="host-payment-method" value="venmo"> Venmo
+                        </label>
+                        <label style="display:flex;align-items:center;gap:4px;cursor:pointer">
+                          <input type="checkbox" class="host-payment-method" value="cashapp"> Cash App
+                        </label>
+                        <label style="display:flex;align-items:center;gap:4px;cursor:pointer">
+                          <input type="checkbox" class="host-payment-method" value="zelle"> Zelle
+                        </label>
+                      </div>
+                    </div>
                   </div>
-                  <button class="navbtn" id="hostEditProfileBtn" type="button">Edit Profile</button>
+                  <button class="navbtn" id="hostSaveProfileBtn" type="button">Save Profile</button>
                 </div>
               </details>
 
               <!-- Fleet Management Section -->
               <details open style="margin-bottom:16px;border:1px solid #e0e0e0;border-radius:8px;padding:12px;background:#fafafa">
                 <summary style="cursor:pointer;font-weight:700;font-size:16px;color:#111;user-select:none;outline:none">
-                  🚗 My Fleet
+                  🚗 My Fleet (<span id="hostVehicleCount">0</span>/<span id="hostVehicleLimit">5</span>)
                 </summary>
                 <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e0e0e0">
                   <button class="navbtn" id="hostAddVehicleBtn" type="button" style="margin-bottom:12px">+ Add Vehicle</button>
@@ -2444,6 +2537,17 @@
               <button class="navbtn" id="membersRefresh" type="button">Refresh Members</button>
             </div>
             <div id="adminMembers" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px"></div>
+          </div>
+        </details>
+        <!-- Host Management Section -->
+        <details class="card" style="max-width:1000px;margin-top:16px">
+          <summary style="cursor:pointer;font-size:18px;font-weight:700;padding:16px;margin:-16px;margin-bottom:16px;background:rgba(212,175,55,0.1);border-radius:8px;user-select:none">🏠 Admin Host Management</summary>
+          <div class="body">
+            <p style="color:var(--muted);margin-top:0">Manage all hosts: view subscriptions, extend/expire plans, ban/unban hosts.</p>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0">
+              <button class="navbtn" id="hostsRefresh" type="button">Refresh Hosts</button>
+            </div>
+            <div id="adminHosts" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px"></div>
           </div>
         </details>
         <!-- Bookings Section -->
