@@ -1050,7 +1050,10 @@
     <header class="wrap">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;width:100%">
         <button id="mobileMenuToggle" type="button">☰</button>
-        <img id="siteLogo" src="assets/icon3.jpeg" alt="Car logo" loading="lazy" style="width:28px;height:28px;border-radius:6px;object-fit:contain;border:1px solid rgba(255,255,255,.2);background:#111;padding:2px;cursor:pointer" title="Go to Home" />
+        <div style="display:flex;align-items:center;gap:8px">
+          <img id="siteLogo" src="assets/icon3.jpeg" alt="Car logo" loading="lazy" style="width:28px;height:28px;border-radius:6px;object-fit:contain;border:1px solid rgba(255,255,255,.2);background:#111;padding:2px;cursor:pointer" title="Go to Home" />
+          <button id="headerLocationBtn" type="button" style="background:transparent;border:none;font-size:16px;cursor:pointer;color:#d4af37;padding:0;margin:0;display:flex;align-items:center;justify-content:center" title="Use my location">📍</button>
+        </div>
         <button id="profileIcon" type="button" style="background:transparent;border:none;font-size:20px;cursor:pointer;color:#000000;padding:0;margin:0" data-nav="membership">👤</button>
       </div>
       <nav>
@@ -1321,11 +1324,6 @@
             <!-- Search Button -->
             <button id="heroSearchBtn" class="search-submit-btn-main" title="Search vehicles">
               🔍 Search
-            </button>
-            
-            <!-- Floating Location Pin -->
-            <button id="heroLocationBtn" class="floating-location-btn" title="Use my location">
-              📍
             </button>
             
             <div id="heroLoadingIndicator" class="loading-indicator" style="display:none">

@@ -4120,7 +4120,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function initHeroSearch() {
   const countrySelect = document.getElementById('heroCountry');
   const stateSelect = document.getElementById('heroState');
-  const locationBtn = document.getElementById('heroLocationBtn');
+  const headerLocationBtn = document.getElementById('headerLocationBtn');
   const searchBtn = document.getElementById('heroSearchBtn');
   const priceRangeSelect = document.getElementById('heroPriceRange');
   const durationBtns = document.querySelectorAll('.term-btn');
@@ -4144,9 +4144,11 @@ function initHeroSearch() {
   });
   
   // Location button handler
-  locationBtn.addEventListener('click', function() {
-    useMyLocation();
-  });
+  if (headerLocationBtn) {
+    headerLocationBtn.addEventListener('click', function() {
+      useMyLocation();
+    });
+  }
   
   // Search button handler
   searchBtn.addEventListener('click', function() {
@@ -4203,7 +4205,7 @@ function updateStateDropdown(country) {
 }
 
 function useMyLocation() {
-  const locationBtn = document.getElementById('heroLocationBtn');
+  const headerLocationBtn = document.getElementById('headerLocationBtn');
   const loadingIndicator = document.getElementById('heroLoadingIndicator');
   
   if (!navigator.geolocation) {
@@ -4211,7 +4213,7 @@ function useMyLocation() {
     return;
   }
   
-  locationBtn.disabled = true;
+  if (headerLocationBtn) headerLocationBtn.disabled = true;
   loadingIndicator.style.display = 'flex';
   
   navigator.geolocation.getCurrentPosition(
@@ -4262,12 +4264,12 @@ function useMyLocation() {
         console.warn('Reverse geocoding failed:', error);
         alert('Could not determine your location. Please select manually.');
       } finally {
-        locationBtn.disabled = false;
+        if (headerLocationBtn) headerLocationBtn.disabled = false;
         loadingIndicator.style.display = 'none';
       }
     },
     function(error) {
-      locationBtn.disabled = false;
+      if (headerLocationBtn) headerLocationBtn.disabled = false;
       loadingIndicator.style.display = 'none';
       console.warn('Geolocation error:', error.message);
       if (error.code === error.PERMISSION_DENIED) {
