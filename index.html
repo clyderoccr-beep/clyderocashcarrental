@@ -182,6 +182,95 @@
     
     .wrap{max-width:var(--maxw); margin:0 auto; padding:12px}
     
+    /* Hero Section - Turo Style */
+    .hero-section {
+      position:relative;
+      width:100%;
+      height:400px;
+      margin:0;
+      padding:0;
+      overflow:hidden;
+      border-radius:24px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .hero-background {
+      position:absolute;
+      top:0;
+      left:0;
+      width:100%;
+      height:100%;
+      background-size:cover;
+      background-position:center;
+      background-repeat:no-repeat;
+      z-index:1;
+    }
+    .hero-content {
+      position:relative;
+      z-index:2;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      width:100%;
+      height:100%;
+    }
+    .search-box {
+      background:rgba(255,255,255,0.95);
+      backdrop-filter:blur(10px);
+      padding:40px 60px;
+      border-radius:16px;
+      box-shadow:0 8px 32px rgba(0,0,0,0.15);
+      text-align:center;
+      max-width:500px;
+    }
+    .search-box h2 {
+      font-size:32px;
+      color:#000000;
+      margin:0 0 12px 0;
+      font-weight:900;
+      letter-spacing:-0.5px;
+    }
+    .search-box p {
+      font-size:16px;
+      color:#666666;
+      margin:0 0 24px 0;
+      line-height:1.5;
+    }
+    .search-btn {
+      background:linear-gradient(135deg, #000000, #333333);
+      color:#ffffff;
+      border:none;
+      padding:14px 32px;
+      border-radius:8px;
+      font-size:16px;
+      font-weight:700;
+      cursor:pointer;
+      transition:all 0.3s ease;
+      box-shadow:0 4px 12px rgba(0,0,0,0.2);
+    }
+    .search-btn:hover {
+      transform:translateY(-2px);
+      box-shadow:0 6px 20px rgba(0,0,0,0.3);
+    }
+    
+    @media (max-width:768px) {
+      .hero-section {
+        height:300px;
+        border-radius:16px;
+      }
+      .search-box {
+        padding:30px 24px;
+        max-width:calc(100% - 48px);
+      }
+      .search-box h2 {
+        font-size:24px;
+      }
+      .search-box p {
+        font-size:14px;
+      }
+    }
+    
     /* Turo-Style Navigation Buttons - Text only, minimal */
     .navbtn{
       min-height:auto; 
@@ -581,6 +670,18 @@
         <button class="navbtn" data-nav="admin" id="adminTab" style="display:none; position:relative">Admin <span id="adminBadge" style="display:none;position:absolute;top:-6px;right:-6px;background:var(--brand);color:#fff;border-radius:12px;padding:0 6px;font-size:12px;line-height:18px;min-width:18px;text-align:center">0</span></button>
       </nav>
     </header>
+
+    <!-- Hero Banner Section -->
+    <section id="hero" class="hero-section">
+      <div class="hero-background" style="background-image: url('assets/banhead.jpeg')"></div>
+      <div class="hero-content">
+        <div class="search-box">
+          <h2>Rent a Car Today</h2>
+          <p>Find the perfect vehicle for your journey</p>
+          <button class="search-btn" data-nav="vehicles">Browse Vehicles</button>
+        </div>
+      </div>
+    </section>
 
     <section id="vehicles" class="section">
       <div class="wrap">
