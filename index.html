@@ -44,11 +44,11 @@
       --snow-blue:#E8F4FF;
       --radius:24px;
       --maxw:1000px;
-        .search-wrapper {
-          flex-direction: column;
-          gap: 12px;
-          align-items: center;
-          position: relative;
+    }
+    *{box-sizing:border-box}
+    html{
+      background:#ffffff center center / cover no-repeat;
+      min-height:100%;
     }
     body{
       margin:0; 
@@ -173,10 +173,10 @@
       flex-wrap:nowrap;
       align-items:center;
       justify-content:flex-end;
-        .search-wrapper {
-          flex-direction: column;
-          gap: 10px;
-          align-items: center;
+      flex:1;
+      padding-right:0;
+    }
+    nav #mobileMenuClose {
       display:none !important;
     }
     
@@ -259,55 +259,67 @@
     }
     .hero-search-container {
       width:100%;
-      max-width:1100px;
+      max-width:1000px;
       position:relative;
       animation:fadeInUp 0.8s ease-out 0.6s both;
     }
+    .search-bar {
+      background:rgba(255,255,255,0.98);
+      backdrop-filter:blur(12px);
+      border-radius:16px;
+      padding:16px;
+      box-shadow:0 8px 32px rgba(0,0,0,0.15);
+      display:flex;
+      gap:12px;
+      align-items:flex-start;
+      position:relative;
+      flex-wrap:wrap;
+      justify-content:center;
+    }
     .search-wrapper {
       display:flex;
-      gap:16px;
-      align-items:center;
+      gap:12px;
+      align-items:flex-start;
+      width:100%;
+      flex-wrap:wrap;
       justify-content:center;
-      position:relative;
     }
-    .search-blocks-grid {
+    .search-blocks-container {
       display:grid;
       grid-template-columns:repeat(4, 1fr);
-      gap:16px;
-      flex:1;
+      gap:12px;
+      flex:0 1 auto;
     }
     .search-block {
-      background:rgba(255,255,255,0.95);
-      backdrop-filter:blur(10px);
-      border:1px solid rgba(255,255,255,0.3);
-      border-radius:16px;
-      padding:16px 18px;
+      background:#ffffff;
+      border:1px solid #e8e8e8;
+      border-radius:12px;
+      padding:14px 16px;
       display:flex;
       flex-direction:column;
-      gap:8px;
+      gap:6px;
       transition:all 0.3s ease;
-      box-shadow:0 4px 20px rgba(0,0,0,0.15);
+      cursor:pointer;
       position:relative;
     }
     .search-block:hover {
-      border-color:rgba(255,255,255,0.5);
-      box-shadow:0 8px 32px rgba(0,0,0,0.25);
-      transform:translateY(-4px);
+      border-color:#d0d0d0;
+      box-shadow:0 4px 12px rgba(0,0,0,0.08);
+      transform:translateY(-2px);
     }
     .search-block-label {
-      font-size:12px;
-      font-weight:700;
-      color:#555555;
+      font-size:11px;
+      font-weight:600;
+      color:#666666;
       text-transform:uppercase;
-      letter-spacing:0.8px;
-      margin-bottom:2px;
+      letter-spacing:0.5px;
     }
     .search-block select {
       border:none;
       background:transparent;
-      font-size:15px;
-      font-weight:600;
-      color:#222222;
+      font-size:14px;
+      font-weight:500;
+      color:#333333;
       cursor:pointer;
       padding:0;
       font-family:inherit;
@@ -315,81 +327,83 @@
       width:100%;
     }
     .search-block select:disabled {
-      color:#aaaaaa;
+      color:#999999;
       cursor:not-allowed;
     }
     .rental-term-buttons {
       display:flex;
-      gap:8px;
+      gap:6px;
       margin-top:4px;
     }
     .term-btn {
       flex:1;
-      padding:10px 6px;
-      border:2px solid rgba(255,255,255,0.6);
-      background:rgba(255,255,255,0.4);
-      border-radius:8px;
-      font-size:12px;
-      font-weight:700;
-      color:#444444;
+      padding:8px 4px;
+      border:1px solid #e0e0e0;
+      background:#f9f9f9;
+      border-radius:6px;
+      font-size:11px;
+      font-weight:600;
+      color:#666666;
       cursor:pointer;
       transition:all 0.2s ease;
       text-align:center;
     }
     .term-btn:hover {
-      background:rgba(255,255,255,0.7);
-      border-color:rgba(255,255,255,0.9);
+      background:#f0f0f0;
+      border-color:#d0d0d0;
     }
     .term-btn.active {
       background:var(--brand);
       border-color:var(--brand);
       color:#ffffff;
-      box-shadow:0 2px 8px rgba(212,175,55,0.4);
     }
     .search-submit-btn-main {
       background:var(--brand);
       border:none;
-      border-radius:16px;
+      border-radius:12px;
       color:#ffffff;
-      font-size:20px;
+      font-size:18px;
       font-weight:700;
-      padding:20px 36px;
+      padding:0 32px;
       cursor:pointer;
       transition:all 0.3s ease;
-      box-shadow:0 6px 24px rgba(212,175,55,0.4);
+      box-shadow:0 4px 12px rgba(212,175,55,0.3);
       display:flex;
       align-items:center;
       justify-content:center;
-      gap:8px;
-      min-width:140px;
+      min-width:120px;
     }
     .search-submit-btn-main:hover {
       background:#c9a235;
-      box-shadow:0 8px 32px rgba(212,175,55,0.5);
-      transform:translateY(-4px);
-    }
-    .search-submit-btn-main:active {
+      box-shadow:0 6px 16px rgba(212,175,55,0.4);
       transform:translateY(-2px);
     }
+    .search-submit-btn-main:active {
+      transform:translateY(0);
+    }
     .floating-location-btn {
-      background:transparent;
-      border:none;
-      box-shadow:none;
-      border-radius:0;
-      width:40px;
-      height:40px;
-      font-size:22px;
+      position:absolute;
+      top:50%;
+      left:50%;
+      transform:translate(-50%, -50%);
+      background:#ffffff;
+      border:2px solid var(--brand);
+      border-radius:50%;
+      width:48px;
+      height:48px;
+      font-size:20px;
       cursor:pointer;
-      transition:transform 0.2s ease;
+      box-shadow:0 4px 16px rgba(0,0,0,0.15);
+      transition:all 0.3s ease;
       z-index:10;
       display:flex;
       align-items:center;
       justify-content:center;
-      position:static;
-      transform:none;
     }
     .floating-location-btn:hover {
-      transform:scale(1.08);
+      background:var(--brand);
+      transform:translate(-50%, -50%) scale(1.1);
+      box-shadow:0 6px 20px rgba(212,175,55,0.4);
     }
     .search-input,
     .location-btn,
@@ -465,36 +479,26 @@
       .hero-search-container {
         max-width:calc(100% - 40px);
       }
-      .search-wrapper {
+      .search-bar {
         flex-direction:column;
-        gap:20px;
+        padding:20px;
       }
-      .search-blocks-grid {
+      .search-blocks-container {
         grid-template-columns:1fr 1fr;
-        gap:16px;
-      }
-      .search-block {
-        padding:14px 16px;
-      }
-      .search-block-label {
-        font-size:11px;
-      }
-      .search-block select {
-        font-size:14px;
-      }
-      .term-btn {
-        font-size:11px;
-        padding:9px 6px;
+        gap:12px;
       }
       .search-submit-btn-main {
         width:100%;
-        padding:18px;
-        font-size:18px;
+        padding:16px;
       }
       .floating-location-btn {
-        width:52px;
-        height:52px;
-        font-size:22px;
+        top:auto;
+        bottom:-24px;
+        left:50%;
+        transform:translateX(-50%);
+      }
+      .floating-location-btn:hover {
+        transform:translateX(-50%) scale(1.1);
       }
       #vehicles {
         margin-top:48px;
@@ -521,55 +525,46 @@
       .hero-search-container {
         width:100%;
         max-width:calc(100% - 32px);
-        position:relative;
       }
-      .search-wrapper {
-        flex-direction:row;
-        gap:12px;
-        align-items:flex-start;
-        position:relative;
+      .search-bar {
+        padding:16px;
+        border-radius:16px;
+        flex-direction:column;
       }
-      .search-blocks-grid {
-        grid-template-columns:1fr 1fr;
+      .search-blocks-container {
+        grid-template-columns:1fr;
         gap:10px;
-        flex:1;
       }
       .search-block {
         padding:12px 14px;
-        border-radius:12px;
-        font-size:12px;
       }
       .search-block-label {
         font-size:10px;
       }
       .search-block select {
-        font-size:12px;
-      }
-      .rental-term-buttons {
-        gap:4px;
-        margin-top:3px;
+        font-size:13px;
       }
       .term-btn {
-        font-size:10px;
-        padding:8px 4px;
+        font-size:11px;
+        padding:10px 6px;
       }
       .search-submit-btn-main {
-        width:auto;
-        padding:12px 20px;
-        font-size:14px;
+        width:100%;
+        padding:16px;
+        font-size:16px;
         min-width:auto;
-        flex-shrink:0;
       }
       .floating-location-btn {
         width:44px;
         height:44px;
         font-size:18px;
-        position:static;
-        transform:none;
-        flex-shrink:0;
+        top:auto;
+        bottom:-22px;
+        left:50%;
+        transform:translateX(-50%);
       }
       .floating-location-btn:hover {
-        transform:scale(1.1);
+        transform:translateX(-50%) scale(1.1);
       }
       #vehicles {
         margin-top:56px;
@@ -596,52 +591,49 @@
       .hero-search-container {
         width:100%;
         max-width:calc(100% - 24px);
-        position:relative;
       }
-      .search-wrapper {
-        flex-direction:row;
-        gap:10px;
-        align-items:flex-start;
+      .search-bar {
+        padding:14px;
+        border-radius:14px;
       }
-      .search-blocks-grid {
+      .search-blocks-container {
         grid-template-columns:1fr;
-        gap:10px;
-        flex:1;
+        gap:8px;
       }
       .search-block {
-        padding:11px 12px;
-        border-radius:10px;
+        padding:10px 12px;
       }
       .search-block-label {
         font-size:9px;
       }
       .search-block select {
-        font-size:11px;
-      }
-      .rental-term-buttons {
-        gap:4px;
-        margin-top:2px;
+        font-size:12px;
       }
       .term-btn {
-        font-size:9px;
-        padding:7px 3px;
+        font-size:10px;
+        padding:8px 4px;
       }
       .search-submit-btn-main {
-        padding:10px 14px;
-        font-size:12px;
-        width:auto;
-        flex-shrink:0;
+        padding:14px;
+        font-size:15px;
       }
       .floating-location-btn {
         width:40px;
         height:40px;
         font-size:16px;
-        position:static;
-        transform:none;
-        flex-shrink:0;
+        bottom:-20px;
       }
-      .floating-location-btn:hover {
-        transform:scale(1.1);
+      .card {
+        padding:16px;
+      }
+      .navbtn {
+        font-size:12px;
+        padding:6px 12px;
+        margin:0 8px;
+      }
+      input, select, textarea {
+        font-size:14px;
+        padding:10px;
       }
       #vehicles {
         margin-top:56px;
@@ -1085,9 +1077,9 @@
           <p class="hero-subtitle">Find the perfect vehicle anywhere in the world</p>
         </div>
         <div class="hero-search-container">
-          <div class="search-wrapper">
-            <!-- 4 Transparent Search Blocks -->
-            <div class="search-blocks-grid">
+          <div class="search-bar">
+            <!-- 4-Block Search Layout -->
+            <div class="search-blocks-container">
               <!-- Block 1: Country -->
               <div class="search-block">
                 <label class="search-block-label">Country</label>
