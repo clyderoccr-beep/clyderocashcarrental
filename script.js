@@ -481,18 +481,58 @@ document.addEventListener('click', (e)=>{
   if(!t) return; 
   e.preventDefault(); 
   const nav=t.dataset.nav; 
-  goto(nav); 
-  // Update membership panel when navigating to membership page
+  
+  // If membership button and user is a host, navigate to host instead
   if(nav === 'membership') {
+    const email = getSessionEmail();
+    if(email) {
+      const auth = getAuthInstance();
+      const uid = auth?.currentUser?.uid;
+      
+      if(uid) {
+        const db = getDB();
+        const { doc, getDoc } = getUtils();
+        
+        if(db && doc && getDoc) {
+          getDoc(doc(db, 'users', uid)).then(snap => {
+            if(snap.exists()) {
+              const userData = snap.data();
+              const accountType = userData.accountType || 'customer';
+              const targetRoute = accountType === 'host' ? 'host' : 'membership';
+              goto(targetRoute);
+              if(targetRoute === 'membership') {
+                updateMembershipPanel();
+                try{ renderAccountSummary(); }catch(_){ }
+              } else if(targetRoute === 'host') {
+                updateHostPanel();
+              }
+            }
+          }).catch(err => {
+            console.warn('Failed to check account type on click:', err);
+            goto(nav);
+            updateMembershipPanel();
+          });
+          return;
+        }
+      }
+    }
+    // Fallback if not logged in
+    goto(nav);
     updateMembershipPanel();
     try{ renderAccountSummary(); }catch(_){ }
+  } else {
+    goto(nav); 
+    // Update membership panel when navigating to membership page
+    if(nav === 'membership') {
+      updateMembershipPanel();
+      try{ renderAccountSummary(); }catch(_){ }
+    }
+    // Pre-fill vehicle booking if coming from vehicle card
+    if(nav==='booking' && t.dataset.veh){ 
+      const sel=document.getElementById('vehicle-select'); 
+      if(sel){ sel.value=t.dataset.veh; } 
+    }
   }
-  // Pre-fill vehicle booking if coming from vehicle card
-  if(nav==='booking' && t.dataset.veh){ 
-    const sel=document.getElementById('vehicle-select'); 
-    if(sel){ sel.value=t.dataset.veh; } 
-  } 
-});
 
 // Click logo to return to default page (vehicles)
 document.addEventListener('click',(e)=>{
@@ -791,9 +831,48 @@ function updateNavLabels(){
       console.log('Logout button display:', logoutBtn.style.display);
     }
   }
-  // Change membership button text based on login state
-  if(memberBtn){ 
-    memberBtn.textContent = email ? 'My Account' : 'Membership';
+  
+  // Change membership button text based on login state and account type
+  if(memberBtn) {
+    if(email) {
+      // Check if user is a host
+      const auth = getAuthInstance();
+      const uid = auth?.currentUser?.uid;
+      
+      if(uid) {
+        const db = getDB();
+        const { doc, getDoc } = getUtils();
+        
+        if(db && doc && getDoc) {
+          getDoc(doc(db, 'users', uid)).then(snap => {
+            if(snap.exists()) {
+              const userData = snap.data();
+              const accountType = userData.accountType || 'customer';
+              
+              if(accountType === 'host') {
+                memberBtn.textContent = 'Host Account';
+                memberBtn.dataset.nav = 'host';
+                console.log('Member button changed to Host Account');
+              } else {
+                memberBtn.textContent = 'My Account';
+                memberBtn.dataset.nav = 'membership';
+                console.log('Member button set to My Account');
+              }
+            }
+          }).catch(err => {
+            console.warn('Failed to check account type:', err);
+            memberBtn.textContent = 'My Account';
+          });
+        } else {
+          memberBtn.textContent = 'My Account';
+        }
+      } else {
+        memberBtn.textContent = 'My Account';
+      }
+    } else {
+      memberBtn.textContent = 'Membership';
+      memberBtn.dataset.nav = 'membership';
+    }
     console.log('Member button text:', memberBtn.textContent);
   }
   // Show/hide member-only nav buttons
@@ -1218,6 +1297,9 @@ document.addEventListener('click', async (e)=>{
     });
     
     showToast('Account upgraded to Host! Please select your subscription plan.');
+    
+    // Update nav labels to show "Host Account" instead of "My Account"
+    updateNavLabels();
     
     // Refresh the account panel
     renderAccountSummary();
