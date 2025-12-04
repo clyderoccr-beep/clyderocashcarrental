@@ -216,11 +216,13 @@
     .navbtn:active{transform:none; box-shadow:none;}
     .navbtn:focus-visible{outline:2px solid #000; outline-offset:3px}
     
-    /* Hide colored buttons in header (Turo has none) */
-    header .navbtn[data-nav="login"],
+    /* Show all navigation buttons */
     header #accountLogout,
     header #adminTab {
-      display:none !important;
+      background:transparent !important;
+      border:none !important;
+      color:#000000 !important;
+      box-shadow:none !important;
     }
     
     /* Announcement Banner - Show at top */
@@ -505,6 +507,7 @@
         background:white;
         border-top:1px solid #e5e5e5;
         padding:12px;
+        padding-top:40px;
         max-height:calc(100vh - 200px);
         overflow-y:auto;
         z-index:1000;
@@ -512,6 +515,9 @@
       }
       header nav.active {
         display:flex;
+      }
+      header nav.active #mobileMenuClose {
+        display:block !important;
       }
         color:#1a1a1a;
         padding:4px 8px !important;
@@ -562,6 +568,7 @@
         <button id="profileIcon" type="button" style="background:transparent;border:none;font-size:20px;cursor:pointer;color:#000000;padding:0;margin:0" data-nav="membership">👤</button>
       </div>
       <nav>
+        <button id="mobileMenuClose" type="button" style="background:transparent;border:none;font-size:24px;color:#000000;cursor:pointer;padding:8px;position:absolute;top:8px;right:8px;display:none">×</button>
         <button class="navbtn" data-nav="membership">My Account</button>
         <button class="navbtn" data-nav="vehicles">Vehicles</button>
         <button class="navbtn" data-nav="booking" style="display:none">Booking</button>
