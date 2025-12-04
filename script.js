@@ -4123,7 +4123,7 @@ function initHeroSearch() {
   const locationBtn = document.getElementById('heroLocationBtn');
   const searchBtn = document.getElementById('heroSearchBtn');
   const priceRangeSelect = document.getElementById('heroPriceRange');
-  const durationBtns = document.querySelectorAll('.duration-btn');
+  const durationBtns = document.querySelectorAll('.term-btn');
   
   if (!countrySelect) return; // Hero search not available
   
