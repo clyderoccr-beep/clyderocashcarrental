@@ -113,8 +113,8 @@ a<!DOCTYPE html>
       top:0; 
       z-index:50; 
       background:#ffffff;
-      box-shadow:0 1px 3px rgba(0,0,0,.05);
-      border-bottom:none;
+      box-shadow:0 2px 8px rgba(0,0,0,.08);
+      border-bottom:1px solid #f0f0f0;
       padding:0;
       width:100%;
     }
@@ -139,12 +139,18 @@ a<!DOCTYPE html>
       flex:0 0 auto;
     }
     header #siteLogo {
-      display:none !important;
+      display:block !important;
+      width:40px !important;
+      height:40px !important;
+      border-radius:6px !important;
+      padding:0 !important;
+      border:none !important;
+      background:transparent !important;
+      object-fit:contain;
+      cursor:pointer;
     }
     header > div > div:first-child > div {
-      display:flex;
-      flex-direction:column;
-      gap:0;
+      display:none;
     }
     header > div > div:first-child > div > div {
       font-weight:900;
@@ -189,33 +195,32 @@ a<!DOCTYPE html>
       padding:8px 0; 
       border-radius:0; 
       background:transparent;
-      color:#000000; 
+      color:#1a1a1a; 
       border:none; 
       cursor:pointer; 
       font-weight:500; 
       font-size:14px;
       letter-spacing:0;
       box-shadow:none;
-      transition:opacity .2s ease;
+      transition:all .2s ease;
       position:relative;
       text-shadow:none;
-      margin:0 24px;
+      margin:0 20px;
     }
     .navbtn::before{
       display:none;
     }
     .navbtn:hover{
       background:transparent;
-      color:#666666;
+      color:#333333;
       box-shadow:none;
       transform:none;
       border-color:transparent;
-      opacity:.7;
     }
     .navbtn:hover::after{
       display:none;
     }
-    .navbtn:active{transform:none; box-shadow:none; opacity:.8}
+    .navbtn:active{transform:none; box-shadow:none;}
     .navbtn:focus-visible{outline:2px solid #000; outline-offset:3px}
     
     /* Hide colored buttons in header (Turo has none) */
