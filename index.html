@@ -204,7 +204,7 @@
       left:0;
       width:100%;
       height:100%;
-      background-image:url('assets/banhead.jpeg');
+      background-image:url('assets/hero.png');
       background-size:cover;
       background-position:center;
       background-repeat:no-repeat;
@@ -273,7 +273,13 @@
     }
     .search-input-group {
       display:grid;
-      grid-template-columns:1fr 1fr 50px 50px;
+      grid-template-columns:1fr 1fr;
+      gap:8px;
+      align-items:center;
+    }
+    .search-action-buttons {
+      display:grid;
+      grid-template-columns:50px 50px;
       gap:8px;
       align-items:center;
     }
@@ -471,7 +477,11 @@
         max-width:calc(100% - 32px);
       }
       .search-input-group {
-        grid-template-columns:1fr 1fr 44px 44px;
+        grid-template-columns:1fr 1fr;
+        gap:6px;
+      }
+      .search-action-buttons {
+        grid-template-columns:50px 50px;
         gap:6px;
       }
       .search-input,
@@ -480,30 +490,131 @@
         padding:10px 12px;
         font-size:13px;
       }
+      .search-filters-group {
+        grid-template-columns:1fr 1fr;
+        gap:6px;
+      }
+      .filter-input {
+        padding:8px 10px;
+        font-size:12px;
+      }
+      .duration-buttons {
+        gap:4px;
+      }
+      .duration-btn {
+        padding:8px 6px;
+        font-size:11px;
+      }
     }
     
     @media (max-width:480px) {
       .hero-section {
-        height:320px;
+        height:360px;
       }
       .hero-content {
-        gap:20px;
-        padding:24px 12px;
+        gap:16px;
+        padding:20px 12px;
       }
       .hero-title {
-        font-size:28px;
+        font-size:24px;
+        line-height:1.2;
       }
       .hero-subtitle {
-        font-size:14px;
+        font-size:13px;
+      }
+      .hero-search-container {
+        gap:8px;
       }
       .search-input-group {
-        grid-template-columns:1fr 1fr 40px 40px;
+        grid-template-columns:1fr 1fr;
+        gap:4px;
+      }
+      .search-action-buttons {
+        grid-template-columns:38px 38px;
+        gap:4px;
       }
       .search-input,
       .location-btn,
       .search-submit-btn {
-        padding:8px 10px;
+        padding:8px 8px;
+        font-size:11px;
+      }
+      .location-btn,
+      .search-submit-btn {
+        font-size:16px;
+        padding:8px 6px;
+      }
+      .search-filters-group {
+        grid-template-columns:1fr;
+        gap:6px;
+      }
+      .filter-input {
+        padding:10px 12px;
+        font-size:13px;
+        width:100%;
+      }
+      .duration-buttons {
+        grid-template-columns:1fr 1fr 1fr;
+        gap:4px;
+      }
+      .duration-btn {
+        padding:10px 6px;
+        font-size:11px;
+      }
+    }
+    
+    @media (max-width:360px) {
+      .hero-section {
+        height:400px;
+      }
+      .hero-content {
+        gap:12px;
+        padding:16px 8px;
+      }
+      .hero-title {
+        font-size:22px;
+      }
+      .hero-subtitle {
         font-size:12px;
+      }
+      .search-input-group {
+        grid-template-columns:1fr 1fr;
+        gap:4px;
+      }
+      .search-action-buttons {
+        grid-template-columns:36px 36px;
+        gap:4px;
+      }
+      .search-input,
+      .location-btn,
+      .search-submit-btn {
+        padding:10px 8px;
+        font-size:12px;
+      }
+      .location-btn,
+      .search-submit-btn {
+        font-size:16px;
+        padding:10px 8px;
+      }
+      .filter-input {
+        padding:10px 10px;
+        font-size:12px;
+      }
+      .duration-btn {
+        padding:8px 4px;
+        font-size:10px;
+      }
+      .card {
+        padding: 16px;
+      }
+      .navbtn {
+        font-size: 12px;
+        padding: 6px 12px;
+        margin: 0 8px;
+      }
+      input, select, textarea {
+        font-size: 14px;
+        padding: 10px;
       }
     }
     
@@ -695,6 +806,30 @@
     #vehicle-grid .card .body *{
       box-shadow: none !important;
       border-color: transparent !important;
+    }
+    
+    /* Vehicle Grid Responsive */
+    #vehicle-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 12px;
+    }
+    
+    @media (max-width: 768px) {
+      #vehicle-grid {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 10px;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      #vehicle-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+      #vehicle-grid .card {
+        max-width: 100%;
+      }
     }
 
     /* 🎄 Form Inputs - Glossy Christmas Style */
@@ -1125,6 +1260,8 @@
               <select id="heroState" class="search-input" aria-label="Select state" disabled>
                 <option value="">Select State/Region</option>
               </select>
+            </div>
+            <div class="search-action-buttons">
               <button id="heroLocationBtn" class="location-btn" title="Use my location">📍</button>
               <button id="heroSearchBtn" class="search-submit-btn" title="Search vehicles">🔍</button>
             </div>
@@ -1165,7 +1302,7 @@
           </div>
         </div>
         <div id="vehicle-empty" class="muted" style="margin-bottom:8px;display:none">No vehicles available right now. Please check back soon.</div>
-        <div id="vehicle-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px"></div>
+        <div id="vehicle-grid"></div>
       </div>
     </section>
 
