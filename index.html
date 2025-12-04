@@ -53,7 +53,7 @@ a<!DOCTYPE html>
     body{
       margin:0; 
       background:#ffffff;
-      color:#2c2c2c; 
+      color:#000000; 
       font-family:Segoe UI,Arial,sans-serif; 
       min-height:100vh;
       position:relative;
@@ -81,7 +81,7 @@ a<!DOCTYPE html>
       top:10%;
       left:15%;
       font-size:20px;
-      color:rgba(232,244,255,.3);
+      color:transparent;
       pointer-events:none;
       z-index:1;
       animation:float 8s ease-in-out infinite;
@@ -92,7 +92,7 @@ a<!DOCTYPE html>
       bottom:20%;
       right:10%;
       font-size:18px;
-      color:rgba(255,216,107,.4);
+      color:transparent;
       pointer-events:none;
       z-index:1;
       animation:sparkleFloat 6s ease-in-out infinite;
@@ -106,7 +106,7 @@ a<!DOCTYPE html>
       top:0; 
       z-index:50; 
       background:#ffffff;
-      box-shadow:0 2px 8px rgba(0,0,0,.08);
+      box-shadow:none;
       border-bottom:1px solid #f0f0f0;
       padding:0;
       width:100%;
@@ -188,7 +188,7 @@ a<!DOCTYPE html>
       padding:8px 0; 
       border-radius:0; 
       background:transparent;
-      color:#1a1a1a; 
+      color:#000000; 
       border:none; 
       cursor:pointer; 
       font-weight:500; 
@@ -244,88 +244,80 @@ a<!DOCTYPE html>
     .section{display:block; padding:24px 0}
     .card{
       background:linear-gradient(145deg, rgba(255,255,255,0.95) 0%, rgba(254,254,254,0.97) 100%); 
-      border:3px solid var(--gold-shadow); 
+      border:1px solid #e0e0e0; 
       border-radius:var(--radius); 
       overflow:hidden; 
-      box-shadow:0 8px 28px rgba(0,0,0,.12), inset 0 2px 0 rgba(255,255,255,.6), 0 0 30px rgba(255,216,107,.15);
+      box-shadow:0 2px 8px rgba(0,0,0,.08);
       position:relative;
     }
     /* Gold highlight strip at top */
     .card::before{
-      content:'';
-      position:absolute;
-      top:0;
-      left:0;
-      right:0;
-      height:3px;
-      background:linear-gradient(90deg, transparent, var(--gold-highlight), transparent);
-      opacity:.7;
+      display:none;
     }
-    .card .body{padding:14px; color:#1a1a1a}
+    .card .body{padding:14px; color:#000000}
     .card:hover{
-      box-shadow:0 12px 40px rgba(0,0,0,.18), inset 0 3px 0 rgba(255,255,255,.7), 0 0 40px rgba(255,216,107,.25);
+      box-shadow:0 4px 12px rgba(0,0,0,.12);
       transform:translateY(-2px);
     }
     h1,h2,h3{
-      color:var(--gold); 
-      text-shadow:0 0 20px rgba(255,216,107,.4), 0 2px 4px rgba(0,0,0,.2);
+      color:#000000; 
+      text-shadow:none;
     }
     .card .body h1, .card .body h2, .card .body h3 { 
-      color:#1a1a1a; 
+      color:#000000; 
       text-shadow:none;
     }
     @keyframes snow{0%{transform:translateY(-10vh) rotate(0deg)}100%{transform:translateY(100vh) rotate(360deg)}}
-    .flake{position:fixed; top:-10vh; left:0; color:var(--snow-blue); opacity:.5; animation:snow 12s linear infinite; pointer-events:none; z-index:10; font-size:16px; text-shadow:0 0 10px rgba(232,244,255,.8)}
+    .flake{position:fixed; top:-10vh; left:0; color:#cccccc; opacity:.2; animation:snow 12s linear infinite; pointer-events:none; z-index:10; font-size:16px; text-shadow:none}
     
     .veh-dot{
       width:14px;height:14px;border-radius:50%;display:inline-block;position:relative;
-      box-shadow:0 0 0 2px var(--gold-shadow) inset, 0 4px 8px rgba(0,0,0,.2);
+      box-shadow:0 2px 4px rgba(0,0,0,.15);
+      background:#cccccc;
     }
     .veh-dot.available{
-      background:linear-gradient(135deg, var(--green-highlight) 0%, var(--christmas-green) 100%);
-      animation:pulseLight 2.8s ease-in-out infinite;
-      box-shadow:0 0 0 2px var(--gold-shadow) inset, 0 0 10px var(--green-highlight), 0 0 20px rgba(76,255,114,.5);
+      background:#4CAF50;
+      animation:none;
+      box-shadow:0 2px 4px rgba(0,0,0,.15);
     }
     .veh-dot.unavailable{
-      background:linear-gradient(135deg, var(--red-highlight) 0%, var(--christmas-red) 100%);
-      animation:pulseDark 2.8s ease-in-out infinite;
-      box-shadow:0 0 0 2px var(--gold-shadow) inset, 0 0 10px var(--red-highlight), 0 0 20px rgba(255,76,76,.5);
+      background:#f44336;
+      animation:none;
+      box-shadow:0 2px 4px rgba(0,0,0,.15);
     }
     .veh-dot::before{
-      content:"";position:absolute;top:2px;left:2px;width:6px;height:6px;border-radius:50%;
-      background:radial-gradient(circle,rgba(255,255,255,.95),rgba(255,255,255,0) 60%);
-      opacity:.9;filter:blur(.3px);animation:sparkle 2.4s ease-in-out infinite;
+      display:none;
     }
     @keyframes pulseLight{
-      0%,100%{box-shadow:0 0 0 2px var(--gold-shadow) inset, 0 0 6px var(--green-highlight), 0 0 12px rgba(76,255,114,.4);transform:scale(1)}
-      50%{box-shadow:0 0 0 2px var(--gold-shadow) inset, 0 0 14px var(--green-highlight), 0 0 28px rgba(76,255,114,.6);transform:scale(1.2)}
+      0%,100%{box-shadow:0 2px 4px rgba(0,0,0,.15);transform:scale(1)}
+      50%{box-shadow:0 2px 4px rgba(0,0,0,.15);transform:scale(1)}
     }
     @keyframes pulseDark{
-      0%,100%{box-shadow:0 0 0 2px var(--gold-shadow) inset, 0 0 6px var(--red-highlight), 0 0 12px rgba(255,76,76,.4);transform:scale(1)}
-      50%{box-shadow:0 0 0 2px var(--gold-shadow) inset, 0 0 14px var(--red-highlight), 0 0 28px rgba(255,76,76,.6);transform:scale(1.2)}
+      0%,100%{box-shadow:0 2px 4px rgba(0,0,0,.15);transform:scale(1)}
+      50%{box-shadow:0 2px 4px rgba(0,0,0,.15);transform:scale(1)}
     }
-    @keyframes sparkle{0%,100%{opacity:.6;transform:translate(0,0) scale(1)}50%{opacity:1;transform:translate(1px,-1px) scale(1.15)}}
+    @keyframes sparkle{0%,100%{opacity:0;transform:translate(0,0) scale(1)}50%{opacity:0;transform:translate(0,0) scale(1)}}
     
     .navbtn[disabled]{opacity:.5; cursor:not-allowed; filter:grayscale(60%)}
     
     .badge{
       display:inline-block;
       padding:4px 12px;
-      border-radius:20px;
+      border-radius:6px;
       font-size:13px;
-      border:2px solid var(--gold);
-      color:var(--gold-shadow);
-      background:linear-gradient(135deg, var(--gold-highlight), var(--gold));
+      border:1px solid #ddd;
+      color:#666;
+      background:#f5f5f5;
       font-weight:700;
       letter-spacing:.4px;
-      box-shadow:0 4px 12px rgba(255,216,107,.4), inset 0 1px 0 rgba(255,255,255,.5);
+      box-shadow:0 1px 3px rgba(0,0,0,.08);
     }
     .badge.unavailable{
-      background:linear-gradient(135deg, var(--red-highlight), var(--christmas-red)); 
-      color:#ffffff; 
-      border-color:var(--gold); 
+      background:#ffebee; 
+      color:#c62828; 
+      border-color:#ffcdd2; 
       font-weight:700;
-      box-shadow:0 4px 12px rgba(214,0,28,.5), inset 0 1px 0 rgba(255,255,255,.3);
+      box-shadow:0 1px 3px rgba(0,0,0,.08);
     }
     
     /* 🎁 Glossy Toast */
@@ -340,20 +332,21 @@ a<!DOCTYPE html>
       box-shadow:0 8px 28px rgba(14,138,38,.6), inset 0 2px 0 rgba(255,255,255,.25);
       display:none;
       font-weight:700;
-      text-shadow:0 1px 3px rgba(0,0,0,.3);
+      text-shadow:none;
+      color:#000000;
     }
 
-    /* 🎄 Vehicle Grid Cards - Glossy Frames */
+    /* Vehicle Grid Cards - Simplify */
     #vehicle-grid .card {
-      border:3px solid var(--gold-shadow) !important;
-      box-shadow: 0 8px 24px rgba(0,0,0,.15), inset 0 2px 0 rgba(255,255,255,.6), 0 0 30px rgba(255,216,107,.25) !important;
+      border:1px solid #e0e0e0 !important;
+      box-shadow: 0 2px 8px rgba(0,0,0,.08) !important;
       background:linear-gradient(145deg, rgba(255,255,255,0.96) 0%, rgba(250,250,250,0.98) 100%);
       position:relative;
     }
     #vehicle-grid .card:hover {
-      box-shadow: 0 12px 36px rgba(0,0,0,.2), inset 0 3px 0 rgba(255,255,255,.7), 0 0 40px rgba(255,216,107,.4) !important;
-      transform:translateY(-4px);
-      border-color:var(--gold-highlight) !important;
+      box-shadow: 0 4px 12px rgba(0,0,0,.12) !important;
+      transform:translateY(-2px);
+      border-color:#e0e0e0 !important;
     }
     #vehicle-grid .card::after{
       content:'✨';
@@ -417,23 +410,23 @@ a<!DOCTYPE html>
       image-rendering:auto;
     }
 
-    /* 🎨 Text Color Strategy - Christmas Theme */
+    /* 🎨 Text Color Strategy - All Black */
     #signup input, #signup select, #signup textarea,
     #login input {
-      color:#1a1a1a !important;
+      color:#000000 !important;
     }
     
     .card .body, .license-section { 
-      color:#1a1a1a !important; 
+      color:#000000 !important; 
     }
     
     footer { 
-      color:var(--gold-highlight) !important;
-      text-shadow:0 1px 3px rgba(0,0,0,.2);
+      color:#000000 !important;
+      text-shadow:none;
     }
     
     .section p, .section label, .section small, .section li { 
-      color:var(--gold-shadow); 
+      color:#000000 !important; 
     }
     
     /* About section description with red background */
@@ -446,24 +439,24 @@ a<!DOCTYPE html>
     }
     
     .holiday, .holiday * { 
-      color:var(--gold-highlight) !important; 
+      color:#000000 !important; 
     }
     .flake { 
-      color:var(--snow-blue) !important; 
+      color:#cccccc !important; 
     }
     
     header, header * { 
-      color:var(--gold-highlight) !important;
-      text-shadow:0 1px 3px rgba(0,0,0,.2);
+      color:#000000 !important;
+      text-shadow:none;
     }
     
-    /* 📜 Terms Section - Gold title with black text */
+    /* 📜 Terms Section - Black text throughout */
     #terms h2 { 
-      color:var(--gold) !important;
-      text-shadow:0 0 20px rgba(255,216,107,.4);
+      color:#000000 !important;
+      text-shadow:none;
     }
     #terms h3, #terms p, #terms li, #terms .card .body, #terms .card .body * { 
-      color:#1a1a1a !important; 
+      color:#000000 !important; 
     }
     #terms #backToPayments { 
       color:var(--gold-highlight) !important; 
