@@ -107,14 +107,14 @@ a<!DOCTYPE html>
     @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-20px)}}
     @keyframes sparkleFloat{0%,100%{transform:translate(0,0) rotate(0deg)}50%{transform:translate(10px,-15px) rotate(180deg)}}
     
-    /* Modern Clean Header - Turo-inspired, Full-width */
+    /* Turo-Inspired Header - Minimal, Clean, Full-width */
     header{
       position:sticky; 
-      top:60px; 
+      top:0; 
       z-index:50; 
       background:#ffffff;
-      box-shadow:0 2px 8px rgba(0,0,0,.08);
-      border-bottom:1px solid #e5e5e5;
+      box-shadow:0 1px 3px rgba(0,0,0,.05);
+      border-bottom:none;
       padding:0;
       width:100%;
     }
@@ -127,37 +127,34 @@ a<!DOCTYPE html>
       display:flex;
       align-items:center;
       justify-content:space-between;
-      padding:12px 40px !important;
+      padding:16px 40px !important;
       width:100%;
       max-width:100%;
+      gap:0;
     }
     header > div > div:first-child {
       display:flex;
       align-items:center;
-      gap:14px;
+      gap:0;
       flex:0 0 auto;
     }
     header #siteLogo {
-      width:40px !important;
-      height:40px !important;
-      border-radius:8px !important;
-      padding:0 !important;
+      display:none !important;
     }
     header > div > div:first-child > div {
       display:flex;
       flex-direction:column;
-      gap:2px;
+      gap:0;
     }
     header > div > div:first-child > div > div {
       font-weight:900;
-      font-size:18px;
+      font-size:24px;
       line-height:1.2;
-      color:#1a1a1a;
+      color:#000000;
+      letter-spacing:-0.5px;
     }
     header > div > div:first-child > div > small {
-      font-size:12px;
-      color:#666 !important;
-      font-weight:500;
+      display:none !important;
     }
     #mobileMenuToggle {
       display:none;
@@ -170,10 +167,10 @@ a<!DOCTYPE html>
       margin:0 !important;
     }
     
-    /* Desktop Navigation - Right-aligned, Full Width */
+    /* Turo-Style Navigation - Minimal text links right-aligned */
     nav{
       display:flex; 
-      gap:8px; 
+      gap:0; 
       flex-wrap:nowrap;
       align-items:center;
       justify-content:flex-end;
@@ -186,68 +183,51 @@ a<!DOCTYPE html>
     
     .wrap{max-width:var(--maxw); margin:0 auto; padding:12px}
     
-    /* 🎁 Navigation Buttons - Clean & Professional */
+    /* Turo-Style Navigation Buttons - Text only, minimal */
     .navbtn{
-      min-height:40px; 
-      padding:8px 16px; 
-      border-radius:8px; 
+      min-height:auto; 
+      padding:8px 0; 
+      border-radius:0; 
       background:transparent;
-      color:#1a1a1a; 
+      color:#000000; 
       border:none; 
       cursor:pointer; 
-      font-weight:600; 
+      font-weight:500; 
       font-size:14px;
-      letter-spacing:.3px; 
+      letter-spacing:0;
       box-shadow:none;
-      transition:all .2s ease;
+      transition:opacity .2s ease;
       position:relative;
       text-shadow:none;
+      margin:0 24px;
     }
     .navbtn::before{
       display:none;
     }
     .navbtn:hover{
-      background:linear-gradient(135deg, var(--gold-highlight), var(--gold));
-      color:#1a1a1a !important;
-      box-shadow:0 4px 12px rgba(255,216,107,.3);
+      background:transparent;
+      color:#666666;
+      box-shadow:none;
       transform:none;
       border-color:transparent;
+      opacity:.7;
     }
     .navbtn:hover::after{
       display:none;
     }
-    .navbtn:active{transform:none; box-shadow:none}
-    .navbtn:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
+    .navbtn:active{transform:none; box-shadow:none; opacity:.8}
+    .navbtn:focus-visible{outline:2px solid #000; outline-offset:3px}
     
-    /* Special styling for action buttons in header */
+    /* Hide colored buttons in header (Turo has none) */
     header .navbtn[data-nav="login"],
-    header #accountLogout {
-      background:linear-gradient(135deg, var(--christmas-green), var(--green-deep)) !important;
-      border:2px solid var(--gold) !important;
-      color:var(--gold-highlight) !important;
-      box-shadow:0 4px 12px rgba(14,138,38,.3);
-      border-radius:8px;
-    }
-    header .navbtn[data-nav="login"]:hover,
-    header #accountLogout:hover {
-      background:linear-gradient(135deg, var(--green-highlight), var(--christmas-green)) !important;
-      box-shadow:0 6px 16px rgba(14,138,38,.4);
-      transform:translateY(-2px);
-    }
+    header #accountLogout,
     header #adminTab {
-      background:linear-gradient(135deg, var(--christmas-red), var(--red-deep)) !important;
-      border:2px solid var(--gold) !important;
-      color:var(--gold-highlight) !important;
-      box-shadow:0 4px 12px rgba(214,0,28,.3);
-    }
-    header #adminTab:hover {
-      background:linear-gradient(135deg, var(--red-highlight), var(--christmas-red)) !important;
-      box-shadow:0 6px 16px rgba(214,0,28,.4);
-      transform:translateY(-2px);
+      display:none !important;
     }
     
-    /* 🎁 Clean Announcement Banner - Full Width */
+    /* Announcement Banner - Hidden (Turo style) */
     .holiday{
+      display:none;
       background:linear-gradient(90deg, #2c2c2c 0%, #3a3a3a 100%);
       color:#ffffff; 
       text-align:center; 
