@@ -1667,19 +1667,40 @@ function renderVehicles(){
       : `<div style="width:100%;height:200px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;color:#999">No Image</div>`;
     
     // Show host contact info if it's a host vehicle
-    const hostContact = v.hostId ? `<div style='font-size:12px;color:#666;margin-top:8px;padding-top:8px;border-top:1px solid #eee'><strong>Host Contact:</strong> ${v.hostId}</div>` : '';
+    const hostEmail = v.hostId || '';
+    const hostContact = hostEmail ? `<div style='font-size:13px;color:#666;margin-top:12px;padding-top:12px;border-top:1px solid #eee'><strong>Host Contact:</strong> ${hostEmail}</div>` : '';
+    
+    // Insurance badge
+    const insuranceBadge = v.insuranceIncluded 
+      ? `<div style='display:inline-block;background:#e8f5e9;border:1px solid #4caf50;color:#2e7d32;padding:6px 12px;border-radius:6px;font-size:12px;font-weight:600;margin-top:8px'>✓ Insurance Included</div>`
+      : `<div style='display:inline-block;background:#ffebee;border:1px solid #f44336;color:#c62828;padding:6px 12px;border-radius:6px;font-size:12px;font-weight:600;margin-top:8px'>⚠ No Insurance</div>`;
     
     el.innerHTML=`${imgHtml}\n<div class='body'>
-      <div style='display:flex;align-items:center;gap:8px'>
+      <div style='display:flex;align-items:center;gap:8px;margin-bottom:8px'>
         <span class='veh-dot ${isAvail && !isPending?'available':'unavailable'}' title='${isAvail && !isPending?'Available':(isPending?'Pending':'Unavailable')}'></span>
-        <div style='font-weight:800'>${v.name || v.makeModel}</div>
+        <div style='font-weight:800;font-size:16px'>${v.year} ${v.make || ''} ${v.model || v.makeModel || 'Vehicle'}</div>
       </div>
-      <div class='muted' style='margin:6px 0'>${v.seats ? 'Seats ' + v.seats + ' • ' : ''}${v.type}</div>
-      <div style='display:flex;gap:8px;align-items:center'>
+      
+      <div style='display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:12px 0;font-size:13px'>
+        <div><strong>Type:</strong> ${v.type || 'N/A'}</div>
+        <div><strong>Price:</strong> <span style='color:#32CD32;font-weight:700'>$${v.price}/${v.rentalTerm === 'Weekly' ? 'week' : v.rentalTerm === 'Daily' ? 'day' : 'week'}</span></div>
+        <div><strong>Location:</strong> ${v.city}, ${v.state}</div>
+        <div><strong>Address:</strong> ${v.address || 'N/A'}</div>
+      </div>
+      
+      ${v.description ? `<div style='font-size:13px;color:#555;margin:8px 0;padding:8px;background:#f9f9f9;border-radius:4px'><strong>Description:</strong> ${v.description}</div>` : ''}
+      
+      <div style='margin:12px 0'>
+        ${insuranceBadge}
+        ${v.insuranceIncluded && v.insuranceType ? `<div style='font-size:12px;color:#666;margin-top:6px'><strong>Coverage:</strong> ${v.insuranceType}</div>` : ''}
+        ${v.insuranceIncluded && v.insuranceNotes ? `<div style='font-size:12px;color:#666;margin-top:4px'><strong>Details:</strong> ${v.insuranceNotes}</div>` : ''}
+      </div>
+      
+      <div style='display:flex;gap:8px;align-items:center;margin-top:12px'>
         ${bookBtn}
-        <span style='margin-left:auto;color:#32CD32;font-weight:700'>$${v.price}/${v.rentalTerm === 'Weekly' ? 'week' : v.rentalTerm === 'Daily' ? 'day' : 'week'}</span>${statusBadge}
+        ${statusBadge}
       </div>
-      ${photos.length > 0 ? `<div style='margin-top:8px'><button class='navbtn' data-gallery='${v.id}' aria-label='View photo gallery for ${v.name || v.makeModel}'>View Photos (${photos.length})</button></div>` : ''}
+      ${photos.length > 0 ? `<div style='margin-top:8px'><button class='navbtn' data-gallery='${v.id}' aria-label='View photo gallery for ${v.name || v.makeModel}' style='font-size:12px'>View Photos (${photos.length})</button></div>` : ''}
       ${hostContact}
     </div>`;
     grid.appendChild(el);
@@ -5273,9 +5294,29 @@ function openVehicleEditModal(vehicleData) {
     document.getElementById('vehicleState').value = vehicleData.state || '';
     document.getElementById('vehicleZip').value = vehicleData.zip || '';
     document.getElementById('vehicleCountry').value = vehicleData.country || '';
+    
+    // Populate insurance fields
+    const insuranceCheckbox = document.getElementById('vehicleInsuranceIncluded');
+    const insuranceDetails = document.getElementById('insuranceDetails');
+    if(vehicleData.insuranceIncluded) {
+      insuranceCheckbox.checked = true;
+      insuranceDetails.style.display = 'block';
+      document.getElementById('vehicleInsuranceType').value = vehicleData.insuranceType || '';
+      document.getElementById('vehicleInsuranceNotes').value = vehicleData.insuranceNotes || '';
+    } else {
+      insuranceCheckbox.checked = false;
+      insuranceDetails.style.display = 'none';
+    }
   }
 
   modal.style.display = 'block';
+  
+  // Add insurance toggle listener
+  const insuranceCheckbox = document.getElementById('vehicleInsuranceIncluded');
+  const insuranceDetails = document.getElementById('insuranceDetails');
+  insuranceCheckbox.onchange = function() {
+    insuranceDetails.style.display = this.checked ? 'block' : 'none';
+  };
 }
 
 // Close vehicle edit modal
@@ -5327,6 +5368,8 @@ async function saveVehicle() {
   }
 
   const vehicleId = document.getElementById('vehicleEditForm').dataset.vehicleId || 'v_' + Date.now();
+  const insuranceIncluded = document.getElementById('vehicleInsuranceIncluded').checked;
+  
   const vehicle = {
     id: vehicleId,
     hostId: email,
@@ -5345,6 +5388,9 @@ async function saveVehicle() {
     country: document.getElementById('vehicleCountry').value,
     photos: VEHICLE_PHOTOS || [],
     rentalStatus: 'available', // available, pending, rented
+    insuranceIncluded: insuranceIncluded,
+    insuranceType: insuranceIncluded ? document.getElementById('vehicleInsuranceType').value : '',
+    insuranceNotes: insuranceIncluded ? document.getElementById('vehicleInsuranceNotes').value : '',
     createdAt: new Date().toISOString(),
   };
   

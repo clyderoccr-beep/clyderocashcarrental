@@ -1787,6 +1787,26 @@
             <textarea id="vehicleDescription" placeholder="Describe your vehicle..." style="width:100%;min-height:100px;color:#000;border-radius:6px;padding:8px;border:1px solid #ccc"></textarea>
           </div>
 
+          <!-- Insurance Toggle -->
+          <div style="border:1px solid #e0e0e0;border-radius:8px;padding:12px;background:#fafafa">
+            <label style="display:flex;align-items:center;gap:12px;cursor:pointer;margin:0;font-weight:600;color:#000">
+              <input id="vehicleInsuranceIncluded" type="checkbox" style="width:20px;height:20px;cursor:pointer">
+              <span>Insurance Included</span>
+            </label>
+            <small style="display:block;margin-top:8px;color:#666;margin-left:32px">Check if your rental includes insurance coverage</small>
+            <div id="insuranceDetails" style="margin-top:12px;padding:12px;background:#fff;border:1px solid #ddd;border-radius:6px;display:none">
+              <label style="display:block;color:#000;margin-bottom:8px;font-weight:600">Insurance Type</label>
+              <select id="vehicleInsuranceType" style="width:100%;color:#000;margin-bottom:8px">
+                <option value="">Select Insurance Type</option>
+                <option value="basic">Basic Coverage</option>
+                <option value="premium">Premium Coverage</option>
+                <option value="full">Full Coverage</option>
+              </select>
+              <label style="display:block;color:#000;margin-bottom:8px;font-weight:600">Additional Notes</label>
+              <textarea id="vehicleInsuranceNotes" placeholder="e.g., Deductible: $500, Coverage limits..." style="width:100%;min-height:60px;color:#000;border-radius:6px;padding:8px;border:1px solid #ccc"></textarea>
+            </div>
+          </div>
+
           <!-- Vehicle Photos Section -->
           <div style="border:1px solid #e0e0e0;border-radius:8px;padding:12px;background:#fafafa">
             <label style="display:block;font-weight:700;margin-bottom:8px;color:#000">📸 Vehicle Photos (Up to 6)</label>
