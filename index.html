@@ -1135,6 +1135,36 @@
         margin: 8px !important;
       }
     }
+    
+    /* Vehicle Details Page - Mobile Responsive */
+    @media (max-width: 768px) {
+      #vehicle-details .wrap > div:first-of-type {
+        grid-template-columns: 1fr !important;
+        gap: 24px !important;
+      }
+      
+      #vehicleDetailMainImage {
+        height: 300px !important;
+      }
+      
+      #vehicle-details .wrap > div > div:last-child {
+        position: static !important;
+      }
+      
+      .vehicle-tab {
+        font-size: 14px !important;
+        padding: 12px 0 !important;
+      }
+      
+      #vehicleDetailTitle {
+        font-size: 24px !important;
+      }
+      
+      #tab-features > div > div > div {
+        grid-template-columns: 1fr !important;
+      }
+    }
+    
     @keyframes slideIn {
       from { transform:translateX(-100%); }
       to { transform:translateX(0); }
@@ -2510,6 +2540,287 @@
       </div>
     </div>
 
+    <!-- Vehicle Details Page (Turo Style) -->
+    <section id="vehicle-details" class="section" style="display:none">
+      <div class="wrap" style="max-width:1400px">
+        <!-- Back Button -->
+        <button onclick="goto('vehicles')" class="navbtn" style="margin-bottom:20px;background:#f5f5f5;color:#121214;border:1px solid #e0e0e0">
+          ← Back to All Vehicles
+        </button>
+
+        <div style="display:grid;grid-template-columns:1fr 400px;gap:32px;align-items:start">
+          <!-- LEFT SIDE: Images + Details -->
+          <div>
+            <!-- Hero Image + Gallery -->
+            <div style="margin-bottom:24px">
+              <div id="vehicleDetailMainImage" style="width:100%;height:500px;border-radius:12px;overflow:hidden;background:#f0f0f0;margin-bottom:12px;position:relative">
+                <img id="vehicleDetailHeroImg" src="" alt="Vehicle" style="width:100%;height:100%;object-fit:cover">
+              </div>
+              
+              <!-- Thumbnail Gallery -->
+              <div style="display:flex;gap:8px;overflow-x:auto;padding:4px 0">
+                <div id="vehicleDetailThumbnails" style="display:flex;gap:8px"></div>
+              </div>
+            </div>
+
+            <!-- Title + Rating -->
+            <div style="margin-bottom:32px">
+              <h1 id="vehicleDetailTitle" style="font-size:32px;font-weight:700;margin:0 0 12px;color:#121214">Vehicle Name</h1>
+              <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:16px">
+                <div style="display:flex;align-items:center;gap:6px">
+                  <span style="color:#d4af37;font-size:18px">★★★★★</span>
+                  <span id="vehicleDetailRating" style="font-weight:600;color:#121214">5.0</span>
+                </div>
+                <span style="color:#666">•</span>
+                <span id="vehicleDetailTrips" style="color:#666">52 trips</span>
+              </div>
+
+              <!-- Quick Features -->
+              <div style="display:flex;gap:16px;flex-wrap:wrap">
+                <div style="display:flex;align-items:center;gap:8px;padding:8px 16px;background:#f8f9fa;border-radius:8px">
+                  <span style="font-size:20px">👥</span>
+                  <span id="vehicleDetailSeats" style="font-weight:600;color:#121214">5 seats</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;padding:8px 16px;background:#f8f9fa;border-radius:8px">
+                  <span style="font-size:20px">⚙️</span>
+                  <span id="vehicleDetailTransmission" style="font-weight:600;color:#121214">Automatic</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;padding:8px 16px;background:#f8f9fa;border-radius:8px">
+                  <span style="font-size:20px">⛽</span>
+                  <span id="vehicleDetailGas" style="font-weight:600;color:#121214">Regular</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;padding:8px 16px;background:#f8f9fa;border-radius:8px">
+                  <span style="font-size:20px">📊</span>
+                  <span id="vehicleDetailMPG" style="font-weight:600;color:#121214">25 MPG</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Hosted By Section -->
+            <div style="padding:24px;border:1px solid #e0e0e0;border-radius:12px;margin-bottom:32px">
+              <h3 style="font-size:20px;font-weight:700;margin:0 0 16px;color:#121214">Hosted by</h3>
+              <div style="display:flex;align-items:center;gap:16px">
+                <div id="vehicleDetailHostAvatar" style="width:64px;height:64px;border-radius:50%;background:#e0e0e0;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:32px">
+                  🏠
+                </div>
+                <div style="flex:1">
+                  <div id="vehicleDetailHostName" style="font-size:18px;font-weight:700;color:#121214;margin-bottom:4px">Host Name</div>
+                  <div style="display:flex;align-items:center;gap:12px;color:#666;font-size:14px">
+                    <span>⭐ <span id="vehicleDetailHostRating">5.0</span></span>
+                    <span>•</span>
+                    <span><span id="vehicleDetailHostTrips">0</span> trips</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tab Navigation -->
+            <div style="border-bottom:2px solid #e0e0e0;margin-bottom:24px">
+              <div style="display:flex;gap:32px;overflow-x:auto">
+                <button class="vehicle-tab active" data-tab="overview" style="padding:16px 0;border:none;background:none;font-size:16px;font-weight:600;color:#121214;border-bottom:3px solid #121214;cursor:pointer;white-space:nowrap">Overview</button>
+                <button class="vehicle-tab" data-tab="features" style="padding:16px 0;border:none;background:none;font-size:16px;font-weight:600;color:#666;border-bottom:3px solid transparent;cursor:pointer;white-space:nowrap">Features</button>
+                <button class="vehicle-tab" data-tab="reviews" style="padding:16px 0;border:none;background:none;font-size:16px;font-weight:600;color:#666;border-bottom:3px solid transparent;cursor:pointer;white-space:nowrap">Reviews</button>
+                <button class="vehicle-tab" data-tab="location" style="padding:16px 0;border:none;background:none;font-size:16px;font-weight:600;color:#666;border-bottom:3px solid transparent;cursor:pointer;white-space:nowrap">Location</button>
+              </div>
+            </div>
+
+            <!-- Tab Content: Overview -->
+            <div id="tab-overview" class="vehicle-tab-content" style="display:block">
+              <h3 style="font-size:20px;font-weight:700;margin:0 0 16px;color:#121214">Description</h3>
+              <p id="vehicleDetailDescription" style="color:#666;line-height:1.6;margin-bottom:24px">
+                Vehicle description will appear here...
+              </p>
+              
+              <!-- Insurance Info -->
+              <div id="vehicleDetailInsuranceSection" style="padding:20px;border-radius:12px;margin-bottom:24px"></div>
+            </div>
+
+            <!-- Tab Content: Features -->
+            <div id="tab-features" class="vehicle-tab-content" style="display:none">
+              <div style="display:grid;gap:32px">
+                <!-- Safety Features -->
+                <div>
+                  <h3 style="font-size:18px;font-weight:700;margin:0 0 16px;color:#121214">🛡️ Safety</h3>
+                  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
+                    <div style="padding:12px;background:#f8f9fa;border-radius:8px">✓ ABS Brakes</div>
+                    <div style="padding:12px;background:#f8f9fa;border-radius:8px">✓ Airbags</div>
+                    <div style="padding:12px;background:#f8f9fa;border-radius:8px">✓ Backup Camera</div>
+                    <div style="padding:12px;background:#f8f9fa;border-radius:8px">✓ Blind Spot Monitor</div>
+                  </div>
+                </div>
+
+                <!-- Interior Features -->
+                <div>
+                  <h3 style="font-size:18px;font-weight:700;margin:0 0 16px;color:#121214">🪑 Interior</h3>
+                  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
+                    <div style="padding:12px;background:#f8f9fa;border-radius:8px">✓ Air Conditioning</div>
+                    <div style="padding:12px;background:#f8f9fa;border-radius:8px">✓ Leather Seats</div>
+                    <div style="padding:12px;background:#f8f9fa;border-radius:8px">✓ Heated Seats</div>
+                    <div style="padding:12px;background:#f8f9fa;border-radius:8px">✓ Sunroof</div>
+                  </div>
+                </div>
+
+                <!-- Technology -->
+                <div>
+                  <h3 style="font-size:18px;font-weight:700;margin:0 0 16px;color:#121214">📱 Technology</h3>
+                  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
+                    <div style="padding:12px;background:#f8f9fa;border-radius:8px">✓ Bluetooth</div>
+                    <div style="padding:12px;background:#f8f9fa;border-radius:8px">✓ Apple CarPlay</div>
+                    <div style="padding:12px;background:#f8f9fa;border-radius:8px">✓ Android Auto</div>
+                    <div style="padding:12px;background:#f8f9fa;border-radius:8px">✓ USB Ports</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tab Content: Reviews -->
+            <div id="tab-reviews" class="vehicle-tab-content" style="display:none">
+              <!-- Overall Rating -->
+              <div style="padding:24px;background:#f8f9fa;border-radius:12px;margin-bottom:32px">
+                <div style="text-align:center;margin-bottom:24px">
+                  <div style="font-size:48px;font-weight:700;color:#121214;margin-bottom:8px">5.0</div>
+                  <div style="color:#d4af37;font-size:24px;margin-bottom:8px">★★★★★</div>
+                  <div style="color:#666;font-size:14px">Based on 10 reviews</div>
+                </div>
+
+                <!-- Rating Bars -->
+                <div style="display:grid;gap:12px">
+                  <div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+                      <span style="font-size:14px;color:#666">Cleanliness</span>
+                      <span style="font-size:14px;font-weight:600;color:#121214">5.0</span>
+                    </div>
+                    <div style="height:8px;background:#e0e0e0;border-radius:4px;overflow:hidden">
+                      <div style="width:100%;height:100%;background:#4caf50"></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+                      <span style="font-size:14px;color:#666">Maintenance</span>
+                      <span style="font-size:14px;font-weight:600;color:#121214">5.0</span>
+                    </div>
+                    <div style="height:8px;background:#e0e0e0;border-radius:4px;overflow:hidden">
+                      <div style="width:100%;height:100%;background:#4caf50"></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+                      <span style="font-size:14px;color:#666">Communication</span>
+                      <span style="font-size:14px;font-weight:600;color:#121214">5.0</span>
+                    </div>
+                    <div style="height:8px;background:#e0e0e0;border-radius:4px;overflow:hidden">
+                      <div style="width:100%;height:100%;background:#4caf50"></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+                      <span style="font-size:14px;color:#666">Convenience</span>
+                      <span style="font-size:14px;font-weight:600;color:#121214">5.0</span>
+                    </div>
+                    <div style="height:8px;background:#e0e0e0;border-radius:4px;overflow:hidden">
+                      <div style="width:100%;height:100%;background:#4caf50"></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+                      <span style="font-size:14px;color:#666">Accuracy</span>
+                      <span style="font-size:14px;font-weight:600;color:#121214">5.0</span>
+                    </div>
+                    <div style="height:8px;background:#e0e0e0;border-radius:4px;overflow:hidden">
+                      <div style="width:100%;height:100%;background:#4caf50"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Individual Reviews -->
+              <div id="vehicleDetailReviews" style="display:grid;gap:24px">
+                <p style="color:#666;text-align:center;padding:40px 0">No reviews yet</p>
+              </div>
+            </div>
+
+            <!-- Tab Content: Location -->
+            <div id="tab-location" class="vehicle-tab-content" style="display:none">
+              <h3 style="font-size:20px;font-weight:700;margin:0 0 16px;color:#121214">Pickup & return</h3>
+              <div id="vehicleDetailLocation" style="padding:20px;background:#f8f9fa;border-radius:12px;margin-bottom:16px">
+                <div style="font-size:16px;font-weight:600;color:#121214;margin-bottom:8px">📍 Location</div>
+                <div id="vehicleDetailAddress" style="color:#666;margin-bottom:16px"></div>
+              </div>
+              
+              <!-- Map Placeholder -->
+              <div style="width:100%;height:400px;background:#e0e0e0;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#999">
+                <div style="text-align:center">
+                  <div style="font-size:48px;margin-bottom:8px">🗺️</div>
+                  <div>Map will display here</div>
+                </div>
+              </div>
+
+              <!-- Pickup Notes -->
+              <div style="margin-top:24px;padding:20px;border:1px solid #e0e0e0;border-radius:12px">
+                <h4 style="font-size:16px;font-weight:700;margin:0 0 12px;color:#121214">ℹ️ Pickup notes</h4>
+                <ul style="color:#666;line-height:1.6;padding-left:20px">
+                  <li>Host will meet you at the designated pickup location</li>
+                  <li>Please arrive on time for your scheduled pickup</li>
+                  <li>Bring valid driver's license and payment method</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT SIDE: Booking Box (Sticky) -->
+          <div style="position:sticky;top:20px">
+            <div style="border:1px solid #e0e0e0;border-radius:12px;padding:24px;background:#fff;box-shadow:0 4px 16px rgba(0,0,0,0.1)">
+              <!-- Price -->
+              <div style="margin-bottom:24px">
+                <div style="font-size:32px;font-weight:700;color:#121214;margin-bottom:4px">
+                  $<span id="vehicleDetailPrice">300</span><span style="font-size:18px;font-weight:400;color:#666">/week</span>
+                </div>
+                <div id="vehicleDetailPriceTerm" style="font-size:14px;color:#666"></div>
+              </div>
+
+              <!-- Date Pickers -->
+              <div style="margin-bottom:16px">
+                <label style="display:block;font-weight:600;color:#121214;margin-bottom:8px">Trip start</label>
+                <input id="detailPickupDate" type="datetime-local" style="width:100%;padding:12px;border:1px solid #d0d0d0;border-radius:8px;font-size:14px">
+              </div>
+
+              <div style="margin-bottom:20px">
+                <label style="display:block;font-weight:600;color:#121214;margin-bottom:8px">Trip end</label>
+                <input id="detailReturnDate" type="datetime-local" style="width:100%;padding:12px;border:1px solid #d0d0d0;border-radius:8px;font-size:14px">
+              </div>
+
+              <!-- Location -->
+              <div style="margin-bottom:24px">
+                <label style="display:block;font-weight:600;color:#121214;margin-bottom:8px">Pickup & return location</label>
+                <div id="vehicleDetailPickupLocation" style="padding:12px;background:#f8f9fa;border:1px solid #e0e0e0;border-radius:8px;font-size:14px;color:#666">
+                  Location details
+                </div>
+              </div>
+
+              <!-- Continue Button -->
+              <button id="vehicleDetailBookBtn" class="navbtn" style="width:100%;padding:16px;font-size:16px;font-weight:600;background:#121214;border-color:#121214;margin-bottom:12px">
+                Continue
+              </button>
+
+              <div style="text-align:center;font-size:12px;color:#999;margin-bottom:16px">You won't be charged yet</div>
+
+              <!-- Trip Summary -->
+              <div id="vehicleDetailTripSummary" style="padding-top:16px;border-top:1px solid #e0e0e0;font-size:14px;color:#666">
+                <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+                  <span>Trip price</span>
+                  <span id="vehicleDetailTripPrice">$0.00</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-weight:700;color:#121214;padding-top:8px;border-top:1px solid #e0e0e0">
+                  <span>Total</span>
+                  <span id="vehicleDetailTotal">$0.00</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section id="booking" class="section">
       <div class="wrap">
         <h2>Booking</h2>
@@ -2985,6 +3296,7 @@
     };
   </script>
   <script src="script.js"></script>
+  <script src="vehicle-details.js"></script>
   <script>
     // Minimal snow
     (function(){
