@@ -1,7 +1,10 @@
-// ===== VEHICLE DETAILS PAGE (TURO STYLE) =====
+// ===== VEHICLE DETAILS PAGE (FULL TURO STYLE) =====
 
-// Global variable to store current vehicle details
+// Global variables
 let currentVehicleDetails = null;
+let currentLightboxIndex = 0;
+let lightboxImages = [];
+let descriptionExpanded = false;
 
 // Show vehicle details page
 window.showVehicleDetails = function(vehicleId) {
@@ -30,61 +33,79 @@ window.showVehicleDetails = function(vehicleId) {
   currentVehicleDetails = vehicle;
   populateVehicleDetails(vehicle);
   goto('vehicle-details');
+  window.scrollTo(0, 0);
 };
 
-// Populate vehicle details page with data
+// Populate all vehicle details
 function populateVehicleDetails(vehicle) {
-  // Hero image
   const photos = vehicle.photos || vehicle.imgs || [];
+  lightboxImages = photos;
+  
+  // Hero image
   const heroImg = document.getElementById('vehicleDetailHeroImg');
   if(heroImg && photos.length > 0) {
     heroImg.src = photos[0];
     heroImg.alt = vehicle.makeModel || vehicle.name || 'Vehicle';
   }
   
-  // Thumbnail gallery
+  // Photo count
+  const photoCount = document.getElementById('vehiclePhotoCount');
+  if(photoCount) photoCount.textContent = photos.length;
+  
+  // Thumbnail gallery (show first 3 images on right side)
   const thumbnails = document.getElementById('vehicleDetailThumbnails');
   if(thumbnails) {
-    thumbnails.innerHTML = photos.map((photo, index) => `
-      <div onclick="updateVehicleDetailHeroImage('${photo}')" style="width:100px;height:80px;border-radius:8px;overflow:hidden;cursor:pointer;border:2px solid ${index === 0 ? '#121214' : '#e0e0e0'};flex-shrink:0">
+    const thumbsToShow = photos.slice(0, 3);
+    thumbnails.innerHTML = thumbsToShow.map((photo, index) => `
+      <div onclick="updateVehicleDetailHeroImage('${photo}', ${index})" style="width:100%;height:${index === 0 ? '180px' : '120px'};border-radius:8px;overflow:hidden;cursor:pointer;border:2px solid ${index === 0 ? '#121214' : 'transparent'};flex-shrink:0">
         <img src="${photo}" alt="Thumbnail ${index + 1}" style="width:100%;height:100%;object-fit:cover">
       </div>
     `).join('');
   }
   
-  // Title
+  // Title and subtitle
   const title = document.getElementById('vehicleDetailTitle');
+  const subtitle = document.getElementById('vehicleDetailSubtitle');
   if(title) {
-    const displayName = vehicle.year 
-      ? `${vehicle.make || ''} ${vehicle.model || vehicle.makeModel || ''} ${vehicle.year}`.trim()
+    const displayName = vehicle.make && vehicle.model 
+      ? `${vehicle.make} ${vehicle.model} ${vehicle.year || ''}`.trim()
       : vehicle.makeModel || vehicle.name || 'Vehicle';
     title.textContent = displayName;
   }
+  if(subtitle) {
+    subtitle.textContent = vehicle.trim || vehicle.type || '';
+  }
   
-  // Rating and trips (placeholder data)
+  // Rating and reviews
   const rating = document.getElementById('vehicleDetailRating');
-  if(rating) rating.textContent = vehicle.rating || '5.0';
-  
+  const reviewCount = document.getElementById('vehicleDetailReviewCount');
   const trips = document.getElementById('vehicleDetailTrips');
-  if(trips) trips.textContent = `${vehicle.tripCount || 0} trips`;
+  
+  if(rating) rating.textContent = (vehicle.rating || 5.0).toFixed(1);
+  if(reviewCount) reviewCount.textContent = vehicle.reviewCount || 10;
+  if(trips) trips.textContent = `${vehicle.tripCount || 52} trips`;
   
   // Quick features
   const seats = document.getElementById('vehicleDetailSeats');
-  if(seats) seats.textContent = `${vehicle.seats || 5} seats`;
-  
   const transmission = document.getElementById('vehicleDetailTransmission');
-  if(transmission) transmission.textContent = vehicle.transmission || 'Automatic';
-  
   const gas = document.getElementById('vehicleDetailGas');
-  if(gas) gas.textContent = vehicle.gasType || 'Regular';
-  
   const mpg = document.getElementById('vehicleDetailMPG');
+  const drivetrain = document.getElementById('vehicleDetailDrivetrain');
+  
+  if(seats) seats.textContent = `${vehicle.seats || 5} seats`;
+  if(transmission) transmission.textContent = vehicle.transmission || 'Automatic';
+  if(gas) gas.textContent = vehicle.gasType || 'Regular';
   if(mpg) mpg.textContent = `${vehicle.mpg || 25} MPG`;
+  if(drivetrain) {
+    const drivetrainText = vehicle.drivetrain || 'FWD';
+    drivetrain.querySelector('span').textContent = drivetrainText;
+  }
   
   // Host information
   const hostName = document.getElementById('vehicleDetailHostName');
   const hostRating = document.getElementById('vehicleDetailHostRating');
   const hostTrips = document.getElementById('vehicleDetailHostTrips');
+  const hostJoinDate = document.getElementById('vehicleDetailHostJoinDate');
   const hostAvatar = document.getElementById('vehicleDetailHostAvatar');
   
   if(vehicle.hostId) {
@@ -93,6 +114,11 @@ function populateVehicleDetails(vehicle) {
       if(hostName) hostName.textContent = hostProfile.name || vehicle.hostId.split('@')[0];
       if(hostRating) hostRating.textContent = (hostProfile.rating || 5.0).toFixed(1);
       if(hostTrips) hostTrips.textContent = hostProfile.tripCount || 0;
+      
+      const joinDate = hostProfile.joinDate ? new Date(hostProfile.joinDate) : new Date();
+      if(hostJoinDate) {
+        hostJoinDate.textContent = `Joined ${joinDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`;
+      }
       
       if(hostAvatar && hostProfile.avatarUrl) {
         hostAvatar.innerHTML = `<img src="${hostProfile.avatarUrl}" alt="Host" style="width:100%;height:100%;object-fit:cover">`;
@@ -104,38 +130,60 @@ function populateVehicleDetails(vehicle) {
     if(hostName) hostName.textContent = 'Clydero Cash Car Rental';
     if(hostRating) hostRating.textContent = '5.0';
     if(hostTrips) hostTrips.textContent = '100+';
+    if(hostJoinDate) hostJoinDate.textContent = 'Joined 2020';
   }
   
-  // Description
-  const description = document.getElementById('vehicleDetailDescription');
-  if(description) {
-    description.textContent = vehicle.description || 'No description available.';
+  // Description with show more/less
+  const description = vehicle.description || 'No description available.';
+  const descShort = document.getElementById('vehicleDescriptionShort');
+  const descFull = document.getElementById('vehicleDescriptionFull');
+  const descToggle = document.getElementById('vehicleDescriptionToggle');
+  
+  if(description.length > 200) {
+    if(descShort) descShort.textContent = description.substring(0, 200) + '...';
+    if(descFull) descFull.textContent = description;
+    if(descToggle) descToggle.style.display = 'block';
+  } else {
+    if(descShort) descShort.textContent = description;
+    if(descToggle) descToggle.style.display = 'none';
   }
+  
+  // Distance included
+  const mileageIncluded = document.getElementById('vehicleMileageIncluded');
+  const mileageOverage = document.getElementById('vehicleMileageOverage');
+  if(mileageIncluded) mileageIncluded.textContent = vehicle.mileageIncluded || 600;
+  if(mileageOverage) mileageOverage.textContent = (vehicle.mileageOverageRate || 0.19).toFixed(2);
+  
+  // Cancellation policy
+  const cancellationTitle = document.getElementById('vehicleCancellationTitle');
+  const cancellationDetails = document.getElementById('vehicleCancellationDetails');
+  if(cancellationTitle) cancellationTitle.textContent = vehicle.cancellationPolicy || 'Free cancellation';
+  if(cancellationDetails) cancellationDetails.textContent = vehicle.cancellationDetails || 'Full refund within 24 hours of booking';
   
   // Insurance section
   const insuranceSection = document.getElementById('vehicleDetailInsuranceSection');
   if(insuranceSection) {
     if(vehicle.insuranceIncluded) {
       insuranceSection.innerHTML = `
-        <div style="background:#e8f5e9;border:1px solid #4caf50;padding:20px;border-radius:12px">
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
-            <span style="font-size:32px">✓</span>
+        <div style="padding:24px;background:#e8f5e9;border:1px solid #4caf50;border-radius:12px">
+          <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px">
+            <span style="font-size:40px">✓</span>
             <div>
-              <div style="font-size:18px;font-weight:700;color:#2e7d32">Insurance Included</div>
-              <div style="font-size:14px;color:#666;margin-top:4px">${vehicle.insuranceType || 'Coverage included'}</div>
+              <div style="font-size:20px;font-weight:700;color:#2e7d32">Insurance Included</div>
+              <div style="font-size:15px;color:#666;margin-top:4px">${vehicle.insuranceType || 'Full coverage included'}</div>
             </div>
           </div>
-          ${vehicle.insuranceNotes ? `<div style="font-size:13px;color:#666;margin-top:12px;padding-top:12px;border-top:1px solid #c8e6c9">${vehicle.insuranceNotes}</div>` : ''}
+          ${vehicle.insuranceNotes ? `<div style="font-size:14px;color:#666;margin-top:16px;padding-top:16px;border-top:1px solid #c8e6c9;line-height:1.6">${vehicle.insuranceNotes}</div>` : ''}
         </div>
       `;
     } else {
       insuranceSection.innerHTML = `
-        <div style="background:#ffebee;border:1px solid #f44336;padding:20px;border-radius:12px">
-          <div style="display:flex;align-items:center;gap:12px">
-            <span style="font-size:32px">⚠️</span>
+        <div style="padding:24px;background:#ffebee;border:1px solid #f44336;border-radius:12px">
+          <div style="display:flex;align-items:center;gap:16px">
+            <span style="font-size:40px">⚠️</span>
             <div>
-              <div style="font-size:18px;font-weight:700;color:#c62828">No Insurance Included</div>
-              <div style="font-size:14px;color:#666;margin-top:4px">You'll need to provide your own insurance coverage</div>
+              <div style="font-size:20px;font-weight:700;color:#c62828">No Insurance Included</div>
+              <div style="font-size:15px;color:#666;margin-top:4px">You'll need to provide your own insurance coverage</div>
             </div>
           </div>
         </div>
@@ -145,18 +193,31 @@ function populateVehicleDetails(vehicle) {
   
   // Price
   const price = document.getElementById('vehicleDetailPrice');
+  const originalPrice = document.getElementById('vehicleDetailOriginalPrice');
   if(price) price.textContent = vehicle.price || 0;
+  
+  // Show original price if there's a discount
+  if(vehicle.originalPrice && vehicle.originalPrice > vehicle.price) {
+    if(originalPrice) {
+      originalPrice.textContent = `$${vehicle.originalPrice}`;
+      originalPrice.style.display = 'block';
+    }
+  }
   
   const priceTerm = document.getElementById('vehicleDetailPriceTerm');
   if(priceTerm) {
     const term = vehicle.rentalTerm === 'Weekly' ? 'week' : vehicle.rentalTerm === 'Daily' ? 'day' : 'week';
-    priceTerm.textContent = `Rental price per ${term}`;
+    priceTerm.textContent = `Total (before taxes)`;
   }
   
   // Location
   const address = document.getElementById('vehicleDetailAddress');
+  const locationName = document.getElementById('vehicleLocationName');
   if(address) {
     address.textContent = `${vehicle.address || ''}, ${vehicle.city}, ${vehicle.state} ${vehicle.zip || ''}`.trim();
+  }
+  if(locationName) {
+    locationName.textContent = vehicle.city || 'Pickup Location';
   }
   
   const pickupLocation = document.getElementById('vehicleDetailPickupLocation');
@@ -164,7 +225,10 @@ function populateVehicleDetails(vehicle) {
     pickupLocation.textContent = `${vehicle.city}, ${vehicle.state}`;
   }
   
-  // Initialize date inputs with current date
+  // Reviews - populate rating bars
+  populateRatingBars(vehicle);
+  
+  // Initialize date inputs
   const now = new Date();
   const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
   const pickupDate = document.getElementById('detailPickupDate');
@@ -182,23 +246,99 @@ function populateVehicleDetails(vehicle) {
   updateVehicleDetailPricing();
 }
 
-// Update hero image when thumbnail clicked
-window.updateVehicleDetailHeroImage = function(imageSrc) {
+// Populate rating bars
+function populateRatingBars(vehicle) {
+  const ratings = {
+    cleanliness: vehicle.ratingCleanliness || 5.0,
+    maintenance: vehicle.ratingMaintenance || 5.0,
+    communication: vehicle.ratingCommunication || 5.0,
+    convenience: vehicle.ratingConvenience || 5.0,
+    accuracy: vehicle.ratingAccuracy || 5.0
+  };
+  
+  Object.keys(ratings).forEach(key => {
+    const valueEl = document.getElementById(`rating${key.charAt(0).toUpperCase() + key.slice(1)}`);
+    const barEl = document.getElementById(`rating${key.charAt(0).toUpperCase() + key.slice(1)}Bar`);
+    
+    if(valueEl) valueEl.textContent = ratings[key].toFixed(1);
+    if(barEl) barEl.style.width = `${(ratings[key] / 5) * 100}%`;
+  });
+  
+  const overallRating = document.getElementById('vehicleOverallRating');
+  const totalReviews = document.getElementById('vehicleTotalReviews');
+  if(overallRating) overallRating.textContent = (vehicle.rating || 5.0).toFixed(1);
+  if(totalReviews) totalReviews.textContent = vehicle.reviewCount || 10;
+}
+
+// Update hero image
+window.updateVehicleDetailHeroImage = function(imageSrc, index) {
   const heroImg = document.getElementById('vehicleDetailHeroImg');
-  if(heroImg) {
-    heroImg.src = imageSrc;
-  }
+  if(heroImg) heroImg.src = imageSrc;
   
   // Update thumbnail borders
   const thumbnails = document.querySelectorAll('#vehicleDetailThumbnails > div');
-  thumbnails.forEach(thumb => {
-    const img = thumb.querySelector('img');
-    if(img && img.src === imageSrc) {
-      thumb.style.border = '2px solid #121214';
-    } else {
-      thumb.style.border = '2px solid #e0e0e0';
-    }
+  thumbnails.forEach((thumb, i) => {
+    thumb.style.border = i === index ? '2px solid #121214' : '2px solid transparent';
   });
+};
+
+// Toggle description
+window.toggleDescription = function() {
+  const short = document.getElementById('vehicleDescriptionShort');
+  const full = document.getElementById('vehicleDescriptionFull');
+  const toggle = document.getElementById('vehicleDescriptionToggle');
+  
+  descriptionExpanded = !descriptionExpanded;
+  
+  if(descriptionExpanded) {
+    if(short) short.style.display = 'none';
+    if(full) full.style.display = 'block';
+    if(toggle) toggle.textContent = 'Show less';
+  } else {
+    if(short) short.style.display = 'block';
+    if(full) full.style.display = 'none';
+    if(toggle) toggle.textContent = 'Show more';
+  }
+};
+
+// Scroll to reviews section
+window.scrollToReviews = function() {
+  const reviewsTab = document.querySelector('[data-tab="reviews"]');
+  if(reviewsTab) {
+    reviewsTab.click();
+    setTimeout(() => {
+      const reviewsSection = document.getElementById('tab-reviews');
+      if(reviewsSection) {
+        reviewsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
+  }
+};
+
+// Scroll to location
+window.scrollToLocation = function() {
+  const locationTab = document.querySelector('[data-tab="location"]');
+  if(locationTab) {
+    locationTab.click();
+    setTimeout(() => {
+      const locationSection = document.getElementById('tab-location');
+      if(locationSection) {
+        locationSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
+  }
+};
+
+// View host profile
+window.viewHostProfile = function() {
+  if(currentVehicleDetails && currentVehicleDetails.hostId) {
+    showToast('Host profile feature coming soon');
+  }
+};
+
+// Load more reviews
+window.loadMoreReviews = function() {
+  showToast('Loading more reviews...');
 };
 
 // Format date for datetime-local input
@@ -211,7 +351,7 @@ function formatDateTimeLocal(date) {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
-// Update pricing based on selected dates
+// Update pricing calculations
 function updateVehicleDetailPricing() {
   if(!currentVehicleDetails) return;
   
@@ -226,6 +366,7 @@ function updateVehicleDetailPricing() {
   
   if(days <= 0) {
     document.getElementById('vehicleDetailTripPrice').textContent = '$0.00';
+    document.getElementById('vehicleDetailServiceFee').textContent = '$0.00';
     document.getElementById('vehicleDetailTotal').textContent = '$0.00';
     return;
   }
@@ -239,14 +380,83 @@ function updateVehicleDetailPricing() {
   } else if(currentVehicleDetails.rentalTerm === 'Daily') {
     total = price * days;
   } else {
-    // Default to weekly
     const weeks = Math.ceil(days / 7);
     total = price * weeks;
   }
   
+  // Calculate service fee (e.g., 10%)
+  const serviceFee = total * 0.10;
+  const grandTotal = total + serviceFee;
+  
+  // Show discount if applicable (3+ day discount)
+  const savingsEl = document.getElementById('vehicleTripSavings');
+  if(days >= 3 && savingsEl) {
+    const discount = total * 0.05; // 5% discount
+    document.getElementById('vehicleSavingsAmount').textContent = discount.toFixed(2);
+    savingsEl.style.display = 'block';
+    total -= discount;
+  } else if(savingsEl) {
+    savingsEl.style.display = 'none';
+  }
+  
   document.getElementById('vehicleDetailTripPrice').textContent = `$${total.toFixed(2)}`;
-  document.getElementById('vehicleDetailTotal').textContent = `$${total.toFixed(2)}`;
+  document.getElementById('vehicleDetailServiceFee').textContent = `$${serviceFee.toFixed(2)}`;
+  document.getElementById('vehicleDetailTotal').textContent = `$${(total + serviceFee).toFixed(2)}`;
 }
+
+// Lightbox gallery functions
+window.openVehicleGalleryLightbox = function(startIndex = 0) {
+  if(!lightboxImages || lightboxImages.length === 0) {
+    showToast('No images available');
+    return;
+  }
+  
+  currentLightboxIndex = startIndex;
+  const lightbox = document.getElementById('vehicleGalleryLightbox');
+  if(lightbox) {
+    lightbox.style.display = 'block';
+    updateLightboxImage();
+    document.body.style.overflow = 'hidden';
+  }
+};
+
+window.closeVehicleGalleryLightbox = function() {
+  const lightbox = document.getElementById('vehicleGalleryLightbox');
+  if(lightbox) {
+    lightbox.style.display = 'none';
+    document.body.style.overflow = '';
+  }
+};
+
+window.lightboxNavigate = function(direction) {
+  currentLightboxIndex += direction;
+  if(currentLightboxIndex < 0) currentLightboxIndex = lightboxImages.length - 1;
+  if(currentLightboxIndex >= lightboxImages.length) currentLightboxIndex = 0;
+  updateLightboxImage();
+};
+
+function updateLightboxImage() {
+  const img = document.getElementById('lightboxImage');
+  const counter = document.getElementById('lightboxCounter');
+  
+  if(img && lightboxImages[currentLightboxIndex]) {
+    img.src = lightboxImages[currentLightboxIndex];
+  }
+  
+  if(counter) {
+    counter.textContent = `${currentLightboxIndex + 1} / ${lightboxImages.length}`;
+  }
+}
+
+// Keyboard navigation for lightbox
+document.addEventListener('keydown', (e) => {
+  const lightbox = document.getElementById('vehicleGalleryLightbox');
+  if(lightbox && lightbox.style.display === 'block') {
+    if(e.key === 'Escape') closeVehicleGalleryLightbox();
+    if(e.key === 'ArrowLeft') lightboxNavigate(-1);
+    if(e.key === 'ArrowRight') lightboxNavigate(1);
+  }
+});
 
 // Handle tab switching
 document.addEventListener('click', (e) => {
@@ -283,7 +493,7 @@ document.addEventListener('change', (e) => {
   }
 });
 
-// Handle Continue button - redirect to booking
+// Handle Continue button
 document.addEventListener('click', (e) => {
   if(e.target.id === 'vehicleDetailBookBtn') {
     if(!currentVehicleDetails) {
@@ -291,7 +501,15 @@ document.addEventListener('click', (e) => {
       return;
     }
     
-    // Store booking data and navigate to booking page
+    // Check if user is logged in
+    const email = getSessionEmail();
+    if(!email) {
+      showToast('Please log in to continue');
+      goto('login');
+      return;
+    }
+    
+    // Store booking data
     sessionStorage.setItem('selectedVehicle', JSON.stringify(currentVehicleDetails));
     sessionStorage.setItem('pickupDate', document.getElementById('detailPickupDate').value);
     sessionStorage.setItem('returnDate', document.getElementById('detailReturnDate').value);
@@ -302,7 +520,6 @@ document.addEventListener('click', (e) => {
     setTimeout(() => {
       const vehicleSelect = document.getElementById('vehicle-select');
       if(vehicleSelect) {
-        // Find and select this vehicle in the dropdown
         for(let i = 0; i < vehicleSelect.options.length; i++) {
           if(vehicleSelect.options[i].value === currentVehicleDetails.id) {
             vehicleSelect.selectedIndex = i;
@@ -311,11 +528,10 @@ document.addEventListener('click', (e) => {
         }
       }
       
-      // Set pickup date
       const pickupDateInput = document.getElementById('pickupDate');
       const pickup = document.getElementById('detailPickupDate').value;
       if(pickupDateInput && pickup) {
-        pickupDateInput.value = pickup.split('T')[0]; // Extract date part
+        pickupDateInput.value = pickup.split('T')[0];
       }
     }, 100);
   }
@@ -323,9 +539,8 @@ document.addEventListener('click', (e) => {
 
 // Update vehicle grid to show details on click
 document.addEventListener('click', (e) => {
-  // Check if clicked on vehicle card image or if inside vehicle card
   const vehicleCard = e.target.closest('[data-vehicle-id]');
-  if(vehicleCard && !e.target.closest('button') && !e.target.hasAttribute('data-nav')) {
+  if(vehicleCard && !e.target.closest('button') && !e.target.hasAttribute('data-nav') && !e.target.classList.contains('navbtn')) {
     const vehicleId = vehicleCard.getAttribute('data-vehicle-id');
     if(vehicleId) {
       showVehicleDetails(vehicleId);
