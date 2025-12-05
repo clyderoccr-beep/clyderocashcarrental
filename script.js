@@ -1684,8 +1684,7 @@ function renderVehicles(){
       <div style='display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:12px 0;font-size:13px'>
         <div><strong>Type:</strong> ${v.type || 'N/A'}</div>
         <div><strong>Price:</strong> <span style='color:#32CD32;font-weight:700'>$${v.price}/${v.rentalTerm === 'Weekly' ? 'week' : v.rentalTerm === 'Daily' ? 'day' : 'week'}</span></div>
-        <div><strong>Location:</strong> ${v.city}, ${v.state}</div>
-        <div><strong>Address:</strong> ${v.address || 'N/A'}</div>
+        <div style='grid-column:1/-1'><strong>Location:</strong> ${v.city}, ${v.state}</div>
       </div>
       
       ${v.description ? `<div style='font-size:13px;color:#555;margin:8px 0;padding:8px;background:#f9f9f9;border-radius:4px'><strong>Description:</strong> ${v.description}</div>` : ''}
